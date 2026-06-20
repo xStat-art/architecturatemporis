@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architectura Temporis Research Centre — ATRC</title>
+<meta name="description" content="ATRC develops reproducible quantitative tools for measuring the temporal quality of historic environments. Chronity Index, TIA, ACAP platform.">
+<meta name="author" content="Sergei Tatarnikov">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #0A0A0A;
+    --dark:    #111111;
+    --white:   #F8F8F6;
+    --off-white: #EFEFEC;
+    --grey-1:  #1C1C1C;
+    --grey-2:  #303030;
+    --grey-3:  #6A6A6A;
+    --grey-4:  #A0A0A0;
+    --grey-5:  #D8D8D8;
+    --ink:     #111111;
+    --ink-mid: #444444;
+    --ink-soft:#6A6A6A;
+    --font-display: 'Arial Black','Helvetica Neue',Arial,sans-serif;
+    --font-body:    Arial,'Helvetica Neue',sans-serif;
+    --font-mono:    'Courier New',Courier,monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background: var(--dark);
+  }
+
+  /* ─ alternating section colours ─ */
+  .dark-section  { background: var(--dark);      color: var(--white); }
+  .light-section { background: var(--off-white);  color: var(--ink); }
+
+  /* text helpers that adapt to section colour */
+  .dark-section  .muted { color: var(--grey-3); }
+  .light-section .muted { color: var(--ink-soft); }
+  .dark-section  .sub   { color: var(--grey-4); }
+  .light-section .sub   { color: var(--ink-mid); }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: var(--dark);
+    border-bottom: 1px solid var(--grey-2);
+    padding: 0 48px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: var(--font-body); font-size: 13px; font-weight: bold;
+    letter-spacing: 3px; color: var(--white); text-decoration: none;
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    font-size: 12px; color: var(--grey-3); text-decoration: none;
+    letter-spacing: 1.5px; text-transform: uppercase; transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--white); }
+
+  /* ── LAYOUT ── */
+  .inner { max-width: 1080px; margin: 0 auto; padding: 0 48px; }
+  .section-wrap { padding: 100px 0; }
+
+  /* ── SECTION HEADER ── */
+  .sec-hdr {
+    display: flex; align-items: baseline; gap: 20px;
+    padding-bottom: 20px; margin-bottom: 52px;
+  }
+  .dark-section  .sec-hdr { border-bottom: 1px solid var(--grey-2); }
+  .light-section .sec-hdr { border-bottom: 1px solid var(--grey-5); }
+  .sec-num  { font-family: var(--font-mono); font-size: 12px; color: var(--grey-3); letter-spacing: 2px; }
+  .sec-label{ font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--grey-3); }
+
+  /* ── RULE ── */
+  .rule { height: 1px; background: var(--grey-2); }
+  .rule-light { height: 1px; background: var(--grey-5); }
+
+  /* ═══════════════════════════════════════════════════
+     01  HERO  (dark)
+  ═══════════════════════════════════════════════════ */
+  #hero {
+    background: var(--dark); color: var(--white);
+    min-height: 100vh; padding-top: 56px;
+    display: flex; flex-direction: column; justify-content: center;
+    border-bottom: 1px solid var(--grey-2);
+  }
+  .hero-inner { max-width: 1080px; margin: 0 auto; padding: 60px 48px; width: 100%; }
+  .hero-eyebrow {
+    font-size: 12px; letter-spacing: 4px; color: var(--grey-3);
+    text-transform: uppercase; margin-bottom: 28px;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(52px, 10vw, 130px);
+    font-weight: 900; line-height: 0.9; letter-spacing: -3px;
+    color: var(--white); margin-bottom: 36px;
+  }
+  .hero-title .dim { color: var(--grey-2); }
+  .hero-rule { width: 64px; height: 2px; background: var(--white); margin-bottom: 28px; }
+  .hero-sub {
+    font-size: 18px; color: var(--grey-4); max-width: 560px;
+    line-height: 1.75; margin-bottom: 44px;
+  }
+  .hero-formula {
+    font-family: var(--font-mono); font-size: 14px; color: var(--grey-3);
+    border-left: 3px solid var(--grey-2); padding: 10px 18px;
+    display: inline-block; margin-bottom: 52px;
+  }
+  .hero-kpis { display: flex; flex-wrap: wrap; gap: 40px; }
+  .kpi-label { font-size: 11px; letter-spacing: 2px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 4px; }
+  .kpi-value { font-size: 15px; font-weight: bold; color: var(--white); }
+
+  /* ═══════════════════════════════════════════════════
+     02  PROBLEM  (light)
+  ═══════════════════════════════════════════════════ */
+  .prob-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    background: var(--grey-5); border: 1px solid var(--grey-5);
+    margin-bottom: 52px;
+  }
+  .prob-cell { background: var(--off-white); padding: 36px; }
+  .prob-cell-label { font-size: 11px; letter-spacing: 3px; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 14px; }
+  .prob-cell-text  { font-size: 15px; color: var(--ink-mid); line-height: 1.75; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--grey-5); border: 1px solid var(--grey-5); }
+  .stat-cell { background: var(--white); padding: 44px 32px; text-align: center; }
+  .stat-num  { font-family: var(--font-display); font-size: 64px; font-weight: 900; color: var(--ink); line-height: 1; margin-bottom: 10px; }
+  .stat-cap  { font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+
+  /* ═══════════════════════════════════════════════════
+     03  CI METHODOLOGY  (dark)
+  ═══════════════════════════════════════════════════ */
+  .ci-big {
+    font-family: var(--font-display);
+    font-size: clamp(80px, 18vw, 210px);
+    font-weight: 900; color: var(--white); line-height: 1; letter-spacing: -6px; margin-bottom: 6px;
+  }
+  .ci-caption { font-size: 13px; color: var(--grey-3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 48px; }
+  .formula-box {
+    background: var(--grey-1); border: 1px solid var(--grey-2);
+    padding: 36px; margin-bottom: 40px;
+  }
+  .formula-label { font-size: 11px; letter-spacing: 3px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 14px; }
+  .formula-eq { font-family: var(--font-mono); font-size: clamp(12px,1.8vw,17px); color: var(--white); line-height: 2.1; }
+
+  .params-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--grey-2); border: 1px solid var(--grey-2); margin-bottom: 40px; }
+  .param-cell { background: var(--dark); padding: 32px; }
+  .param-code  { font-family: var(--font-mono); font-size: 24px; font-weight: bold; color: var(--white); margin-bottom: 6px; }
+  .param-name  { font-size: 11px; letter-spacing: 2px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 12px; }
+  .param-desc  { font-size: 14px; color: var(--grey-4); line-height: 1.65; }
+  .param-w     { font-family: var(--font-mono); font-size: 20px; color: var(--grey-3); margin-top: 14px; }
+
+  .entropy-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--grey-2); border: 1px solid var(--grey-2); }
+  .ent-cell { background: var(--dark); padding: 24px; }
+  .ent-type { font-family: var(--font-mono); font-size: 20px; font-weight: bold; color: var(--white); margin-bottom: 6px; }
+  .ent-label-a { font-size: 11px; letter-spacing: 1px; color: #5baa7a; text-transform: uppercase; margin-bottom: 10px; }
+  .ent-label-b { font-size: 11px; letter-spacing: 1px; color: #7a8abf; text-transform: uppercase; margin-bottom: 10px; }
+  .ent-label-c { font-size: 11px; letter-spacing: 1px; color: #b08858; text-transform: uppercase; margin-bottom: 10px; }
+  .ent-label-d { font-size: 11px; letter-spacing: 1px; color: #b05050; text-transform: uppercase; margin-bottom: 10px; }
+  .ent-desc { font-size: 13px; color: var(--grey-4); line-height: 1.6; }
+
+  /* ═══════════════════════════════════════════════════
+     04  ACAP  (light)
+  ═══════════════════════════════════════════════════ */
+  .pipeline {
+    display: grid; grid-template-columns: 1fr 32px 1fr 32px 1fr 32px 1fr;
+    align-items: center; gap: 0; margin-bottom: 52px;
+  }
+  .pipe-step {
+    background: var(--white); border: 1px solid var(--grey-5);
+    padding: 28px 16px; text-align: center;
+  }
+  .pipe-icon  { font-size: 26px; margin-bottom: 10px; display: block; }
+  .pipe-lbl   { font-size: 11px; letter-spacing: 2px; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 6px; }
+  .pipe-name  { font-size: 13px; font-weight: bold; color: var(--ink); }
+  .pipe-arrow { text-align: center; color: var(--grey-5); font-size: 18px; }
+
+  .layers-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--grey-5); border: 1px solid var(--grey-5); margin-bottom: 40px; }
+  .layer-cell  { background: var(--white); padding: 36px; }
+  .layer-tag   { font-size: 11px; letter-spacing: 3px; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .layer-tag::before { content:''; display:inline-block; width:20px; height:1px; background:var(--grey-5); }
+  .layer-title { font-size: 19px; font-weight: bold; color: var(--ink); margin-bottom: 10px; }
+  .layer-tech  { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); margin-bottom: 14px; }
+  .layer-desc  { font-size: 14px; color: var(--ink-mid); line-height: 1.7; }
+
+  .tia-card { background: var(--white); border: 1px solid var(--grey-5); padding: 36px; }
+  .tia-title-txt { font-size: 11px; letter-spacing: 3px; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 16px; }
+  .tia-formula   { font-family: var(--font-mono); font-size: 20px; font-weight: bold; color: var(--ink); margin-bottom: 14px; }
+  .tia-rules     { font-size: 14px; color: var(--ink-mid); line-height: 1.8; border-left: 3px solid var(--grey-5); padding-left: 18px; }
+
+  /* ═══════════════════════════════════════════════════
+     05  RESEARCH  (dark)
+  ═══════════════════════════════════════════════════ */
+  .pilot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-bottom: 40px; }
+  .pilot-result {
+    background: var(--grey-1); border: 1px solid var(--grey-2);
+    padding: 44px; text-align: center;
+  }
+  .pilot-num   { font-family: var(--font-display); font-size: 80px; font-weight: 900; color: var(--white); line-height: 1; margin-bottom: 6px; }
+  .pilot-lbl   { font-size: 12px; letter-spacing: 2px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 22px; }
+  .pilot-quote { font-size: 14px; color: var(--grey-4); font-style: italic; line-height: 1.75; border-top: 1px solid var(--grey-2); padding-top: 22px; }
+  .pilot-rows  { display: flex; flex-direction: column; justify-content: center; gap: 0; }
+  .pilot-row   { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--grey-2); }
+  .pilot-row:first-child { border-top: 1px solid var(--grey-2); }
+  .pilot-rlbl  { font-size: 11px; letter-spacing: 2px; color: var(--grey-3); text-transform: uppercase; min-width: 110px; padding-top: 1px; }
+  .pilot-rval  { font-size: 14px; color: var(--white); }
+  .pilot-note  { background: var(--grey-1); border: 1px solid var(--grey-2); padding: 36px; }
+  .pilot-note-title { font-size: 11px; letter-spacing: 3px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 14px; }
+  .pilot-note-text  { font-size: 15px; color: var(--grey-4); line-height: 1.75; max-width: 800px; }
+
+  /* ═══════════════════════════════════════════════════
+     06  ROADMAP  (light)
+  ═══════════════════════════════════════════════════ */
+  .phases { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--grey-5); border: 1px solid var(--grey-5); margin-bottom: 40px; }
+  .phase  { background: var(--off-white); padding: 36px; }
+  .phase-num    { font-family: var(--font-display); font-size: 52px; font-weight: 900; color: var(--grey-5); line-height: 1; margin-bottom: 14px; }
+  .phase-title  { font-size: 17px; font-weight: bold; color: var(--ink); margin-bottom: 6px; }
+  .phase-period { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); margin-bottom: 18px; }
+  .phase-items  { list-style: none; }
+  .phase-items li { font-size: 14px; color: var(--ink-mid); padding: 8px 0; border-bottom: 1px solid var(--grey-5); line-height: 1.5; }
+  .phase-items li:last-child { border-bottom: none; }
+  .phase-items li::before { content: '— '; color: var(--ink-soft); }
+
+  .rm-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--grey-5); border: 1px solid var(--grey-5); }
+  .rm-cell   { background: var(--white); padding: 32px; }
+  .rm-cell-label { font-size: 11px; letter-spacing: 3px; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 12px; }
+  .rm-cell-big   { font-size: 22px; font-weight: bold; color: var(--ink); margin-bottom: 6px; }
+  .rm-cell-sub   { font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+
+  /* ═══════════════════════════════════════════════════
+     07  ABOUT  (dark)
+  ═══════════════════════════════════════════════════ */
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; }
+  .about-name  { font-family: var(--font-display); font-size: 44px; font-weight: 900; color: var(--white); line-height: 1.05; margin-bottom: 6px; }
+  .about-role  { font-size: 12px; letter-spacing: 2px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 28px; }
+  .about-text  { font-size: 15px; color: var(--grey-4); line-height: 1.8; margin-bottom: 24px; }
+  .about-links { display: flex; flex-direction: column; gap: 8px; }
+  .about-link  { font-family: var(--font-mono); font-size: 13px; color: var(--grey-3); text-decoration: none; transition: color .2s; }
+  .about-link:hover { color: var(--white); }
+  .about-stats { display: flex; flex-direction: column; gap: 1px; background: var(--grey-2); border: 1px solid var(--grey-2); align-self: start; }
+  .astat  { background: var(--dark); padding: 20px 28px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .astat-lbl { font-size: 11px; letter-spacing: 1px; color: var(--grey-3); text-transform: uppercase; white-space: nowrap; }
+  .astat-val { font-size: 14px; font-weight: bold; color: var(--white); text-align: right; }
+
+  /* ═══════════════════════════════════════════════════
+     08  CONTACT  (light)
+  ═══════════════════════════════════════════════════ */
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; }
+  .contact-col h3 {
+    font-size: 11px; letter-spacing: 3px; color: var(--ink-soft);
+    text-transform: uppercase; margin-bottom: 20px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--grey-5);
+  }
+  .c-item { padding: 14px 0; border-bottom: 1px solid var(--grey-5); display: flex; flex-direction: column; gap: 4px; }
+  .c-item:last-child { border-bottom: none; }
+  .c-lbl  { font-size: 11px; letter-spacing: 2px; color: var(--ink-soft); text-transform: uppercase; }
+  .c-val  { font-family: var(--font-mono); font-size: 14px; color: var(--ink); text-decoration: none; }
+  .c-val:hover { color: var(--ink-soft); }
+  .partner-note {
+    background: var(--white); border: 1px solid var(--grey-5); padding: 32px; margin-top: 40px;
+    font-size: 14px; color: var(--ink-mid); line-height: 1.75;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--dark); border-top: 1px solid var(--grey-2);
+    padding: 28px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .footer-l { font-size: 12px; color: var(--grey-3); line-height: 1.6; }
+  .footer-r { font-family: var(--font-mono); font-size: 12px; color: var(--grey-3); }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:768px){
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .hero-inner { padding: 40px 20px; }
+    .hero-title { letter-spacing: -1px; }
+    .inner { padding: 0 20px; }
+    .section-wrap { padding: 72px 0; }
+    .prob-grid,.stats-row,.params-grid,.entropy-grid,
+    .layers-grid,.pilot-grid,.phases,.rm-bottom,
+    .about-grid,.contact-grid { grid-template-columns: 1fr; }
+    .pipeline { grid-template-columns: 1fr; }
+    .pipe-arrow { transform: rotate(90deg); }
+    footer { flex-direction: column; text-align: center; padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#hero" class="nav-logo">ATRC</a>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#ci">Methodology</a></li>
+    <li><a href="#acap">ACAP</a></li>
+    <li><a href="#research">Research</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- ═══ 01 HERO (dark) ═══ -->
+<div id="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Architectura Temporis Research Centre · Herceg Novi, Montenegro · Est. 2024</p>
+    <h1 class="hero-title">
+      MEASURING<br>
+      <span class="dim">THE VALUE</span><br>
+      OF TIME
+    </h1>
+    <div class="hero-rule"></div>
+    <p class="hero-sub">We develop reproducible quantitative tools for assessing the temporal quality of historic environments — and integrating these tools into international heritage management practice.</p>
+    <div class="hero-formula">CI = (PI/25 × 0.40) + (AD × 0.35) + (II/100 × 0.25)</div>
+    <div class="hero-kpis">
+      <div><div class="kpi-label">Pilot result</div><div class="kpi-value">CI = 0.828</div></div>
+      <div><div class="kpi-label">Object</div><div class="kpi-value">Casa Zamprogno · 1971 · T+54</div></div>
+      <div><div class="kpi-label">Conference</div><div class="kpi-value">EAAE Cagliari 2026 · Abstract #42</div></div>
+      <div><div class="kpi-label">UNESCO partnership</div><div class="kpi-value">In progress · Kotor buffer zone</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 02 PROBLEM (light) ═══ -->
+<section id="problem" class="light-section">
+  <div class="inner section-wrap">
+    <div class="sec-hdr"><span class="sec-num">01</span><span class="sec-label">The Problem</span></div>
+
+    <div class="prob-grid">
+      <div class="prob-cell">
+        <div class="prob-cell-label">The global gap</div>
+        <div class="prob-cell-text">Step 4 of the UNESCO Historic Urban Landscape methodology (2011) — integrating heritage values into real planning — is officially the least implemented step globally. No standardised quantitative protocol exists for executing it in any jurisdiction.</div>
+      </div>
+      <div class="prob-cell">
+        <div class="prob-cell-label">The Montenegro crisis</div>
+        <div class="prob-cell-text">New regulations require every project in UNESCO-protected zones to receive a formal heritage assessment. Certified specialists are critically scarce. Hundreds of projects are frozen. Investors lose money on loan interest. Political pressure to exit UNESCO protection status is growing.</div>
+      </div>
+      <div class="prob-cell">
+        <div class="prob-cell-label">The language gap</div>
+        <div class="prob-cell-text">Investors, designers, and regulators operate without a shared operational language. Conflict reproduces itself wherever there is no measurable criterion — and expert opinion alone cannot be verified, compared, or defended in a regulatory context.</div>
+      </div>
+      <div class="prob-cell">
+        <div class="prob-cell-label">The demographic wave</div>
+        <div class="prob-cell-text">Post-war architecture of the 1950s–70s is passing to third-generation owners without documented knowledge of its value. Tobia Scarpa, 91, is one of the last living masters of that era. Every year without a Chrono-Passport is a year of irreversible knowledge loss.</div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-cell">
+        <div class="stat-num">99%</div>
+        <div class="stat-cap">of a building's real life<br>remains undesigned</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">Step 4</div>
+        <div class="stat-cap">HUL — least implemented<br>step in global practice</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">25</div>
+        <div class="stat-cap">standardised intervention types<br>in AT Impact Matrix v1.0</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 03 CI METHODOLOGY (dark) ═══ -->
+<section id="ci" class="dark-section">
+  <div class="inner section-wrap">
+    <div class="sec-hdr"><span class="sec-num">02</span><span class="sec-label">Methodology — Chronity Index</span></div>
+
+    <div class="ci-big">0.828</div>
+    <p class="ci-caption">Casa Zamprogno · Tobia Scarpa · 1971 · 54 years later · The building did not age. It ripened.</p>
+
+    <div class="formula-box">
+      <div class="formula-label">Chronity Index — CI v5.0</div>
+      <div class="formula-eq">
+        CI = (PI/25 × 0.40) + (AD × 0.35) + (II/100 × 0.25)<br>
+        PI_raw = A1×1.0 + PMI×2.0 + VQI×1.5 + B2×1.5 + C1×0.75 + C2×0.75<br>
+        ΔCI = CI_zone(after) − CI_zone(before)
+      </div>
+    </div>
+
+    <div class="params-grid">
+      <div class="param-cell">
+        <div class="param-code">PI</div>
+        <div class="param-name">Perceptual Index</div>
+        <div class="param-desc">Sensory quality: acoustics, patina maturity (PMI), visual quality, light scenario, tactility, olfactory profile. Six parameters with differentiated weights. Protocol: Appendix J.</div>
+        <div class="param-w">× 0.40</div>
+      </div>
+      <div class="param-cell">
+        <div class="param-code">AD</div>
+        <div class="param-name">Authenticity Density</div>
+        <div class="param-desc">Proportion of authentic Type A and B materials in the visual field. Quantified from project documentation, historical photographs, and CV-based surface analysis.</div>
+        <div class="param-w">× 0.35</div>
+      </div>
+      <div class="param-cell">
+        <div class="param-code">II</div>
+        <div class="param-name">Integrity Index</div>
+        <div class="param-desc">Degree of preservation of the historic planning structure. Calculated via GIS overlay of current cadastral data against historical stratigraphic layers.</div>
+        <div class="param-w">× 0.25</div>
+      </div>
+    </div>
+
+    <div class="formula-label" style="margin-bottom:14px;">Material classification — AT Entropy Scale</div>
+    <div class="entropy-grid">
+      <div class="ent-cell">
+        <div class="ent-type">A</div>
+        <div class="ent-label-a">Patinating natural</div>
+        <div class="ent-desc">Stone, timber, Corten steel, bare concrete with marble aggregate. Value grows with time.</div>
+      </div>
+      <div class="ent-cell">
+        <div class="ent-type">B</div>
+        <div class="ent-label-b">Ageing industrial</div>
+        <div class="ent-desc">Patinated metals, fired brick, terracotta. Age with dignity over decades.</div>
+      </div>
+      <div class="ent-cell">
+        <div class="ent-type">C</div>
+        <div class="ent-label-c">Standard modern</div>
+        <div class="ent-desc">Painted renders, standard glazing, galvanised steel. Neutral temporal trajectory.</div>
+      </div>
+      <div class="ent-cell">
+        <div class="ent-type">D</div>
+        <div class="ent-label-d">Synthetic substitute</div>
+        <div class="ent-desc">PVC, composite panels, synthetic renders. Peak value at T₀; degrades aesthetically with time.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 04 ACAP (light) ═══ -->
+<section id="acap" class="light-section">
+  <div class="inner section-wrap">
+    <div class="sec-hdr"><span class="sec-num">03</span><span class="sec-label">ACAP — AI Chronity Assessment Platform</span></div>
+
+    <p style="font-size:18px; color:var(--ink-mid); max-width:680px; line-height:1.75; margin-bottom:48px;">
+      ACAP automates the calculation of CI by combining three AI components into a single end-to-end pipeline — from field photographs to a structured PDF assessment report.
+    </p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <span class="pipe-icon">📸</span>
+        <div class="pipe-lbl">Input</div>
+        <div class="pipe-name">Field photos + measurements</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <span class="pipe-icon">👁</span>
+        <div class="pipe-lbl">Computer Vision</div>
+        <div class="pipe-name">SAM 2 + CLIP</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <span class="pipe-icon">🗺</span>
+        <div class="pipe-lbl">GIS Analysis</div>
+        <div class="pipe-name">PostGIS + GeoPandas</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <span class="pipe-icon">📄</span>
+        <div class="pipe-lbl">LLM Report</div>
+        <div class="pipe-name">PDF + ΔCI verdict</div>
+      </div>
+    </div>
+
+    <div class="layers-grid">
+      <div class="layer-cell">
+        <div class="layer-tag">Layer 01</div>
+        <div class="layer-title">Computer Vision<br>«The Visual Eye»</div>
+        <div class="layer-tech">SAM 2 (Meta) + CLIP (OpenAI) — fine-tuned on AT dataset</div>
+        <div class="layer-desc">Segments facade surfaces. Classifies materials by AT entropy type (A/B/C/D). Detects visual pollution — AC units, PVC windows, signage. Compares current state against archival photographs to compute Authenticity Density (AD).</div>
+      </div>
+      <div class="layer-cell">
+        <div class="layer-tag">Layer 02</div>
+        <div class="layer-title">GIS Integration<br>«The Time Map»</div>
+        <div class="layer-tech">QGIS + PostGIS + Python (GeoPandas)</div>
+        <div class="layer-desc">Overlays current cadastral data against digitised historical stratigraphic layers. Computes Integrity Index (II) automatically. Checks UNESCO and national heritage registries for Cultural Significance Multiplier (CSM).</div>
+      </div>
+      <div class="layer-cell">
+        <div class="layer-tag">Layer 03</div>
+        <div class="layer-title">Language Model<br>«The Expert Voice»</div>
+        <div class="layer-tech">LLM — Claude / GPT-4 / Mistral — structured prompt design</div>
+        <div class="layer-desc">Synthesises CV and GIS outputs with researcher's field measurements. Generates structured justification for each CI parameter. Calculates ΔCI for proposed interventions and issues TIA verdict. Human verification mandatory before report issuance.</div>
+      </div>
+    </div>
+
+    <div class="tia-card">
+      <div class="tia-title-txt">Temporis Impact Assessment (TIA) — direct realisation of HUL Step 4</div>
+      <div class="tia-formula">ΔCI = CI_zone(after) − CI_zone(before)</div>
+      <div class="tia-rules">
+        If ΔCI ≥ 0 — intervention is admissible.<br>
+        If −0.05 ≤ ΔCI &lt; 0 — minor reduction; material correction required.<br>
+        If ΔCI &lt; −0.05 — significant reduction; concept requires revision.<br>
+        25 standardised intervention types · AT Impact Matrix v1.0 · ATRC 2026
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 05 RESEARCH (dark) ═══ -->
+<section id="research" class="dark-section">
+  <div class="inner section-wrap">
+    <div class="sec-hdr"><span class="sec-num">04</span><span class="sec-label">Field Research</span></div>
+
+    <div class="pilot-grid">
+      <div class="pilot-result">
+        <div class="pilot-num">0.828</div>
+        <div class="pilot-lbl">Chronity Index · Casa Zamprogno · T+54</div>
+        <div class="pilot-quote">«The building did not age. It ripened.»<br><br>Tobia Scarpa designed for the life cycle, not for opening day. The choice of concrete with marble aggregate, calibrated cantilever overhangs, and Corten steel — all decisions at T₀ that produced deep temporal quality 54 years later.</div>
+      </div>
+      <div class="pilot-rows">
+        <div class="pilot-row"><div class="pilot-rlbl">Object</div><div class="pilot-rval">Villa Casa Zamprogno, Montebelluna, Italy</div></div>
+        <div class="pilot-row"><div class="pilot-rlbl">Architects</div><div class="pilot-rval">Afra and Tobia Scarpa, 1971</div></div>
+        <div class="pilot-row"><div class="pilot-rlbl">Field study</div><div class="pilot-rval">ATRC 2025 · Protocol Appendix J</div></div>
+        <div class="pilot-row"><div class="pilot-rlbl">PI / 25</div><div class="pilot-rval">19.33 (PMI=5, VQI=4, B2=4, A1=4)</div></div>
+        <div class="pilot-row"><div class="pilot-rlbl">AD</div><div class="pilot-rval">0.84 — Type A surfaces dominant</div></div>
+        <div class="pilot-row"><div class="pilot-rlbl">II</div><div class="pilot-rval">90 / 100 — planning integrity intact</div></div>
+        <div class="pilot-row"><div class="pilot-rlbl">Reliability</div><div class="pilot-rval">PI_verified (A1 instrumentally measured)</div></div>
+      </div>
+    </div>
+
+    <div class="pilot-note">
+      <div class="pilot-note-title">Pilot study — Herceg Novi · Kotor World Heritage buffer zone</div>
+      <div class="pilot-note-text">Montenegro represents the optimal scale for the first ACAP pilot. Kotor has been a UNESCO World Heritage Site since 1979. Its buffer zone faces increasing investment and tourism pressure. Three of seven planned CI_zone measurement points have been completed (field work 2025). A partnership with the UNESCO World Heritage Centre for full TIA verification in the Kotor buffer zone is currently under discussion.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 06 ROADMAP (light) ═══ -->
+<section id="roadmap" class="light-section">
+  <div class="inner section-wrap">
+    <div class="sec-hdr"><span class="sec-num">05</span><span class="sec-label">Roadmap — 36 months</span></div>
+
+    <div class="phases">
+      <div class="phase">
+        <div class="phase-num">01</div>
+        <div class="phase-title">Validation & Dataset</div>
+        <div class="phase-period">Months 1–12 · TRL 2 → 3</div>
+        <ul class="phase-items">
+          <li>Complete CI_zone measurements in Herceg Novi (7 points)</li>
+          <li>Inter-expert reliability test (ICC ≥ 0.75)</li>
+          <li>Digitise Ilyanic stratigraphic layers in QGIS</li>
+          <li>Build structured photo dataset (500+ images, 10–15 objects)</li>
+          <li>Register ATRC NGO; file grant applications</li>
+          <li>Patent consultation · Architectura Temporis™ trademark</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="phase-num">02</div>
+        <div class="phase-title">AI Prototype</div>
+        <div class="phase-period">Months 12–24 · TRL 3 → 5</div>
+        <ul class="phase-items">
+          <li>LLM prototype: manual input → PDF report (Month 12–13)</li>
+          <li>Annotate 500 photos; fine-tune SAM 2 + CLIP on AT dataset</li>
+          <li>Integrate CV + GIS pipeline</li>
+          <li>First end-to-end test: photo → CI report (Month 17–20)</li>
+          <li>Field validation on Herceg Novi and Kotor objects</li>
+          <li>Academic publication of verification results</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="phase-num">03</div>
+        <div class="phase-title">Scale</div>
+        <div class="phase-period">Months 24–36 · TRL 5 → 7</div>
+        <ul class="phase-items">
+          <li>Domain adaptation: Croatia, Greece, Italy, Portugal</li>
+          <li>API for permit-issuing system integration</li>
+          <li>SaaS subscription model for architects and bureaux</li>
+          <li>Pilot contracts with 2–3 municipalities</li>
+          <li>AT researcher certification programme</li>
+          <li>UNESCO HUL Step 4 institutional recognition</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rm-bottom">
+      <div class="rm-cell">
+        <div class="rm-cell-label">Total programme budget (preliminary)</div>
+        <div class="rm-cell-big">€ 280 000 – 790 000</div>
+        <div class="rm-cell-sub">Horizon Europe · SNF · UNESCO/ICOMOS · National funds<br>Figures subject to revision after partner negotiations</div>
+      </div>
+      <div class="rm-cell">
+        <div class="rm-cell-label">Academic validation</div>
+        <div class="rm-cell-big">EAAE Cagliari · August 2026</div>
+        <div class="rm-cell-sub">Session UN-Build · Abstract #42 accepted without revisions<br>Paper: «Time as the Right Measure»</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 07 ABOUT (dark) ═══ -->
+<section id="about" class="dark-section">
+  <div class="inner section-wrap">
+    <div class="sec-hdr"><span class="sec-num">06</span><span class="sec-label">About ATRC</span></div>
+
+    <div class="about-grid">
+      <div>
+        <div class="about-name">Sergei<br>Tatarnikov</div>
+        <div class="about-role">Founder · Principal Researcher · ATRC</div>
+        <p class="about-text">Architect and independent researcher based in Herceg Novi, Montenegro. Founded Architectura Temporis Research Centre in autumn 2024 to develop the first reproducible quantitative methodology for measuring temporal quality in historic environments.</p>
+        <p class="about-text">The AT methodology extends the classical Vitruvian triad (Firmitas, Utilitas, Venustas) with a fourth pillar: Tempus. Time is not a threat to architecture. It is a building material that requires its own design language, tools, and documentation.</p>
+        <div class="about-links">
+          <a href="mailto:xtarkdesign@gmail.com" class="about-link">xtarkdesign@gmail.com</a>
+          <a href="https://orcid.org/0009-0004-4519-8572" class="about-link" target="_blank">ORCID 0009-0004-4519-8572</a>
+        </div>
+      </div>
+      <div class="about-stats">
+        <div class="astat"><span class="astat-lbl">Founded</span><span class="astat-val">Autumn 2024</span></div>
+        <div class="astat"><span class="astat-lbl">Methodology</span><span class="astat-val">AT v5.0 · CI v5.0 · TIA v2.0</span></div>
+        <div class="astat"><span class="astat-lbl">Intervention types</span><span class="astat-val">25 (Impact Matrix v1.0)</span></div>
+        <div class="astat"><span class="astat-lbl">Pilot objects</span><span class="astat-val">Herceg Novi · Kotor · Casa Zamprogno</span></div>
+        <div class="astat"><span class="astat-lbl">Publications</span><span class="astat-val">arq · TAD · Built Heritage</span></div>
+        <div class="astat"><span class="astat-lbl">UNESCO package</span><span class="astat-val">Submitted via Ambassador Ponorac</span></div>
+        <div class="astat"><span class="astat-lbl">Legal status</span><span class="astat-val">NGO registration in progress</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 08 CONTACT (light) ═══ -->
+<section id="contact" class="light-section">
+  <div class="inner section-wrap">
+    <div class="sec-hdr"><span class="sec-num">07</span><span class="sec-label">Contact & Partnership</span></div>
+
+    <div class="contact-grid">
+      <div class="contact-col">
+        <h3>Direct contact</h3>
+        <div class="c-item"><div class="c-lbl">Email</div><a href="mailto:xtarkdesign@gmail.com" class="c-val">xtarkdesign@gmail.com</a></div>
+        <div class="c-item"><div class="c-lbl">ORCID</div><a href="https://orcid.org/0009-0004-4519-8572" class="c-val" target="_blank">0009-0004-4519-8572</a></div>
+        <div class="c-item"><div class="c-lbl">Location</div><span class="c-val">Herceg Novi, Montenegro</span></div>
+        <div class="c-item"><div class="c-lbl">Conference</div><span class="c-val">EAAE Cagliari · 26–29 Aug 2026</span></div>
+      </div>
+      <div class="contact-col">
+        <h3>Partnership opportunities</h3>
+        <div class="c-item"><div class="c-lbl">Academic</div><span class="c-val">Research collaboration · Horizon Europe consortium</span></div>
+        <div class="c-item"><div class="c-lbl">Technical</div><span class="c-val">ML engineering · GIS analysis · ACAP development</span></div>
+        <div class="c-item"><div class="c-lbl">Institutional</div><span class="c-val">Heritage authorities · Municipalities · UNESCO/ICOMOS</span></div>
+        <div class="c-item"><div class="c-lbl">Pilot sites</div><span class="c-val">Historical zones seeking CI_zone verification</span></div>
+      </div>
+    </div>
+
+    <div class="partner-note">
+      ATRC is not requesting funding at this stage — we are seeking institutional partnership for pilot verification of TIA methodology at a specific World Heritage property. The full operational package (TIA Protocol, AT Impact Matrix v1.0, Appendix J field protocol) is available to verified partners under NDA. Detailed methodology documentation available upon request.
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-l">
+    Architectura Temporis Research Centre (ATRC) · Herceg Novi, Montenegro · Est. 2024<br>
+    Architectura Temporis™ — all methodological content protected
+  </div>
+  <div class="footer-r">CI = (PI/25 × 0.40) + (AD × 0.35) + (II/100 × 0.25)</div>
+</footer>
+
+</body>
+</html>
