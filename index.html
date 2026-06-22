@@ -228,6 +228,12 @@
   .pilot-rlbl  { font-size: 11px; letter-spacing: 2px; color: var(--grey-3); text-transform: uppercase; min-width: 110px; padding-top: 1px; }
   .pilot-rval  { font-size: 14px; color: var(--white); }
   .pilot-note  { background: var(--grey-1); border: 1px solid var(--grey-2); padding: 36px; }
+
+  /* ATU section */
+  .atu-card { background: var(--grey-1); padding: 28px 28px 32px; }
+  .atu-num  { font-size: 10px; letter-spacing: 3px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 10px; }
+  .atu-title { font-size: 15px; font-weight: 600; color: var(--white); margin-bottom: 12px; letter-spacing: 0.3px; }
+  .atu-text  { font-size: 13px; color: var(--grey-4); line-height: 1.75; }
   .pilot-note-title { font-size: 11px; letter-spacing: 3px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 14px; }
   .pilot-note-text  { font-size: 15px; color: var(--grey-4); line-height: 1.75; max-width: 800px; }
 
@@ -305,7 +311,7 @@
     .section-wrap { padding: 72px 0; }
     .prob-grid,.stats-row,.params-grid,.entropy-grid,
     .layers-grid,.pilot-grid,.phases,.rm-bottom,
-    .about-grid,.contact-grid { grid-template-columns: 1fr; }
+    .about-grid,.contact-grid,.atu-grid { grid-template-columns: 1fr; }
     .pipeline { grid-template-columns: 1fr; }
     .pipe-arrow { transform: rotate(90deg); }
     .pipe-tooltip { left: 0; transform: none; width: 100%; }
@@ -332,6 +338,7 @@
     <li><a href="#ci">Methodology</a></li>
     <li><a href="#acap">ACAP</a></li>
     <li><a href="#research">Research</a></li>
+    <li><a href="#atu">ATU</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
@@ -621,6 +628,152 @@
     </div>
   </div>
 </section>
+
+<!-- ═══ ATU — ARCHITECTURA TEMPORIS URBANISM (dark) ═══ -->
+<section id="atu" class="dark-section">
+  <div class="inner section-wrap">
+    <div class="sec-hdr"><span class="sec-num">ATU</span><span class="sec-label">Architectura Temporis Urbanism</span></div>
+
+    <div style="max-width:800px;margin-bottom:56px;">
+      <p style="font-size:20px;line-height:1.7;color:var(--grey-4);margin-bottom:24px;">
+        ATU is a design doctrine derived from the AT methodology — a framework for developing territory without severing its temporal continuity. Where the Chronity Index measures the temporal quality of existing environments, ATU translates that intelligence into the act of design.
+      </p>
+      <div style="border-left:2px solid var(--grey-2);padding-left:24px;margin-top:32px;">
+        <p style="font-size:13px;line-height:1.9;color:var(--grey-3);font-style:italic;">
+          The twentieth century treated the city as a machine.<br>
+          The twenty-first century increasingly treats it as an ecosystem.<br>
+          Architectura Temporis Urbanism proposes treating the city as a temporal continuum — a living process in which past, present and future coexist simultaneously.
+        </p>
+      </div>
+    </div>
+
+    <!-- Positioning table -->
+    <div style="margin-bottom:64px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--grey-2);">
+            <th style="text-align:left;padding:10px 16px 10px 0;font-size:10px;letter-spacing:2px;color:var(--grey-3);text-transform:uppercase;font-weight:400;">Theory</th>
+            <th style="text-align:left;padding:10px 0;font-size:10px;letter-spacing:2px;color:var(--grey-3);text-transform:uppercase;font-weight:400;">Central question</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--grey-1);">
+            <td style="padding:12px 16px 12px 0;color:var(--grey-4);">New Urbanism</td>
+            <td style="padding:12px 0;color:var(--grey-4);">What should a good city look like?</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--grey-1);">
+            <td style="padding:12px 16px 12px 0;color:var(--grey-4);">Landscape Urbanism</td>
+            <td style="padding:12px 0;color:var(--grey-4);">How to integrate nature into the city?</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--grey-1);">
+            <td style="padding:12px 16px 12px 0;color:var(--grey-4);">Genius Loci</td>
+            <td style="padding:12px 0;color:var(--grey-4);">What is the spirit of place?</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--grey-1);">
+            <td style="padding:12px 16px 12px 0;color:var(--grey-4);">Smart City</td>
+            <td style="padding:12px 0;color:var(--grey-4);">How to deploy technology in urban environments?</td>
+          </tr>
+          <tr>
+            <td style="padding:14px 16px 14px 0;color:var(--white);font-weight:500;">Architectura Temporis Urbanism</td>
+            <td style="padding:14px 0;color:var(--white);font-weight:500;">How to develop territory without severing its temporal continuity?</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 14 Principles -->
+    <div style="font-size:10px;letter-spacing:3px;color:var(--grey-3);text-transform:uppercase;margin-bottom:32px;">Fourteen Principles</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:16px;" class="atu-grid">
+
+      <div class="atu-card">
+        <div class="atu-num">I</div>
+        <div class="atu-title">Temporal Continuity</div>
+        <div class="atu-text">Every project is a continuation of the place's history — neither its imitation nor its negation. The question is not "does this resemble the old city?" but "does this continue the territory's story?"</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">II</div>
+        <div class="atu-title">Landscape Primacy</div>
+        <div class="atu-text">Landscape precedes architecture. Topography, climate, water, vegetation and view axes determine the structure of the city — not the other way around. Architecture is embedded in the landscape, not imposed upon it.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">III</div>
+        <div class="atu-title">Layered Identity</div>
+        <div class="atu-text">The identity of a place is formed by several historical layers simultaneously. No single layer is the only valid one — all are equally real and equally valuable. The designer's task is to read these layers and make the new intervention the next one, not the first.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">IV</div>
+        <div class="atu-title">Spatial Memory</div>
+        <div class="atu-text">Significant elements of place memory — old roads, stone walls, terraces, water sources, view axes, historical routes — must be preserved or reinterpreted. They become the armature of the project. Not the other way around.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">V</div>
+        <div class="atu-title">Cultural Resonance</div>
+        <div class="atu-text">The new environment must resonate with local culture — not copy its forms, but extract its principles. Not "a Montenegrin facade" but "a Montenegrin code": stone plinth, deep shadow, loggias, handling of slope, natural stone. Contemporary architecture — but recognisably belonging to this place.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">VI</div>
+        <div class="atu-title">Local Material Logic</div>
+        <div class="atu-text">Materials are chosen not only by cost and technical specification — but by cultural connection to place. Local stone, timber, terracotta carry temporal memory that imported synthetic materials cannot reproduce.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">VII</div>
+        <div class="atu-title">Human Scale</div>
+        <div class="atu-text">Human scale is mandatory regardless of density. Blocks of 300–500 m, everything necessary within 5–10 minutes on foot, active ground floors, a network of streets rather than highways. This is not an architectural style — it is spatial logic.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">VIII</div>
+        <div class="atu-title">Street over Building</div>
+        <div class="atu-text">Streets, squares, boulevards and parks are designed first — buildings second. This is how Mediterranean cities were built for centuries. Outstanding urban space matters more than outstanding individual objects.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">IX</div>
+        <div class="atu-title">Incremental Growth</div>
+        <div class="atu-text">The city must develop in phases, not be built as a finished object. Each phase must be self-sufficient and viable independent of the next. Incompleteness is not a defect — it is the normal condition of a living city.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">X</div>
+        <div class="atu-title">Future Heritage</div>
+        <div class="atu-text">Every project must ask: what of what is created today will be considered heritage in 100 years? Material choice, spatial logic, detail — all must pass through this filter. Chronity does not arise by itself — it is designed.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">XI</div>
+        <div class="atu-title">Authentic Continuity</div>
+        <div class="atu-text">Not imitation of history — continuation of history. The difference is fundamental: imitation creates scenery, continuation creates the next layer of genuine environment. A new building in a historic context should not pretend to be old — it must be honest but belonging to the place.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">XII</div>
+        <div class="atu-title">Social Memory</div>
+        <div class="atu-text">Memory is stored not only in stone — it is stored in habits, routes, markets, festivals and public life. Designing street naming, local festivals, community gardens and cultural itineraries from day one is not marketing — it is creating memory in advance.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">XIII</div>
+        <div class="atu-title">Adaptive Evolution</div>
+        <div class="atu-text">The city must not be a finished work. It must be capable of changing, being added to and reinterpreted by each succeeding generation. Excessive regulation kills natural development just as its complete absence does.</div>
+      </div>
+
+      <div class="atu-card">
+        <div class="atu-num">XIV</div>
+        <div class="atu-title">Belonging</div>
+        <div class="atu-text">The primary measure of environmental quality is not beauty, density or property value — but the capacity for people to say: "This is my place." People do not buy architecture. They buy the sense of belonging. Architecture is merely the instrument for creating it.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
 
 <!-- ═══ 06 ROADMAP (light) ═══ -->
 <section id="roadmap" class="light-section">
