@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chrono-Passport · Casa Zamprogno · ATRC</title>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --grey-3: #888;
+      --grey-4: #bbb;
+      --white: #fff;
+      --font-sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f5f5f3;
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .top-bar {
+      width: 100%;
+      background: #1a1a1a;
+      padding: 16px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .top-bar-logo {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: #888;
+      text-transform: uppercase;
+    }
+    .top-bar-title {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #bbb;
+      text-transform: uppercase;
+    }
+    .back-link {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #888;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: #fff; }
+    .passport-wrap {
+      width: 100%;
+      max-width: 860px;
+      padding: 48px 24px 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .passport-meta {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 24px;
+    }
+    .passport-meta-left {
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      color: #888;
+      text-transform: uppercase;
+    }
+    .passport-meta-right {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #888;
+      text-transform: uppercase;
+    }
+    .svg-container {
+      width: 100%;
+      background: #fff;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.12);
+    }
+    .svg-container svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .download-row {
+      margin-top: 32px;
+      display: flex;
+      gap: 16px;
+    }
+    .btn {
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      padding: 12px 28px;
+      text-decoration: none;
+      border: 1px solid #1a1a1a;
+      color: #1a1a1a;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn:hover { background: #1a1a1a; color: #fff; }
+    @media (max-width: 600px) {
+      .top-bar { padding: 14px 20px; }
+      .top-bar-title { display: none; }
+      .passport-wrap { padding: 32px 16px 48px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <span class="top-bar-logo">ATRC · Architectura Temporis Research Centre</span>
+  <span class="top-bar-title">Chrono-Passport · Casa Zamprogno</span>
+  <a href="index.html" class="back-link">← Back</a>
+</div>
+
+<div class="passport-wrap">
+  <div class="passport-meta">
+    <span class="passport-meta-left">Villa Casa Zamprogno · Montebelluna, Veneto · Afra &amp; Tobia Scarpa · 1971</span>
+    <span class="passport-meta-right">CI = 0.828 · T+55 · First issue 2026</span>
+  </div>
+
+  <div class="svg-container">
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 596.28 842.89">
+  <defs>
+    <style>
+      .cls-1 {
+        letter-spacing: .09em;
+      }
+
+      .cls-2 {
+        letter-spacing: .05em;
+      }
+
+      .cls-3 {
+        letter-spacing: .07em;
+      }
+
+      .cls-4 {
+        letter-spacing: .03em;
+      }
+
+      .cls-5 {
+        letter-spacing: -.06em;
+      }
+
+      .cls-6 {
+        letter-spacing: -.03em;
+      }
+
+      .cls-7 {
+        font-family: ArialNarrow-Italic, Arial;
+        font-size: 6.99px;
+      }
+
+      .cls-7, .cls-8, .cls-9, .cls-10, .cls-11, .cls-12 {
+        font-style: italic;
+      }
+
+      .cls-13 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-14 {
+        letter-spacing: -.04em;
+      }
+
+      .cls-15 {
+        stroke-width: .7px;
+      }
+
+      .cls-15, .cls-16, .cls-17, .cls-18, .cls-19, .cls-20, .cls-21, .cls-22, .cls-23 {
+        stroke: #ddd;
+      }
+
+      .cls-15, .cls-19, .cls-24, .cls-22 {
+        fill: #f5f5f0;
+      }
+
+      .cls-25 {
+        fill: #b5b5b5;
+      }
+
+      .cls-25, .cls-26, .cls-27, .cls-28, .cls-29, .cls-30, .cls-31, .cls-32, .cls-33, .cls-34, .cls-35, .cls-36, .cls-8, .cls-37, .cls-9, .cls-38, .cls-39, .cls-40, .cls-41, .cls-42, .cls-43, .cls-44, .cls-45, .cls-46, .cls-47, .cls-48, .cls-49, .cls-50, .cls-51, .cls-10, .cls-52, .cls-53, .cls-54, .cls-55, .cls-11, .cls-56, .cls-57, .cls-58, .cls-59, .cls-60, .cls-61, .cls-62, .cls-63, .cls-12, .cls-64, .cls-65 {
+        isolation: isolate;
+      }
+
+      .cls-25, .cls-26, .cls-27, .cls-28, .cls-29, .cls-32, .cls-33, .cls-38, .cls-40, .cls-43, .cls-44, .cls-47, .cls-48, .cls-50, .cls-52, .cls-54, .cls-55, .cls-57, .cls-59, .cls-63 {
+        font-family: ArialMT, Arial;
+      }
+
+      .cls-25, .cls-27, .cls-29, .cls-32, .cls-35, .cls-38, .cls-42, .cls-43, .cls-47, .cls-48, .cls-10, .cls-54, .cls-55, .cls-56, .cls-57, .cls-61 {
+        font-size: 6.43px;
+      }
+
+      .cls-66 {
+        letter-spacing: .11em;
+      }
+
+      .cls-26 {
+        fill: #5a5b5b;
+      }
+
+      .cls-26, .cls-34, .cls-9, .cls-50, .cls-52, .cls-59, .cls-63 {
+        font-size: 5.72px;
+      }
+
+      .cls-27 {
+        fill: #777;
+      }
+
+      .cls-67, .cls-16, .cls-17, .cls-18, .cls-68, .cls-69, .cls-70, .cls-71, .cls-21, .cls-72, .cls-73 {
+        fill: none;
+      }
+
+      .cls-67, .cls-70 {
+        stroke: #eee;
+      }
+
+      .cls-67, .cls-21 {
+        stroke-width: .7px;
+      }
+
+      .cls-28 {
+        fill: #e3e4e5;
+      }
+
+      .cls-28, .cls-44 {
+        font-size: 5.59px;
+      }
+
+      .cls-29 {
+        fill: #494949;
+      }
+
+      .cls-16 {
+        stroke-width: .73px;
+      }
+
+      .cls-74 {
+        letter-spacing: -.06em;
+      }
+
+      .cls-75 {
+        letter-spacing: 0em;
+      }
+
+      .cls-30 {
+        font-size: 18.58px;
+        letter-spacing: -.02em;
+      }
+
+      .cls-30, .cls-31, .cls-34, .cls-35, .cls-36, .cls-37, .cls-39, .cls-41, .cls-42, .cls-45, .cls-46, .cls-53, .cls-56, .cls-58, .cls-60, .cls-61, .cls-12, .cls-64, .cls-65 {
+        font-weight: 700;
+      }
+
+      .cls-30, .cls-31, .cls-34, .cls-35, .cls-36, .cls-37, .cls-39, .cls-41, .cls-42, .cls-45, .cls-46, .cls-53, .cls-56, .cls-58, .cls-60, .cls-61, .cls-64, .cls-65 {
+        font-family: Arial-BoldMT, Arial;
+      }
+
+      .cls-30, .cls-76, .cls-36, .cls-8, .cls-37, .cls-42, .cls-45, .cls-57, .cls-60, .cls-62 {
+        fill: #fff;
+      }
+
+      .cls-31, .cls-33, .cls-40, .cls-51, .cls-11, .cls-60, .cls-62 {
+        font-size: 7.15px;
+      }
+
+      .cls-31, .cls-43, .cls-56 {
+        fill: #555;
+      }
+
+      .cls-77 {
+        letter-spacing: .11em;
+      }
+
+      .cls-78 {
+        fill: #e2e2e2;
+      }
+
+      .cls-79 {
+        letter-spacing: .09em;
+      }
+
+      .cls-32 {
+        fill: #636363;
+      }
+
+      .cls-76 {
+        stroke: #231f20;
+      }
+
+      .cls-76, .cls-71 {
+        stroke-miterlimit: 10;
+      }
+
+      .cls-80 {
+        letter-spacing: -.04em;
+      }
+
+      .cls-17 {
+        stroke-width: .73px;
+      }
+
+      .cls-33 {
+        fill: #b7b7b7;
+      }
+
+      .cls-34, .cls-39, .cls-81, .cls-41, .cls-12, .cls-64, .cls-82, .cls-65 {
+        fill: #111;
+      }
+
+      .cls-35, .cls-83, .cls-55 {
+        fill: #4a7c5a;
+      }
+
+      .cls-18, .cls-68, .cls-69, .cls-20, .cls-70, .cls-73, .cls-22, .cls-23, .cls-82 {
+        stroke-width: .72px;
+      }
+
+      .cls-84 {
+        letter-spacing: .2em;
+      }
+
+      .cls-85 {
+        letter-spacing: -.11em;
+      }
+
+      .cls-86 {
+        letter-spacing: .17em;
+      }
+
+      .cls-87, .cls-61 {
+        fill: #b05050;
+      }
+
+      .cls-36, .cls-58 {
+        font-size: 13.97px;
+      }
+
+      .cls-88 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-8 {
+        font-size: 11.44px;
+      }
+
+      .cls-8, .cls-9, .cls-10, .cls-11 {
+        font-family: Arial-ItalicMT, Arial;
+      }
+
+      .cls-89 {
+        letter-spacing: -.04em;
+      }
+
+      .cls-37, .cls-41 {
+        font-size: 12.57px;
+      }
+
+      .cls-90 {
+        letter-spacing: 0em;
+      }
+
+      .cls-91 {
+        letter-spacing: -.11em;
+      }
+
+      .cls-92 {
+        letter-spacing: .2em;
+      }
+
+      .cls-93 {
+        fill: #7aaa88;
+      }
+
+      .cls-9 {
+        fill: #848484;
+      }
+
+      .cls-38 {
+        fill: #434444;
+      }
+
+      .cls-39 {
+        font-size: 10.01px;
+      }
+
+      .cls-94 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-40 {
+        fill: #f7f5f5;
+      }
+
+      .cls-95 {
+        letter-spacing: .04em;
+      }
+
+      .cls-96 {
+        letter-spacing: .11em;
+      }
+
+      .cls-97 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-68 {
+        stroke: #ccc;
+      }
+
+      .cls-98 {
+        letter-spacing: .18em;
+      }
+
+      .cls-99 {
+        letter-spacing: -.11em;
+      }
+
+      .cls-100 {
+        letter-spacing: .13em;
+      }
+
+      .cls-101 {
+        letter-spacing: 0em;
+      }
+
+      .cls-102 {
+        letter-spacing: -.04em;
+      }
+
+      .cls-44 {
+        fill: #444;
+      }
+
+      .cls-19 {
+        stroke-width: .73px;
+      }
+
+      .cls-69 {
+        stroke: #c1c1c1;
+      }
+
+      .cls-103 {
+        letter-spacing: -.11em;
+      }
+
+      .cls-45 {
+        font-size: 16.77px;
+      }
+
+      .cls-104 {
+        letter-spacing: .09em;
+      }
+
+      .cls-105 {
+        letter-spacing: -.03em;
+      }
+
+      .cls-20, .cls-106 {
+        fill: #fdf5f5;
+      }
+
+      .cls-46 {
+        letter-spacing: -.05em;
+      }
+
+      .cls-46, .cls-53 {
+        font-size: 12.04px;
+      }
+
+      .cls-46, .cls-53, .cls-58 {
+        fill: #edeeef;
+      }
+
+      .cls-71 {
+        stroke: #898989;
+        stroke-width: .7px;
+      }
+
+      .cls-47 {
+        fill: #cccdce;
+      }
+
+      .cls-48, .cls-63 {
+        fill: #666;
+      }
+
+      .cls-107 {
+        letter-spacing: -.11em;
+      }
+
+      .cls-108 {
+        letter-spacing: .22em;
+      }
+
+      .cls-49 {
+        fill: #383838;
+        font-size: 8.38px;
+      }
+
+      .cls-49, .cls-51, .cls-62 {
+        font-family: CourierNewPSMT, 'Courier New';
+      }
+
+      .cls-109 {
+        letter-spacing: -.09em;
+      }
+
+      .cls-50 {
+        fill: #d8d8d8;
+      }
+
+      .cls-110 {
+        letter-spacing: .22em;
+      }
+
+      .cls-111 {
+        letter-spacing: .04em;
+      }
+
+      .cls-112 {
+        letter-spacing: .11em;
+      }
+
+      .cls-51 {
+        fill: #3d3d3d;
+      }
+
+      .cls-113 {
+        letter-spacing: .1em;
+      }
+
+      .cls-10, .cls-52, .cls-59 {
+        fill: #565656;
+      }
+
+      .cls-114 {
+        letter-spacing: -.06em;
+      }
+
+      .cls-115 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-116 {
+        fill: #afafaf;
+      }
+
+      .cls-54 {
+        fill: #999;
+      }
+
+      .cls-117 {
+        letter-spacing: 0em;
+      }
+
+      .cls-118 {
+        letter-spacing: .11em;
+      }
+
+      .cls-11 {
+        fill: #333;
+      }
+
+      .cls-119 {
+        fill: #c1c1c1;
+      }
+
+      .cls-120 {
+        fill: #515151;
+      }
+
+      .cls-121 {
+        letter-spacing: .04em;
+      }
+
+      .cls-122 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-72 {
+        stroke-width: 1.43px;
+      }
+
+      .cls-72, .cls-82 {
+        stroke: #111;
+      }
+
+      .cls-123 {
+        letter-spacing: .07em;
+      }
+
+      .cls-124 {
+        fill: #757575;
+      }
+
+      .cls-59 {
+        letter-spacing: .12em;
+      }
+
+      .cls-125 {
+        letter-spacing: -.11em;
+      }
+
+      .cls-126 {
+        letter-spacing: .09em;
+      }
+
+      .cls-127 {
+        letter-spacing: .11em;
+      }
+
+      .cls-128 {
+        fill: #d4b85a;
+      }
+
+      .cls-129 {
+        letter-spacing: 0em;
+      }
+
+      .cls-130 {
+        fill: #191919;
+      }
+
+      .cls-131 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-132 {
+        fill: #e08080;
+      }
+
+      .cls-133 {
+        letter-spacing: .12em;
+      }
+
+      .cls-134 {
+        letter-spacing: .09em;
+      }
+
+      .cls-135 {
+        letter-spacing: .08em;
+      }
+
+      .cls-73 {
+        stroke: #6b6b6b;
+      }
+
+      .cls-136 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-137 {
+        letter-spacing: .07em;
+      }
+
+      .cls-138 {
+        letter-spacing: .03em;
+      }
+
+      .cls-139 {
+        letter-spacing: -.07em;
+      }
+
+      .cls-140 {
+        letter-spacing: 0em;
+      }
+
+      .cls-141 {
+        letter-spacing: -.06em;
+      }
+
+      .cls-142 {
+        fill: #885;
+      }
+
+      .cls-143 {
+        letter-spacing: .1em;
+      }
+
+      .cls-23 {
+        fill: #fdfdf5;
+      }
+
+      .cls-12 {
+        font-family: CourierNewPS-BoldItalicMT, 'Courier New';
+      }
+
+      .cls-12, .cls-64 {
+        font-size: 11.18px;
+      }
+
+      .cls-144 {
+        letter-spacing: .11em;
+      }
+
+      .cls-145 {
+        letter-spacing: -.04em;
+      }
+
+      .cls-65 {
+        font-size: 7.86px;
+      }
+
+      .cls-146 {
+        letter-spacing: -.07em;
+      }
+
+      .cls-147 {
+        letter-spacing: -.07em;
+      }
+
+      .cls-148 {
+        letter-spacing: -.04em;
+      }
+
+      .cls-149 {
+        letter-spacing: 0em;
+      }
+    </style>
+  </defs>
+  <rect class="cls-76" x=".5" y=".5" width="595.28" height="841.89"/>
+  <rect class="cls-130" x="15.26" y="21.64" width="567.93" height="51.46"/>
+  <text class="cls-25" transform="translate(32.43 37.37)"><tspan class="cls-110" x="0" y="0">ARCHITECTUR</tspan><tspan class="cls-86" x="61.81" y="0">A</tspan><tspan class="cls-92" x="67.17" y="0"> </tspan><tspan class="cls-108" x="70.27" y="0">TEMPORIS™</tspan></text>
+  <text class="cls-30" transform="translate(32.43 57.92)"><tspan x="0" y="0">Chrono-Passport</tspan></text>
+  <text class="cls-33" transform="translate(242.18 44.51)"><tspan x="0" y="0">Casa Zamprogno · Montebelluna, </tspan><tspan class="cls-5" x="108.46" y="0">V</tspan><tspan x="112.83" y="0">eneto</tspan></text>
+  <text class="cls-33" transform="translate(242.18 55.95)"><tspan x="0" y="0">Afra &amp;</tspan><tspan class="cls-94" x="19.86" y="0"> </tspan><tspan class="cls-85" x="21.72" y="0">T</tspan><tspan x="25.29" y="0">obia Scarpa · 1971 ·</tspan><tspan class="cls-13" x="90.05" y="0"> </tspan><tspan x="91.91" y="0">T+55</tspan></text>
+  <rect class="cls-120" x="485.92" y="27.36" width="80.11" height="40.03"/>
+  <text class="cls-28" transform="translate(494.47 40.23)"><tspan class="cls-96" x="0" y="0">CHRONIT</tspan><tspan class="cls-126" x="29.8" y="0">Y</tspan><tspan class="cls-96" x="34.05" y="0" xml:space="preserve"> INDEX</tspan></text>
+  <text class="cls-45" transform="translate(500.91 58.81)"><tspan x="0" y="0">0.828</tspan></text>
+  <rect class="cls-124" x="407.24" y="27.36" width="74.39" height="40.03"/>
+  <text class="cls-28" transform="translate(415.58 40.23)"><tspan class="cls-96" x="0" y="0">REVERSA</tspan><tspan class="cls-3" x="31.05" y="0">L</tspan><tspan class="cls-96" x="34.57" y="0" xml:space="preserve"> INDEX</tspan></text>
+  <text class="cls-45" transform="translate(424.39 58.81)"><tspan x="0" y="0">92%</tspan></text>
+  <g>
+    <line class="cls-69" x1="64.99" y1="80.79" x2="556.99" y2="80.79"/>
+    <polygon class="cls-119" points="556.41 76.45 556.41 85.13 560.75 80.79 556.41 76.45"/>
+  </g>
+  <circle class="cls-81" cx="64.99" cy="80.79" r="2.15"/>
+  <text class="cls-63" transform="translate(66.93 87.59)"><tspan x="0" y="0">T+0 · 1971</tspan></text>
+  <circle class="cls-116" cx="158.32" cy="80.79" r="2.15"/>
+  <text class="cls-63" transform="translate(160.27 87.59)"><tspan x="0" y="0">T+10 · 1981</tspan></text>
+  <circle class="cls-116" cx="294.22" cy="80.79" r="2.15"/>
+  <text class="cls-63" transform="translate(296.17 87.59)"><tspan x="0" y="0">T+25 · 1996</tspan></text>
+  <circle class="cls-116" cx="430.13" cy="80.79" r="2.15"/>
+  <text class="cls-63" transform="translate(432.07 87.59)"><tspan x="0" y="0">T+50 · 2021</tspan></text>
+  <circle class="cls-82" cx="566.03" cy="80.79" r="3.58"/>
+  <text class="cls-34" transform="translate(526.43 90.26)"><tspan x="0" y="0">T+55 · 2026</tspan></text>
+  <rect class="cls-130" x="15.26" y="99.84" width="21.74" height="68.33"/>
+  <text class="cls-58" transform="translate(22.86 120.45)"><tspan x="0" y="0">1</tspan></text>
+  <text class="cls-65" transform="translate(62.46 105.98)"><tspan class="cls-121" x="0" y="0">IDENTIT</tspan><tspan class="cls-4" x="33.05" y="0">Y</tspan><tspan class="cls-121" x="38.51" y="0" xml:space="preserve"> &amp; INTERNA</tspan><tspan class="cls-4" x="87.03" y="0">L</tspan><tspan class="cls-121" x="92.05" y="0" xml:space="preserve"> EIDOS</tspan></text>
+  <line class="cls-70" x1="62.46" y1="109.55" x2="566.03" y2="109.55"/>
+  <text class="cls-54" transform="translate(62.46 121.7)"><tspan class="cls-112" x="0" y="0">INTERNA</tspan><tspan class="cls-137" x="33.23" y="0">L</tspan><tspan class="cls-127" x="37.28" y="0" xml:space="preserve"> EIDOS</tspan></text>
+  <text class="cls-11" transform="translate(62.46 133.14)"><tspan x="0" y="0">«Chronograph of Silence — the space where material weight dissolves into the rhythm of light»</tspan></text>
+  <text class="cls-54" transform="translate(62.46 148.87)"><tspan class="cls-112" x="0" y="0">INVIOLABILIT</tspan><tspan class="cls-134" x="49.32" y="0">Y</tspan><tspan class="cls-112" x="54.21" y="0" xml:space="preserve"> MA</tspan><tspan class="cls-134" x="67.79" y="0">P</tspan></text>
+  <rect class="cls-130" x="62.46" y="153.87" width="100.14" height="14.29"/>
+  <text class="cls-57" transform="translate(89.63 163.87)"><tspan x="0" y="0">Inviolability Map</tspan></text>
+  <rect class="cls-68" x="168.32" y="153.87" width="92.99" height="14.29"/>
+  <text class="cls-43" transform="translate(174.91 163.87)"><tspan x="0" y="0">Shadow Gaps 100–120 mm</tspan></text>
+  <rect class="cls-68" x="267.03" y="153.87" width="71.53" height="14.29"/>
+  <text class="cls-43" transform="translate(280.61 163.87)"><tspan x="0" y="0">Light wells (R1)</tspan></text>
+  <rect class="cls-68" x="344.28" y="153.87" width="78.68" height="14.29"/>
+  <text class="cls-43" transform="translate(357.51 163.87)"><tspan x="0" y="0">Corten grilles (R2)</tspan></text>
+  <text class="cls-32" transform="translate(483.05 105.98)"><tspan class="cls-127" x="0" y="0">PI INPU</tspan><tspan class="cls-79" x="28.23" y="0">T</tspan></text>
+  <text class="cls-39" transform="translate(521.48 105.98)"><tspan x="0" y="0">19.33 / 25</tspan></text>
+  <rect class="cls-130" x="15.26" y="184.28" width="21.74" height="74.65"/>
+  <text class="cls-65" transform="translate(62.46 190.32) scale(.95 1)"><tspan class="cls-111" x="0" y="0">M</tspan><tspan class="cls-105" x="6.9" y="0">A</tspan><tspan class="cls-111" x="12.35" y="0">TERIA</tspan><tspan class="cls-138" x="37.71" y="0">L</tspan><tspan class="cls-111" x="42.72" y="0" xml:space="preserve"> BIOGRAPH</tspan><tspan class="cls-138" x="90.46" y="0">Y</tspan></text>
+  <text class="cls-32" transform="translate(480.19 190.32)"><tspan class="cls-127" x="0" y="0">AD INPU</tspan><tspan class="cls-79" x="31.09" y="0">T</tspan></text>
+  <text class="cls-39" transform="translate(546.54 190.32)"><tspan x="0" y="0">0.84</tspan></text>
+  <line class="cls-67" x1="62.46" y1="193.89" x2="566.03" y2="193.89"/>
+  <rect class="cls-24" x="62.46" y="200.33" width="503.57" height="15.72"/>
+  <rect class="cls-83" x="62.46" y="200.33" width="2.04" height="15.72"/>
+  <text class="cls-35" transform="translate(69.25 211.05) scale(.95 1)"><tspan x="0" y="0">TYPE</tspan><tspan class="cls-102" x="16.8" y="0" xml:space="preserve"> A</tspan><tspan class="cls-90" x="22.76" y="0" xml:space="preserve"> — noble ageing</tspan></text>
+  <text class="cls-43" transform="translate(179.19 211.05) scale(.95 1)"><tspan x="0" y="0">Concrete (marble agg.) · Light wells · Cantilevers ·</tspan><tspan class="cls-115" x="143.71" y="0"> </tspan><tspan class="cls-91" x="145.38" y="0">T</tspan><tspan class="cls-75" x="148.6" y="0">orcello furniture</tspan></text>
+  <rect class="cls-106" x="62.46" y="218.91" width="503.57" height="15.72"/>
+  <rect class="cls-87" x="62.46" y="218.91" width="2.04" height="15.72"/>
+  <text class="cls-61" transform="translate(69.25 229.63) scale(.95 1)"><tspan x="0" y="0">TYPE D* — degraded by painting</tspan></text>
+  <text class="cls-43" transform="translate(179.19 229.63) scale(.95 1)"><tspan x="0" y="0">Corten grilles — oxide layer painted over · Priority: reversal</tspan></text>
+  <text class="cls-32" transform="translate(62.46 247.5) scale(.95 1)"><tspan class="cls-77" x="0" y="0">FORECAS</tspan><tspan class="cls-104" x="36.09" y="0">T</tspan><tspan class="cls-77" x="40.62" y="0" xml:space="preserve"> HORIZONS</tspan></text>
+  <rect class="cls-21" x="153.27" y="239.64" width="35.29" height="12.87"/>
+  <text class="cls-32" transform="translate(163.87 248.93) scale(.95 1)"><tspan x="0" y="0">T+10</tspan></text>
+  <rect class="cls-21" x="192.63" y="239.64" width="35.29" height="12.87"/>
+  <text class="cls-32" transform="translate(203.23 248.93) scale(.95 1)"><tspan x="0" y="0">T+25</tspan></text>
+  <rect class="cls-130" x="231.99" y="239.64" width="35.29" height="12.87"/>
+  <text class="cls-42" transform="translate(242.59 248.93) scale(.95 1)"><tspan x="0" y="0">T+50</tspan></text>
+  <text class="cls-32" transform="translate(372.9 248.93)"><tspan x="0" y="0">Sensory intensity: 19.33/25 · 77%</tspan></text>
+  <line class="cls-70" x1="62.46" y1="258.93" x2="566.03" y2="258.93"/>
+  <rect class="cls-130" x="15.26" y="270.04" width="21.74" height="76.09"/>
+  <text class="cls-65" transform="translate(62.46 276.09)"><tspan class="cls-121" x="0" y="0">INTE</tspan><tspan class="cls-4" x="19.32" y="0">R</tspan><tspan class="cls-121" x="25.21" y="0">VENTION PRO</tspan><tspan class="cls-4" x="83.27" y="0">T</tspan><tspan class="cls-121" x="88.29" y="0">OCO</tspan><tspan class="cls-4" x="107.26" y="0">L</tspan></text>
+  <text class="cls-32" transform="translate(485.56 276.09)"><tspan class="cls-127" x="0" y="0">II INPU</tspan><tspan class="cls-79" x="25.73" y="0">T</tspan></text>
+  <text class="cls-39" transform="translate(529.84 276.09)"><tspan x="0" y="0">90 / 100</tspan></text>
+  <line class="cls-70" x1="62.91" y1="279.66" x2="566.03" y2="279.66"/>
+  <rect class="cls-22" x="62.46" y="286.09" width="163.08" height="60.04"/>
+  <rect class="cls-83" x="62.46" y="286.09" width="163.08" height="14.29"/>
+  <text class="cls-42" transform="translate(121.47 296.1)"><tspan x="0" y="0">LE</tspan><tspan class="cls-147" x="8.22" y="0">A</tspan><tspan class="cls-117" x="12.39" y="0">VE</tspan><tspan class="cls-89" x="20.97" y="0"> </tspan><tspan class="cls-149" x="22.52" y="0">ALONE</tspan></text>
+  <text class="cls-44" transform="translate(104.66 311.11)"><tspan x="0" y="0">Concrete patina</tspan></text>
+  <text class="cls-44" transform="translate(104.66 321.12)"><tspan x="0" y="0">Shadow gaps · Light wells</tspan></text>
+  <text class="cls-44" transform="translate(104.66 331.12)"><tspan x="0" y="0">Cantilever geometry</tspan></text>
+  <text class="cls-44" transform="translate(104.66 341.13)"><tspan class="cls-107" x="0" y="0">T</tspan><tspan x="2.79" y="0">orcello furniture finish</tspan></text>
+  <rect class="cls-23" x="233.03" y="286.09" width="163.08" height="60.04"/>
+  <rect class="cls-142" x="233.03" y="286.09" width="163.08" height="14.29"/>
+  <text class="cls-42" transform="translate(289 296.1)"><tspan x="0" y="0">PERIODIC CARE</tspan></text>
+  <text class="cls-44" transform="translate(273.6 311.11)"><tspan x="0" y="0">Joint inspection · 10 yr cycle</tspan></text>
+  <text class="cls-44" transform="translate(273.6 321.12)"><tspan class="cls-107" x="0" y="0">T</tspan><tspan x="2.79" y="0">orcello oil finish · 5 yr</tspan></text>
+  <text class="cls-44" transform="translate(273.6 331.12)"><tspan class="cls-80" x="0" y="0">W</tspan><tspan x="5.07" y="0">aterproofing check · 5 yr</tspan></text>
+  <text class="cls-44" transform="translate(273.6 341.13)"><tspan x="0" y="0">Facade photo audit · 5 yr</tspan></text>
+  <rect class="cls-20" x="403.15" y="286.09" width="164.52" height="60.04"/>
+  <rect class="cls-87" x="403.15" y="286.09" width="164.52" height="14.29"/>
+  <text class="cls-42" transform="translate(465.48 296.1)"><tspan x="0" y="0">PROHIBITED</tspan></text>
+  <text class="cls-44" transform="translate(442.26 310.4)"><tspan x="0" y="0">Chemical cleaning of concrete</tspan></text>
+  <text class="cls-44" transform="translate(455.5 320.4)"><tspan x="0" y="0">Painting Corten steel</tspan></text>
+  <text class="cls-44" transform="translate(457 330.41)"><tspan x="0" y="0">Filling shadow gaps</tspan></text>
+  <text class="cls-44" transform="translate(446.34 340.41)"><tspan x="0" y="0">Replacing</tspan><tspan class="cls-136" x="24.85" y="0"> </tspan><tspan class="cls-99" x="26.31" y="0">T</tspan><tspan x="29.1" y="0">orcello furniture</tspan></text>
+  <text class="cls-65" transform="translate(62.46 369)"><tspan class="cls-121" x="0" y="0">OWNERSHI</tspan><tspan class="cls-4" x="46.07" y="0">P</tspan><tspan class="cls-121" x="51.53" y="0" xml:space="preserve"> ECONOMICS</tspan></text>
+  <line class="cls-70" x1="62.46" y1="372.58" x2="566.03" y2="372.58"/>
+  <rect class="cls-81" x="61.93" y="387.46" width="116.85" height="43.81"/>
+  <text class="cls-50" transform="translate(91.56 398.92) scale(.95 1)"><tspan class="cls-100" x="0" y="0">TYPE</tspan><tspan class="cls-123" x="17.79" y="0" xml:space="preserve"> A</tspan><tspan class="cls-133" x="23.99" y="0" xml:space="preserve"> vs</tspan><tspan class="cls-66" x="33.44" y="0"> </tspan><tspan class="cls-100" x="35.64" y="0">TYPE D</tspan></text>
+  <text class="cls-37" transform="translate(101.03 416.18) scale(.95 1)"><tspan x="0" y="0">−18%</tspan></text>
+  <text class="cls-50" transform="translate(93.17 426.18) scale(.95 1)"><tspan x="0" y="0">TCO saving over 50 yr</tspan></text>
+  <rect class="cls-17" x="184.22" y="387.46" width="116.85" height="43.81"/>
+  <text class="cls-26" transform="translate(202.53 396.95) scale(.95 1)"><tspan class="cls-100" x="0" y="0">AUTHENTICIT</tspan><tspan class="cls-66" x="45.66" y="0">Y</tspan><tspan class="cls-133" x="50.09" y="0" xml:space="preserve"> PREMIUM</tspan></text>
+  <text class="cls-41" transform="translate(210.85 413.37) scale(.95 1)"><tspan x="0" y="0">+35–45%</tspan></text>
+  <text class="cls-52" transform="translate(212.71 426.18) scale(.95 1)"><tspan x="0" y="0">vs. regional market</tspan><tspan class="cls-131" x="48.3" y="0"> </tspan><tspan x="49.79" y="0">T+50</tspan></text>
+  <rect class="cls-17" x="306.51" y="387.46" width="116.85" height="43.81"/>
+  <text class="cls-26" transform="translate(332.69 396.95) scale(.95 1)"><tspan class="cls-100" x="0" y="0">NE</tspan><tspan class="cls-118" x="9.37" y="0">T</tspan><tspan class="cls-100" x="13.48" y="0" xml:space="preserve"> S</tspan><tspan class="cls-2" x="20.31" y="0">A</tspan><tspan class="cls-100" x="24.41" y="0">VING · 50</tspan><tspan class="cls-66" x="56.27" y="0"> </tspan><tspan class="cls-100" x="58.47" y="0">YR</tspan></text>
+  <text class="cls-41" transform="translate(343.53 413.37) scale(.95 1)"><tspan x="0" y="0">~7.5%</tspan></text>
+  <text class="cls-52" transform="translate(335.63 426.18) scale(.95 1)"><tspan x="0" y="0">of total investment value</tspan></text>
+  <rect class="cls-17" x="428.79" y="387.46" width="137.23" height="43.81"/>
+  <text class="cls-26" transform="translate(465.4 396.95) scale(.95 1)"><tspan class="cls-100" x="0" y="0">BREAK-EVEN POIN</tspan><tspan class="cls-118" x="63.15" y="0">T</tspan></text>
+  <text class="cls-64" transform="translate(480.19 412.92) scale(.95 1)"><tspan class="cls-114" x="0" y="0">Y</tspan><tspan x="6.84" y="0">ear 15</tspan></text>
+  <text class="cls-52" transform="translate(465.38 426.18) scale(.95 1)"><tspan class="cls-74" x="0" y="0">T</tspan><tspan class="cls-101" x="3.18" y="0">ype</tspan><tspan class="cls-74" x="12.4" y="0" xml:space="preserve"> A</tspan><tspan x="17.17" y="0" xml:space="preserve"> strategy advantage</tspan></text>
+  <text class="cls-65" transform="translate(61.93 453.34)"><tspan class="cls-121" x="0" y="0">CHRONIT</tspan><tspan class="cls-4" x="38.29" y="0">Y</tspan><tspan class="cls-121" x="43.75" y="0" xml:space="preserve"> INDEX — CI COMPU</tspan><tspan class="cls-6" x="127.51" y="0">TA</tspan><tspan class="cls-121" x="137.53" y="0">TION</tspan></text>
+  <line class="cls-70" x1="62.91" y1="456.92" x2="566.03" y2="456.92"/>
+  <text class="cls-10" transform="translate(62.46 467.64)"><tspan x="0" y="0">Integrated output parameter · aggregates all three components of</tspan><tspan class="cls-14" x="186.3" y="0"> </tspan><tspan class="cls-146" x="187.85" y="0">A</tspan><tspan x="191.67" y="0">T methodology v5.0</tspan></text>
+  <rect class="cls-15" x="62.19" y="473.36" width="504.1" height="25.73"/>
+  <text class="cls-12" transform="translate(147.67 489.79)"><tspan x="0" y="0">CI = (PI/25 × 0.40) + (AD × 0.35) + (II/100 × 0.25)</tspan></text>
+  <rect class="cls-16" x="61.93" y="506.23" width="163.62" height="45.74"/>
+  <text class="cls-29" transform="translate(113.43 519.1) scale(1.04 1)"><tspan class="cls-144" x="0" y="0">PI COMPONEN</tspan><tspan class="cls-1" x="53.6" y="0">T</tspan></text>
+  <text class="cls-51" transform="translate(105.8 528.02) scale(1.04 1)"><tspan x="0" y="0">19.33/25 × 0.40 =</tspan></text>
+  <text class="cls-64" transform="translate(126.99 545.27) scale(1.04 1)"><tspan x="0" y="0">0.309</tspan></text>
+  <rect class="cls-16" x="232.99" y="506.23" width="163.62" height="45.74"/>
+  <text class="cls-29" transform="translate(283 519.1) scale(1.04 1)"><tspan class="cls-144" x="0" y="0">AD COMPONEN</tspan><tspan class="cls-1" x="56.46" y="0">T</tspan></text>
+  <text class="cls-51" transform="translate(285.79 528.02) scale(1.04 1)"><tspan x="0" y="0">0.84 × 0.35 =</tspan></text>
+  <text class="cls-64" transform="translate(298.05 545.27) scale(1.04 1)"><tspan x="0" y="0">0.294</tspan></text>
+  <rect class="cls-16" x="404.04" y="506.23" width="163.62" height="45.74"/>
+  <text class="cls-29" transform="translate(456.85 519.1) scale(1.04 1)"><tspan class="cls-144" x="0" y="0">II COMPONEN</tspan><tspan class="cls-1" x="51.1" y="0">T</tspan></text>
+  <text class="cls-51" transform="translate(452.38 528.02) scale(1.04 1)"><tspan x="0" y="0">90/100 × 0.25 =</tspan></text>
+  <text class="cls-64" transform="translate(469.1 545.27) scale(1.04 1)"><tspan x="0" y="0">0.225</tspan></text>
+  <text class="cls-49" transform="translate(216 588.5)"><tspan x="0" y="0">0.309 + 0.294 + 0.225 =</tspan></text>
+  <rect class="cls-83" x="349.82" y="561.5" width="164.51" height="49.09"/>
+  <text class="cls-40" transform="translate(392.08 574.21)"><tspan class="cls-84" x="0" y="0">CHRONIT</tspan><tspan class="cls-98" x="42.56" y="0">Y</tspan><tspan class="cls-84" x="48.63" y="0" xml:space="preserve"> INDEX</tspan></text>
+  <text class="cls-36" transform="translate(414.6 591.46)"><tspan x="0" y="0">0.828</tspan></text>
+  <text class="cls-59" transform="translate(61.93 612.01)"><tspan x="0" y="0">SCALE</tspan></text>
+  <rect class="cls-132" x="61.93" y="616.3" width="68.67" height="2.86"/>
+  <rect class="cls-128" x="130.59" y="616.3" width="68.67" height="2.86"/>
+  <rect class="cls-93" x="199.26" y="616.3" width="68.67" height="2.86"/>
+  <rect class="cls-83" x="267.93" y="616.3" width="68.67" height="2.86"/>
+  <text class="cls-52" transform="translate(75.74 629.17)"><tspan x="0" y="0">0–0.40 distorted</tspan></text>
+  <text class="cls-52" transform="translate(141.86 629.17)"><tspan x="0" y="0">0.41–0.60 forming</tspan></text>
+  <text class="cls-52" transform="translate(211.17 629.17)"><tspan x="0" y="0">0.61–0.75 mature</tspan></text>
+  <text class="cls-52" transform="translate(288.29 629.17)"><tspan x="0" y="0">0.76–1.00 deep</tspan></text>
+  <line class="cls-72" x1="310.85" y1="610.58" x2="310.85" y2="622.02"/>
+  <polygon class="cls-81" points="306.55 613.44 315.14 613.44 310.85 607.73 306.55 613.44"/>
+  <text class="cls-34" transform="translate(303.69 606.3)"><tspan x="0" y="0">0.828</tspan></text>
+  <line class="cls-70" x1="62.19" y1="636.32" x2="566.03" y2="636.32"/>
+  <text class="cls-65" transform="translate(61.93 658.4)"><tspan class="cls-121" x="0" y="0">ADAP</tspan><tspan class="cls-6" x="23.69" y="0">T</tspan><tspan class="cls-121" x="28.27" y="0">ABILIT</tspan><tspan class="cls-4" x="55.72" y="0">Y</tspan><tspan class="cls-121" x="61.17" y="0" xml:space="preserve"> M</tspan><tspan class="cls-6" x="70.61" y="0">A</tspan><tspan class="cls-121" x="76.06" y="0">TRIX</tspan></text>
+  <line class="cls-70" x1="61.93" y1="661.97" x2="566.03" y2="661.97"/>
+  <rect class="cls-19" x="61.93" y="668.4" width="244.58" height="53.77"/>
+  <text class="cls-31" transform="translate(124.78 681.27)"><tspan x="0" y="0">Flexible zones — ~15%</tspan></text>
+  <line class="cls-18" x1="61.93" y1="684.13" x2="307.1" y2="684.13"/>
+  <text class="cls-48" transform="translate(101.03 694.14)"><tspan x="0" y="0">Non-load-bearing partitions · No light wells displaced</tspan></text>
+  <text class="cls-48" transform="translate(101.03 704.14)"><tspan x="0" y="0">Reversibility index: 92%+ (ICOMOS — High)</tspan></text>
+  <text class="cls-55" transform="translate(101.03 714.15)"><tspan x="0" y="0">ΔCI forecast after full reversal: 0.92+</tspan></text>
+  <rect class="cls-81" x="313.3" y="668.4" width="252.73" height="53.77"/>
+  <text class="cls-60" transform="translate(379.67 681.27)"><tspan x="0" y="0">Fixed core — DN</tspan><tspan class="cls-145" x="57.19" y="0">A</tspan><tspan x="62.09" y="0" xml:space="preserve"> of the object</tspan></text>
+  <line class="cls-73" x1="313.3" y1="684.13" x2="566.03" y2="684.13"/>
+  <text class="cls-47" transform="translate(372.9 694.14)"><tspan x="0" y="0">Shadow gaps · Light wells · Corten parallax</tspan></text>
+  <text class="cls-47" transform="translate(372.9 704.14)"><tspan x="0" y="0">Cantilever geometry ·</tspan><tspan class="cls-88" x="61.49" y="0"> </tspan><tspan class="cls-103" x="63.16" y="0">T</tspan><tspan x="66.38" y="0">orcello furniture</tspan></text>
+  <text class="cls-47" transform="translate(372.9 714.15)"><tspan x="0" y="0">Concrete with marble aggregate</tspan></text>
+  <rect class="cls-78" x="15.26" y="733.13" width="567.93" height="91.16"/>
+  <text class="cls-56" transform="translate(62.91 780)"><tspan x="0" y="0">Created by: Sergei </tspan><tspan class="cls-147" x="58.63" y="0">T</tspan><tspan x="62.08" y="0">atarnikov -</tspan><tspan class="cls-14" x="94.61" y="0"> </tspan><tspan x="96.16" y="0">Architectura </tspan><tspan class="cls-147" x="135.84" y="0">T</tspan><tspan x="139.29" y="0">emporis Research Center (</tspan><tspan class="cls-147" x="221.16" y="0">A</tspan><tspan x="225.33" y="0">TRC)</tspan></text>
+  <text class="cls-27" transform="translate(62.91 791.44)"><tspan x="0" y="0">Architectura</tspan><tspan class="cls-122" x="34.32" y="0"> </tspan><tspan class="cls-125" x="35.99" y="0">T</tspan><tspan class="cls-149" x="39.21" y="0" xml:space="preserve">emporis™  -   info@architecturatemporis.com · Montenegro, 2026</tspan></text>
+  <text class="cls-27" transform="translate(62.91 802.88)"><tspan x="0" y="0">First retrospective Chrono-Passport by</tspan><tspan class="cls-141" x="110.11" y="0"> </tspan><tspan class="cls-146" x="111.54" y="0">A</tspan><tspan class="cls-97" x="115.35" y="0">T</tspan><tspan x="119.17" y="0" xml:space="preserve"> methodology</tspan></text>
+  <text class="cls-9" transform="translate(62.91 815.02)"><tspan x="0" y="0">Cite as: </tspan><tspan class="cls-109" x="20.97" y="0">T</tspan><tspan x="23.94" y="0">atarnikov S. 2026. Chrono-Passport T+55: Casa Zamprogno.</tspan><tspan class="cls-148" x="178.56" y="0"> </tspan><tspan class="cls-129" x="179.94" y="0">Architectura </tspan><tspan class="cls-109" x="212.04" y="0">T</tspan><tspan class="cls-129" x="215" y="0">emporis™.</tspan></text>
+  <text class="cls-56" transform="translate(359.96 749.79)"><tspan x="0" y="0">Document status:</tspan></text>
+  <text class="cls-39" transform="translate(452.76 749.79)"><tspan x="0" y="0">First issue · T+55 · 2026</tspan></text>
+  <text class="cls-38" transform="translate(475.79 762.65)"><tspan x="0" y="0">Next audit recommended:</tspan><tspan class="cls-97" x="73.66" y="0"> </tspan><tspan x="75.33" y="0">T+60</tspan></text>
+  <text class="cls-38" transform="translate(498.39 774.09)"><tspan x="0" y="0">Projected CI: 0.87–0.90</tspan></text>
+  <text class="cls-55" transform="translate(443.83 785.52)"><tspan x="0" y="0">Reversal of Corten paint CI forecast: 0.92+</tspan></text>
+  <rect class="cls-81" x="491.1" y="792.13" width="74.93" height="22.87"/>
+  <text class="cls-8" transform="translate(518.93 807.14)"><tspan class="cls-139" x="0" y="0">A</tspan><tspan class="cls-140" x="6.78" y="0">T™</tspan></text>
+  <text class="cls-58" transform="translate(22.06 200.33)"><tspan x="0" y="0">2</tspan></text>
+  <text class="cls-58" transform="translate(22.06 290.03)"><tspan x="0" y="0">3</tspan></text>
+  <rect class="cls-130" x="15.26" y="363.48" width="21.74" height="67.79"/>
+  <text class="cls-53" transform="translate(22.06 380.7) scale(1.16 1)"><tspan x="0" y="0">4</tspan></text>
+  <rect class="cls-130" x="15.26" y="650.83" width="21.74" height="71.35"/>
+  <text class="cls-53" transform="translate(22.06 668.05) scale(1.16 1)"><tspan x="0" y="0">5</tspan></text>
+  <rect class="cls-130" x="15.26" y="447.32" width="21.74" height="188.99"/>
+  <text class="cls-46" transform="translate(19.1 466.51) scale(1.16 1)"><tspan x="0" y="0">CI</tspan></text>
+  <text class="cls-7" transform="translate(174.91 382.64)"><tspan class="cls-113" x="0" y="0">TCO = C0 + Σ[Cm × DF(t)] + Σ[Cr × DF(tr)] − [</tspan><tspan class="cls-135" x="147.81" y="0">R</tspan><tspan class="cls-143" x="152.52" y="0">V × DF(50)] · r = 4% (RICS 2016) ·</tspan><tspan class="cls-95" x="264.77" y="0"> </tspan><tspan class="cls-143" x="266.67" y="0">Area: ~400 m²</tspan></text>
+  <line class="cls-71" x1="421.38" y1="741.89" x2="421.38" y2="792.13"/>
+  <text class="cls-62" transform="translate(410.04 602.28) scale(1.04 1)"><tspan x="0" y="0">March 2026</tspan></text>
+</svg>
+  </div>
+
+  <div class="download-row">
+    <a href="CZ_Chrono_Passport.svg" download class="btn">Download SVG</a>
+    <a href="index.html" class="btn">← Back to ATRC</a>
+  </div>
+</div>
+
+</body>
+</html>
