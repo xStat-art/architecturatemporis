@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ATRC · Field Launcher</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .logo {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .logo span { color: #c55a11; }
+
+  .subtitle {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #333;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  .gps-box {
+    background: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 340px;
+    margin-bottom: 16px;
+  }
+
+  .gps-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .gps-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+    line-height: 1.3;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gps-value.loading {
+    font-size: 11px;
+    font-weight: 400;
+    color: #333;
+    letter-spacing: 2px;
+  }
+
+  .gps-value.error {
+    font-size: 12px;
+    font-weight: 400;
+    color: #c00000;
+    line-height: 1.5;
+  }
+
+  .gps-accuracy {
+    font-size: 10px;
+    color: #444;
+    letter-spacing: 1px;
+    margin-top: 10px;
+    min-height: 14px;
+  }
+
+  .status {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    min-height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #c55a11;
+    flex-shrink: 0;
+    animation: pulse 1.5s infinite;
+  }
+
+  .dot.green { background: #4CAF50; animation: none; }
+  .dot.red   { background: #c00000; animation: none; }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; }
+    50% { opacity:0.2; }
+  }
+
+  /* Main CTA button */
+  .btn-launch {
+    width: 100%;
+    max-width: 340px;
+    padding: 20px;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border: none;
+    background: #c55a11;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+    text-decoration: none;
+    display: block;
+  }
+
+  .btn-launch:active { background: #a04800; }
+  .btn-launch.disabled {
+    background: #1a1a1a;
+    border: 1px solid #222;
+    color: #333;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .btn-secondary {
+    width: 100%;
+    max-width: 340px;
+    padding: 14px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid #222;
+    background: transparent;
+    color: #444;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 40px;
+  }
+
+  .btn-secondary:active { color: #888; border-color: #444; }
+
+  .hint {
+    font-size: 11px;
+    color: #2e2e2e;
+    line-height: 1.8;
+    max-width: 280px;
+  }
+
+  .hint strong { color: #3e3e3e; }
+</style>
+</head>
+<body>
+
+<div class="logo">AT<span>RC</span></div>
+<div class="subtitle">CI Field Data Collection</div>
+
+<div class="status" id="status">
+  <div class="dot" id="dot"></div>
+  <span id="statusText">Detecting location...</span>
+</div>
+
+<div class="gps-box">
+  <div class="gps-label">Your GPS Coordinates</div>
+  <div class="gps-value loading" id="gpsValue">Waiting for GPS...</div>
+  <div class="gps-accuracy" id="gpsAccuracy"></div>
+</div>
+
+<a class="btn-launch disabled" id="btnLaunch" href="#" target="_blank">
+  → Open Field Form
+</a>
+
+<button class="btn-secondary" onclick="getLocation()">↻ Refresh Location</button>
+
+<div class="hint">
+  GPS coordinates will be inserted into the form automatically.<br>
+  <strong>Allow location access</strong> when browser asks.
+</div>
+
+<script>
+const FORM_BASE = 'https://docs.google.com/forms/d/e/1FAIpQLSe45pgFLqXMaagHHn7W34oeogulfu9Z_dF9iKYa12eX1qlK8w/viewform';
+const GPS_ENTRY = 'entry.1075279085';
+
+let coords = null;
+
+function getLocation() {
+  setStatus('loading', 'Detecting location...');
+  document.getElementById('gpsValue').className = 'gps-value loading';
+  document.getElementById('gpsValue').textContent = 'Waiting for GPS...';
+  document.getElementById('gpsAccuracy').textContent = '';
+  document.getElementById('btnLaunch').className = 'btn-launch disabled';
+  document.getElementById('btnLaunch').href = '#';
+
+  if (!navigator.geolocation) {
+    setStatus('error', 'GPS not supported');
+    document.getElementById('gpsValue').className = 'gps-value error';
+    document.getElementById('gpsValue').textContent = 'Geolocation not supported by this browser.';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      const acc = Math.round(pos.coords.accuracy);
+
+      coords = `${lat}, ${lng}`;
+
+      document.getElementById('gpsValue').className = 'gps-value';
+      document.getElementById('gpsValue').textContent = coords;
+      document.getElementById('gpsAccuracy').textContent = `Accuracy: ±${acc} m`;
+
+      // Build form URL with GPS pre-filled
+      const formURL = `${FORM_BASE}?usp=pp_url&${GPS_ENTRY}=${encodeURIComponent(coords)}`;
+      const btn = document.getElementById('btnLaunch');
+      btn.href = formURL;
+      btn.className = 'btn-launch';
+      btn.textContent = '→ Open Field Form';
+
+      setStatus('ok', 'Location found · Ready');
+    },
+    function(err) {
+      let msg = 'Location error. Try again.';
+      if (err.code === 1) msg = 'Permission denied. Allow location in browser settings.';
+      if (err.code === 2) msg = 'Position unavailable. Try outdoors.';
+      if (err.code === 3) msg = 'Timeout. Try again.';
+
+      setStatus('error', 'Location error');
+      document.getElementById('gpsValue').className = 'gps-value error';
+      document.getElementById('gpsValue').textContent = msg;
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
+  );
+}
+
+function setStatus(type, text) {
+  const dot  = document.getElementById('dot');
+  const span = document.getElementById('statusText');
+  span.textContent = text;
+  dot.className = 'dot';
+  if (type === 'ok')    dot.className = 'dot green';
+  if (type === 'error') dot.className = 'dot red';
+}
+
+// Auto-start on load
+getLocation();
+</script>
+</body>
+</html>
