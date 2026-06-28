@@ -23,7 +23,7 @@
   .logo {
     font-size: 10px;
     letter-spacing: 3px;
-    color: #555;
+    color: #aaaaaa;      /* было #555 */
     text-transform: uppercase;
     margin-bottom: 4px;
     text-align: center;
@@ -33,7 +33,7 @@
   .subtitle {
     font-size: 9px;
     letter-spacing: 2px;
-    color: #333;
+    color: #888888;      /* было #333 */
     text-transform: uppercase;
     margin-bottom: 32px;
     text-align: center;
@@ -43,7 +43,7 @@
   .status {
     font-size: 10px;
     letter-spacing: 2px;
-    color: #555;
+    color: #aaaaaa;      /* было #555 */
     text-transform: uppercase;
     margin-bottom: 12px;
     min-height: 14px;
@@ -61,8 +61,8 @@
     animation: pulse 1.2s infinite;
   }
   .dot.green { background: #4CAF50; animation: none; }
-  .dot.red   { background: #c00000; animation: none; }
-  .dot.idle  { background: #333; animation: none; }
+  .dot.red   { background: #e04040; animation: none; }
+  .dot.idle  { background: #666; animation: none; }   /* было #333 */
 
   @keyframes pulse {
     0%,100% { opacity:1; }
@@ -72,7 +72,7 @@
   /* GPS box */
   .gps-box {
     background: #1a1a1a;
-    border: 1px solid #2e2e2e;
+    border: 1px solid #444444;   /* было #2e2e2e */
     padding: 24px;
     width: 100%;
     margin-bottom: 12px;
@@ -81,7 +81,7 @@
   .gps-label {
     font-size: 9px;
     letter-spacing: 3px;
-    color: #555;
+    color: #aaaaaa;      /* было #555 */
     text-transform: uppercase;
     margin-bottom: 12px;
   }
@@ -101,20 +101,20 @@
   .gps-value.dim {
     font-size: 12px;
     font-weight: 400;
-    color: #333;
+    color: #888888;      /* было #333 */
     letter-spacing: 1px;
   }
 
   .gps-value.error-state {
     font-size: 12px;
     font-weight: 400;
-    color: #c00000;
+    color: #e04040;      /* было #c00000 */
     line-height: 1.6;
   }
 
   .gps-accuracy {
     font-size: 10px;
-    color: #444;
+    color: #888888;      /* было #444 */
     letter-spacing: 1px;
     margin-top: 10px;
     min-height: 14px;
@@ -141,8 +141,8 @@
   .btn-launch:active { background: #a04800; }
   .btn-launch.disabled {
     background: #1a1a1a;
-    border: 1px solid #222;
-    color: #2e2e2e;
+    border: 1px solid #333;      /* было #222 */
+    color: #555555;              /* было #2e2e2e */
     pointer-events: none;
   }
 
@@ -158,36 +158,37 @@
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    border: 1px solid #222;
+    border: 1px solid #444444;   /* было #222 */
     background: transparent;
-    color: #555;
+    color: #aaaaaa;              /* было #555 */
     cursor: pointer;
     text-align: center;
     -webkit-tap-highlight-color: transparent;
     font-family: Arial, sans-serif;
   }
-  .btn-sec:active { color: #aaa; border-color: #555; }
+  .btn-sec:active { color: #fff; border-color: #888; }
 
-  /* Map link */
+  /* Map link — оранжевый */
   .map-link {
     display: block;
     padding: 14px;
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    border: 1px solid #1e1e1e;
-    color: #444;
+    border: 1px solid #c55a11;
+    color: #c55a11;
     text-decoration: none;
     text-align: center;
     margin-bottom: 32px;
+    transition: background 0.15s;
   }
-  .map-link:active { color: #888; }
+  .map-link:active { background: #1a0d00; color: #e06820; }
 
   /* Scale */
   .scale-title {
     font-size: 9px;
     letter-spacing: 3px;
-    color: #333;
+    color: #888888;      /* было #333 */
     text-transform: uppercase;
     margin-bottom: 14px;
   }
@@ -207,14 +208,14 @@
 
   .scale-text {
     font-size: 10px;
-    color: #444;
+    color: #aaaaaa;      /* было #444 */
     flex: 1;
     letter-spacing: 1px;
   }
 
   .scale-ci {
     font-size: 10px;
-    color: #333;
+    color: #888888;      /* было #333 */
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -226,7 +227,7 @@
     text-align: center;
     font-size: 9px;
     letter-spacing: 2px;
-    color: #222;
+    color: #555555;      /* было #222 */
     text-transform: uppercase;
   }
 
@@ -237,11 +238,11 @@
     left: 20px;
     right: 20px;
     background: #1a1a1a;
-    border: 1px solid #444;
+    border: 1px solid #555;      /* было #444 */
     padding: 12px 16px;
     font-size: 11px;
     letter-spacing: 1px;
-    color: #aaa;
+    color: #cccccc;              /* было #aaa */
     text-align: center;
     z-index: 99;
     display: none;
@@ -272,7 +273,7 @@
   <button class="btn-sec" onclick="copyCoords()">⎘ Copy</button>
 </div>
 
-<a class="map-link" href="https://architecturatemporis.github.io/ATRC_CI_Map.html" target="_blank">↗ View CI Map</a>
+<a class="map-link" href="https://architecturatemporis.com/ATRC_CI_Map.html" target="_blank">↗ View CI Map</a>
 
 <div class="scale-title">CI Scale</div>
 
@@ -302,7 +303,7 @@
   <div class="scale-ci">0.85–1.00</div>
 </div>
 
-<footer>Time is a building material · ATRC 2026</footer>
+<footer>Understanding before change · ATRC 2026</footer>
 
 <div class="toast" id="toast"></div>
 
@@ -327,7 +328,6 @@ function getLocation() {
   document.getElementById('gpsAccuracy').textContent = '';
   document.getElementById('btnLaunch').className = 'btn-launch disabled';
 
-  // Clear previous watch
   if (watchId !== null) { navigator.geolocation.clearWatch(watchId); }
 
   watchId = navigator.geolocation.watchPosition(
@@ -345,7 +345,6 @@ function getLocation() {
       el.textContent = coords;
       document.getElementById('gpsAccuracy').textContent = 'Accuracy: ±' + acc + ' m';
 
-      // Build prefilled form URL
       const url = FORM_BASE + '?usp=pp_url&' + GPS_ENTRY + '=' + encodeURIComponent(coords);
       const btn = document.getElementById('btnLaunch');
       btn.href = url;
@@ -386,7 +385,6 @@ function setStatus(color, text) {
   dot.className = 'dot';
   if (color === 'green')  dot.className = 'dot green';
   if (color === 'red')    dot.className = 'dot red';
-  // orange = default animation
   document.getElementById('statusText').textContent = text;
 }
 
@@ -424,7 +422,6 @@ function showToast(msg) {
   setTimeout(function() { t.className = 'toast'; }, 3000);
 }
 
-// Auto-start if permission already granted
 if (navigator.permissions) {
   navigator.permissions.query({name:'geolocation'}).then(function(r) {
     if (r.state === 'granted') getLocation();

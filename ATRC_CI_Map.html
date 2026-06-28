@@ -28,7 +28,7 @@
   /* ── HEADER ─────────────────────────────────────────────── */
   .header {
     background: #1a1a1a;
-    border-bottom: 1px solid #2e2e2e;
+    border-bottom: 1px solid #444444;  /* было #2e2e2e */
     padding: 12px 20px;
     display: flex;
     align-items: center;
@@ -46,7 +46,7 @@
   .logo {
     font-size: 11px;
     letter-spacing: 3px;
-    color: #888;
+    color: #aaaaaa;       /* было #888 */
     text-transform: uppercase;
   }
 
@@ -55,7 +55,7 @@
   .title {
     font-size: 13px;
     letter-spacing: 1px;
-    color: #ccc;
+    color: #eeeeee;       /* было #ccc */
     text-transform: uppercase;
   }
 
@@ -70,9 +70,9 @@
     letter-spacing: 2px;
     text-transform: uppercase;
     padding: 6px 16px;
-    border: 1px solid #333;
+    border: 1px solid #555555;  /* было #333 */
     background: transparent;
-    color: #888;
+    color: #aaaaaa;             /* было #888 */
     cursor: pointer;
     transition: all 0.2s;
   }
@@ -103,8 +103,8 @@
     bottom: 32px;
     left: 16px;
     z-index: 1000;
-    background: rgba(20,20,20,0.92);
-    border: 1px solid #2e2e2e;
+    background: rgba(20,20,20,0.95);
+    border: 1px solid #444444;  /* было #2e2e2e */
     padding: 16px 20px;
     min-width: 200px;
   }
@@ -112,7 +112,7 @@
   .legend-title {
     font-size: 9px;
     letter-spacing: 3px;
-    color: #666;
+    color: #aaaaaa;       /* было #666 */
     text-transform: uppercase;
     margin-bottom: 12px;
   }
@@ -136,7 +136,7 @@
     display: flex;
     justify-content: space-between;
     font-size: 9px;
-    color: #666;
+    color: #aaaaaa;       /* было #666 */
     letter-spacing: 1px;
     margin-bottom: 14px;
   }
@@ -152,7 +152,7 @@
     align-items: center;
     gap: 8px;
     font-size: 10px;
-    color: #888;
+    color: #cccccc;       /* было #888 */
     letter-spacing: 1px;
   }
 
@@ -168,8 +168,8 @@
     top: 70px;
     right: 16px;
     z-index: 1000;
-    background: rgba(20,20,20,0.92);
-    border: 1px solid #2e2e2e;
+    background: rgba(20,20,20,0.95);
+    border: 1px solid #444444;  /* было #2e2e2e */
     padding: 16px 20px;
     min-width: 180px;
   }
@@ -177,7 +177,7 @@
   .stats-title {
     font-size: 9px;
     letter-spacing: 3px;
-    color: #666;
+    color: #aaaaaa;       /* было #666 */
     text-transform: uppercase;
     margin-bottom: 12px;
   }
@@ -192,7 +192,7 @@
 
   .stats-label {
     font-size: 10px;
-    color: #666;
+    color: #aaaaaa;       /* было #666 */
     letter-spacing: 1px;
   }
 
@@ -204,14 +204,14 @@
 
   .stats-divider {
     border: none;
-    border-top: 1px solid #2e2e2e;
+    border-top: 1px solid #444444;  /* было #2e2e2e */
     margin: 10px 0;
   }
 
   /* ── POPUP ───────────────────────────────────────────────── */
   .leaflet-popup-content-wrapper {
     background: #1a1a1a;
-    border: 1px solid #333;
+    border: 1px solid #555555;  /* было #333 */
     border-radius: 0;
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
@@ -239,7 +239,7 @@
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #888;
+    color: #aaaaaa;       /* было #888 */
     margin-bottom: 10px;
   }
 
@@ -247,12 +247,12 @@
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: #666;
+    color: #888888;       /* было #666 */
     letter-spacing: 0.5px;
     margin-bottom: 3px;
   }
 
-  .popup-row span:last-child { color: #aaa; }
+  .popup-row span:last-child { color: #cccccc; }  /* было #aaa */
 
   /* ── LOADING ─────────────────────────────────────────────── */
   .loading-overlay {
@@ -270,14 +270,14 @@
   .loading-text {
     font-size: 10px;
     letter-spacing: 3px;
-    color: #666;
+    color: #aaaaaa;       /* было #666 */
     text-transform: uppercase;
   }
 
   .loading-bar {
     width: 120px;
     height: 2px;
-    background: #222;
+    background: #333333;  /* было #222 */
     position: relative;
     overflow: hidden;
   }
@@ -309,14 +309,14 @@
   .no-data-title {
     font-size: 13px;
     letter-spacing: 2px;
-    color: #444;
+    color: #888888;       /* было #444 */
     text-transform: uppercase;
     margin-bottom: 8px;
   }
 
   .no-data-sub {
     font-size: 10px;
-    color: #333;
+    color: #666666;       /* было #333 */
     letter-spacing: 1px;
   }
 
@@ -365,7 +365,7 @@
   </div>
   <div class="stats-row">
     <div class="stats-label">Category</div>
-    <div class="stats-value" style="font-size:11px;color:#888;" id="statCat">—</div>
+    <div class="stats-value" style="font-size:11px;color:#aaa;" id="statCat">—</div>
   </div>
   <hr class="stats-divider">
   <div class="stats-row">
@@ -374,11 +374,11 @@
   </div>
   <div class="stats-row">
     <div class="stats-label">Min CI</div>
-    <div class="stats-value" id="statMin" style="font-size:14px;color:#888;">—</div>
+    <div class="stats-value" id="statMin" style="font-size:14px;color:#aaa;">—</div>
   </div>
   <div class="stats-row">
     <div class="stats-label">Max CI</div>
-    <div class="stats-value" id="statMax" style="font-size:14px;color:#888;">—</div>
+    <div class="stats-value" id="statMax" style="font-size:14px;color:#aaa;">—</div>
   </div>
 </div>
 
@@ -418,14 +418,8 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-// CONFIG — замени на свой Spreadsheet ID
-// ═══════════════════════════════════════════════════════════════
-const SHEET_ID   = '1mMF9JQscYIhlZYq5tOiZKSJ9zn4PT46W_4CbiEaxeP4';
-const SHEET_NAME = 'Form_Responses';
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=67053185&single=true&output=csv';
 
-// Резервные тестовые данные (если таблица недоступна)
 const DEMO_DATA = [
   { name: 'Crkva Sv. Mihaila — north', lat: 42.4534, lng: 18.5312, CI: 0.808, ad: 0.80, ii: 75 },
   { name: 'Stara zgrada — east', lat: 42.4528, lng: 18.5320, CI: 0.743, ad: 0.65, ii: 70 },
@@ -434,9 +428,6 @@ const DEMO_DATA = [
   { name: 'Nova zgrada — south', lat: 42.4515, lng: 18.5340, CI: 0.426, ad: 0.40, ii: 35 },
 ];
 
-// ═══════════════════════════════════════════════════════════════
-// SPECTRAL COLOR — CI 0–1 → visible spectrum 400–700nm
-// ═══════════════════════════════════════════════════════════════
 function wavelengthToRGB(wl) {
   let r=0, g=0, b=0;
   if (wl >= 380 && wl < 440) { r=(440-wl)/(440-380); g=0; b=1; }
@@ -445,12 +436,9 @@ function wavelengthToRGB(wl) {
   else if (wl < 580) { r=(wl-510)/(580-510); g=1; b=0; }
   else if (wl < 645) { r=1; g=(645-wl)/(645-580); b=0; }
   else if (wl <= 780) { r=1; g=0; b=0; }
-
-  // Intensity falloff at edges
   let factor = 1.0;
   if (wl >= 380 && wl < 420)      factor = 0.3 + 0.7*(wl-380)/(420-380);
   else if (wl >= 700 && wl <= 780) factor = 0.3 + 0.7*(780-wl)/(780-700);
-
   return [
     Math.round(255 * Math.pow(r*factor, 0.8)),
     Math.round(255 * Math.pow(g*factor, 0.8)),
@@ -459,7 +447,7 @@ function wavelengthToRGB(wl) {
 }
 
 function ciToColor(ci) {
-  const wl = 400 + ci * 300; // CI 0→400nm (violet), CI 1→700nm (red)
+  const wl = 400 + ci * 300;
   const [r,g,b] = wavelengthToRGB(wl);
   return `rgb(${r},${g},${b})`;
 }
@@ -478,16 +466,12 @@ function ciCategory(ci) {
   return '🟥 No Chronity';
 }
 
-// ═══════════════════════════════════════════════════════════════
-// INIT MAP
-// ═══════════════════════════════════════════════════════════════
 const map = L.map('map', {
-  center: [42.4534, 18.5312], // Herceg Novi default
+  center: [42.4534, 18.5312],
   zoom: 15,
   zoomControl: true,
 });
 
-// Dark OSM tiles
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '© OpenStreetMap © CARTO',
   maxZoom: 19,
@@ -496,9 +480,6 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 let markersLayer = L.layerGroup().addTo(map);
 let hullLayer    = L.layerGroup().addTo(map);
 
-// ═══════════════════════════════════════════════════════════════
-// PARSE GPS from text "42.4534, 18.5312" or "42.4534,18.5312"
-// ═══════════════════════════════════════════════════════════════
 function parseGPS(text) {
   if (!text || text.trim() === '') return null;
   const parts = text.replace(/\s/g,'').split(',');
@@ -510,9 +491,6 @@ function parseGPS(text) {
   return { lat, lng };
 }
 
-// ═══════════════════════════════════════════════════════════════
-// PARSE CI from various formats
-// ═══════════════════════════════════════════════════════════════
 function parseCI(val) {
   if (!val) return null;
   const n = parseFloat(String(val).replace(',','.'));
@@ -520,9 +498,6 @@ function parseCI(val) {
   return Math.round(n * 1000) / 1000;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// RENDER OBJECTS ON MAP
-// ═══════════════════════════════════════════════════════════════
 function renderObjects(objects) {
   markersLayer.clearLayers();
   hullLayer.clearLayers();
@@ -538,7 +513,6 @@ function renderObjects(objects) {
   const old = document.getElementById('noData');
   if (old) old.remove();
 
-  // ── Draw convex hull zone ──────────────────────────────────
   if (objects.length >= 3) {
     const pts = turf.featureCollection(
       objects.map(o => turf.point([o.lng, o.lat], { ci: o.CI }))
@@ -547,7 +521,6 @@ function renderObjects(objects) {
     if (hull) {
       const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
       const color = ciToHex(avgCI);
-
       L.geoJSON(hull, {
         style: {
           fillColor: color,
@@ -558,8 +531,6 @@ function renderObjects(objects) {
           dashArray: '4 4',
         }
       }).addTo(hullLayer);
-
-      // Zone CI label in center
       const center = turf.centroid(hull);
       const [cLng, cLat] = center.geometry.coordinates;
       L.marker([cLat, cLng], {
@@ -573,12 +544,9 @@ function renderObjects(objects) {
     }
   }
 
-  // ── Draw object markers ────────────────────────────────────
   objects.forEach(obj => {
     const color = ciToColor(obj.CI);
     const hex   = ciToHex(obj.CI);
-
-    // Pulsing circle marker
     const marker = L.circleMarker([obj.lat, obj.lng], {
       radius: 10,
       fillColor: hex,
@@ -586,8 +554,6 @@ function renderObjects(objects) {
       weight: 2,
       fillOpacity: 0.9,
     });
-
-    // Popup
     const popup = L.popup({ maxWidth: 220, className: '' }).setContent(`
       <div class="popup-content">
         <div class="popup-name">${obj.name || 'Unknown object'}</div>
@@ -599,12 +565,10 @@ function renderObjects(objects) {
         ${obj.date ? `<div class="popup-row"><span>Measured</span><span>${obj.date}</span></div>` : ''}
       </div>
     `);
-
     marker.bindPopup(popup);
     marker.addTo(markersLayer);
   });
 
-  // ── Update stats ───────────────────────────────────────────
   const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
   const minCI = Math.min(...objects.map(o => o.CI));
   const maxCI = Math.max(...objects.map(o => o.CI));
@@ -618,16 +582,12 @@ function renderObjects(objects) {
   document.getElementById('statMax').textContent   = maxCI.toFixed(3);
   document.getElementById('statsPanel').style.display = 'block';
 
-  // Fit map to objects
   if (objects.length > 0) {
     const bounds = L.latLngBounds(objects.map(o => [o.lat, o.lng]));
     map.fitBounds(bounds, { padding: [60, 60] });
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// LOAD DATA from Google Sheets CSV
-// ═══════════════════════════════════════════════════════════════
 function loadData() {
   document.getElementById('loadingOverlay').style.display = 'flex';
   document.getElementById('statusDot').style.background = '#c55a11';
@@ -644,30 +604,25 @@ function loadData() {
       const objects = [];
 
       rows.forEach(row => {
-        // Try GPS coordinates field first, then location
         const gpsRaw  = row['GPS coordinates (if address unknown)'] || '';
         const locRaw  = row['Location / Address'] || '';
         const nameRaw = row['Object name'] || '';
 
         let coords = parseGPS(gpsRaw);
-        if (!coords) coords = parseGPS(locRaw); // try location field too
-        if (!coords) return; // skip if no valid coordinates
+        if (!coords) coords = parseGPS(locRaw);
+        if (!coords) return;
 
-        // Try to find CI from various possible column names
         let ci = null;
         const ciCols = ['CI', 'ci', 'Chronity Index', 'CI_zone'];
         for (const col of ciCols) {
           if (row[col]) { ci = parseCI(row[col]); break; }
         }
 
-        // If no CI column, try to calculate from raw data
         if (ci === null) {
-          // Use approximate from available data
           const adRaw = row['AD — Exact value (if known)'] || row['AD'] || '';
           const iiRaw = row['II — Exact value (if known)'] || row['II'] || '';
           const ad = parseFloat(adRaw) || 0.50;
           const ii = parseFloat(iiRaw) || 50;
-          // Simplified: use AD and II weighted
           ci = Math.round((ad * 0.35 + (ii/100) * 0.25 + 0.40 * 0.5) * 1000) / 1000;
           ci = Math.min(1, Math.max(0, ci));
         }
@@ -685,7 +640,6 @@ function loadData() {
       });
 
       if (objects.length === 0) {
-        // No objects with GPS — show demo data
         console.log('No GPS data found, showing demo objects');
         renderObjects(DEMO_DATA);
       } else {
@@ -701,12 +655,7 @@ function loadData() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════
 loadData();
-
-// Auto-refresh every 60 seconds
 setInterval(loadData, 60000);
 </script>
 </body>
