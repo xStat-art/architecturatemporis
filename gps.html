@@ -23,7 +23,7 @@
   .logo {
     font-size: 10px;
     letter-spacing: 3px;
-    color: #555;
+    color: #aaaaaa;      /* было #555 */
     text-transform: uppercase;
     margin-bottom: 48px;
   }
@@ -33,7 +33,7 @@
   .status {
     font-size: 11px;
     letter-spacing: 2px;
-    color: #555;
+    color: #aaaaaa;      /* было #555 */
     text-transform: uppercase;
     margin-bottom: 24px;
     min-height: 16px;
@@ -41,7 +41,7 @@
 
   .coords-box {
     background: #1a1a1a;
-    border: 1px solid #2e2e2e;
+    border: 1px solid #444444;   /* было #2e2e2e */
     padding: 32px 24px;
     width: 100%;
     max-width: 340px;
@@ -52,7 +52,7 @@
   .coords-label {
     font-size: 9px;
     letter-spacing: 3px;
-    color: #555;
+    color: #aaaaaa;      /* было #555 */
     text-transform: uppercase;
     margin-bottom: 16px;
   }
@@ -60,7 +60,7 @@
   .coords-value {
     font-size: 28px;
     font-weight: 700;
-    color: #fff;
+    color: #ffffff;
     letter-spacing: -0.5px;
     line-height: 1.3;
     word-break: break-all;
@@ -70,12 +70,12 @@
     justify-content: center;
   }
 
-  .coords-value.loading { color: #333; font-size: 14px; font-weight: 400; letter-spacing: 2px; }
-  .coords-value.error   { color: #c00000; font-size: 13px; font-weight: 400; }
+  .coords-value.loading { color: #888888; font-size: 14px; font-weight: 400; letter-spacing: 2px; }  /* было #333 */
+  .coords-value.error   { color: #e04040; font-size: 13px; font-weight: 400; }  /* было #c00000 */
 
   .accuracy {
     font-size: 10px;
-    color: #444;
+    color: #888888;      /* было #444 */
     letter-spacing: 1px;
     margin-top: 12px;
     min-height: 14px;
@@ -88,9 +88,9 @@
     font-size: 11px;
     letter-spacing: 3px;
     text-transform: uppercase;
-    border: 1px solid #333;
+    border: 1px solid #666666;   /* было #333 */
     background: transparent;
-    color: #888;
+    color: #cccccc;              /* было #888 */
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: 12px;
@@ -104,7 +104,7 @@
   }
 
   .btn-copy:disabled {
-    opacity: 0.3;
+    opacity: 0.35;
     cursor: not-allowed;
   }
 
@@ -115,34 +115,34 @@
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    border: 1px solid #222;
+    border: 1px solid #444444;   /* было #222 */
     background: transparent;
-    color: #444;
+    color: #888888;              /* было #444 */
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: 48px;
   }
 
-  .btn-refresh:active { color: #888; border-color: #444; }
+  .btn-refresh:active { color: #cccccc; border-color: #666; }
 
   .instruction {
     font-size: 11px;
-    color: #333;
+    color: #888888;      /* было #333 */
     line-height: 1.8;
     max-width: 280px;
     letter-spacing: 0.3px;
   }
 
-  .instruction strong { color: #555; }
+  .instruction strong { color: #cccccc; }  /* было #555 */
 
   .form-link {
     margin-top: 32px;
     font-size: 10px;
     letter-spacing: 2px;
-    color: #333;
+    color: #888888;      /* было #333 */
     text-decoration: none;
     text-transform: uppercase;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid #555555;   /* было #222 */
     padding-bottom: 2px;
     transition: color 0.2s;
   }
@@ -203,6 +203,7 @@ let currentCoords = null;
 
 function getLocation() {
   document.getElementById('status').innerHTML = '<span class="dot"></span>Requesting location...';
+  document.getElementById('status').style.color = '';
   document.getElementById('coords').className = 'coords-value loading';
   document.getElementById('coords').textContent = 'Waiting for GPS...';
   document.getElementById('accuracy').textContent = '';
@@ -247,7 +248,7 @@ function showError(msg) {
   document.getElementById('coords').className = 'coords-value error';
   document.getElementById('coords').textContent = msg;
   document.getElementById('status').innerHTML = '✕ &nbsp;Error';
-  document.getElementById('status').style.color = '#c00000';
+  document.getElementById('status').style.color = '#e04040';
 }
 
 function copyCoords() {
