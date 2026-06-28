@@ -13,16 +13,16 @@
 
   body {
     font-family: 'Arial', sans-serif;
-    background: #f4f1ec;
-    color: #1a1a1a;
+    background: #0f0f0f;
+    color: #fff;
     height: 100vh;
     display: flex;
     flex-direction: column;
   }
 
   .header {
-    background: #ffffff;
-    border-bottom: 1px solid #d8d2c8;
+    background: #1a1a1a;
+    border-bottom: 1px solid #444444;
     padding: 12px 20px;
     display: flex;
     align-items: center;
@@ -31,15 +31,15 @@
     z-index: 1000;
   }
   .header-left { display: flex; align-items: baseline; gap: 12px; }
-  .logo { font-size: 11px; letter-spacing: 3px; color: #888888; text-transform: uppercase; }
+  .logo { font-size: 11px; letter-spacing: 3px; color: #aaaaaa; text-transform: uppercase; }
   .logo span { color: #c55a11; }
-  .title { font-size: 13px; letter-spacing: 1px; color: #1a1a1a; text-transform: uppercase; }
+  .title { font-size: 13px; letter-spacing: 1px; color: #eeeeee; text-transform: uppercase; }
   .header-right { display: flex; align-items: center; gap: 16px; }
 
   .btn-refresh {
     font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    padding: 6px 16px; border: 1px solid #c8bfb0; background: transparent;
-    color: #888888; cursor: pointer; transition: all 0.2s;
+    padding: 6px 16px; border: 1px solid #555555; background: transparent;
+    color: #aaaaaa; cursor: pointer; transition: all 0.2s;
   }
   .btn-refresh:hover { border-color: #c55a11; color: #c55a11; }
 
@@ -53,52 +53,50 @@
 
   .legend {
     position: absolute; bottom: 32px; left: 16px; z-index: 1000;
-    background: rgba(255,255,255,0.97); border: 1px solid #d8d2c8;
+    background: rgba(20,20,20,0.95); border: 1px solid #444444;
     padding: 16px 20px; min-width: 200px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
   }
-  .legend-title { font-size: 9px; letter-spacing: 3px; color: #888888; text-transform: uppercase; margin-bottom: 12px; }
+  .legend-title { font-size: 9px; letter-spacing: 3px; color: #aaaaaa; text-transform: uppercase; margin-bottom: 12px; }
   .legend-spectrum {
     height: 12px; border-radius: 1px;
     background: linear-gradient(to right, #7B00D4, #0000FF, #00BFFF, #00FF00, #FFFF00, #FF8C00, #FF0000);
     margin-bottom: 6px;
   }
-  .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: #888888; letter-spacing: 1px; margin-bottom: 14px; }
+  .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: #aaaaaa; letter-spacing: 1px; margin-bottom: 14px; }
   .legend-items { display: flex; flex-direction: column; gap: 6px; }
-  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #444444; letter-spacing: 1px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #cccccc; letter-spacing: 1px; }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
   .stats {
     position: absolute; top: 70px; right: 16px; z-index: 1000;
-    background: rgba(255,255,255,0.97); border: 1px solid #d8d2c8;
+    background: rgba(20,20,20,0.95); border: 1px solid #444444;
     padding: 16px 20px; min-width: 180px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
   }
-  .stats-title { font-size: 9px; letter-spacing: 3px; color: #888888; text-transform: uppercase; margin-bottom: 12px; }
+  .stats-title { font-size: 9px; letter-spacing: 3px; color: #aaaaaa; text-transform: uppercase; margin-bottom: 12px; }
   .stats-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 16px; }
-  .stats-label { font-size: 10px; color: #888888; letter-spacing: 1px; }
-  .stats-value { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; color: #1a1a1a; }
-  .stats-divider { border: none; border-top: 1px solid #d8d2c8; margin: 10px 0; }
+  .stats-label { font-size: 10px; color: #aaaaaa; letter-spacing: 1px; }
+  .stats-value { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; }
+  .stats-divider { border: none; border-top: 1px solid #444444; margin: 10px 0; }
 
   .leaflet-popup-content-wrapper {
-    background: #ffffff; border: 1px solid #d8d2c8;
-    border-radius: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    background: #1a1a1a; border: 1px solid #555555;
+    border-radius: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
-  .leaflet-popup-tip { background: #ffffff; }
+  .leaflet-popup-tip { background: #1a1a1a; }
   .popup-content { padding: 4px; min-width: 180px; }
-  .popup-name { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px; letter-spacing: 0.3px; }
+  .popup-name { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 8px; letter-spacing: 0.3px; }
   .popup-ci { font-size: 28px; font-weight: 700; margin-bottom: 4px; letter-spacing: -1px; }
-  .popup-cat { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #888888; margin-bottom: 10px; }
-  .popup-row { display: flex; justify-content: space-between; font-size: 10px; color: #aaaaaa; letter-spacing: 0.5px; margin-bottom: 3px; }
-  .popup-row span:last-child { color: #444444; }
+  .popup-cat { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #aaaaaa; margin-bottom: 10px; }
+  .popup-row { display: flex; justify-content: space-between; font-size: 10px; color: #888888; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .popup-row span:last-child { color: #cccccc; }
 
   .loading-overlay {
-    position: absolute; inset: 0; background: rgba(244,241,236,0.92);
+    position: absolute; inset: 0; background: rgba(15,15,15,0.9);
     z-index: 2000; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 16px;
   }
-  .loading-text { font-size: 10px; letter-spacing: 3px; color: #888888; text-transform: uppercase; }
-  .loading-bar { width: 120px; height: 2px; background: #d8d2c8; position: relative; overflow: hidden; }
+  .loading-text { font-size: 10px; letter-spacing: 3px; color: #aaaaaa; text-transform: uppercase; }
+  .loading-bar { width: 120px; height: 2px; background: #333333; position: relative; overflow: hidden; }
   .loading-bar::after {
     content: ''; position: absolute; left: -40%; width: 40%; height: 100%;
     background: #c55a11; animation: loading 1s ease-in-out infinite;
@@ -106,8 +104,8 @@
   @keyframes loading { to { left: 100%; } }
 
   .no-data { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 500; text-align: center; }
-  .no-data-title { font-size: 13px; letter-spacing: 2px; color: #aaaaaa; text-transform: uppercase; margin-bottom: 8px; }
-  .no-data-sub { font-size: 10px; color: #bbbbbb; letter-spacing: 1px; }
+  .no-data-title { font-size: 13px; letter-spacing: 2px; color: #888888; text-transform: uppercase; margin-bottom: 8px; }
+  .no-data-sub { font-size: 10px; color: #666666; letter-spacing: 1px; }
 
   .zone-label { background: transparent; border: none; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
 
@@ -141,11 +139,11 @@
 <div class="stats" id="statsPanel" style="display:none;">
   <div class="stats-title">Zone Summary</div>
   <div class="stats-row"><div class="stats-label">CI_zone</div><div class="stats-value" id="statCI">—</div></div>
-  <div class="stats-row"><div class="stats-label">Category</div><div class="stats-value" style="font-size:11px;" id="statCat">—</div></div>
+  <div class="stats-row"><div class="stats-label">Category</div><div class="stats-value" style="font-size:11px;color:#aaa;" id="statCat">—</div></div>
   <hr class="stats-divider">
   <div class="stats-row"><div class="stats-label">Objects</div><div class="stats-value" id="statCount" style="font-size:18px;">—</div></div>
-  <div class="stats-row"><div class="stats-label">Min CI</div><div class="stats-value" id="statMin" style="font-size:14px;color:#888;">—</div></div>
-  <div class="stats-row"><div class="stats-label">Max CI</div><div class="stats-value" id="statMax" style="font-size:14px;color:#888;">—</div></div>
+  <div class="stats-row"><div class="stats-label">Min CI</div><div class="stats-value" id="statMin" style="font-size:14px;color:#aaa;">—</div></div>
+  <div class="stats-row"><div class="stats-label">Max CI</div><div class="stats-value" id="statMax" style="font-size:14px;color:#aaa;">—</div></div>
 </div>
 
 <div class="legend">
@@ -155,7 +153,7 @@
   <div class="legend-items">
     <div class="legend-item"><div class="legend-dot" style="background:#FF0000;"></div><span>0.85–1.00 · Deep Chronity</span></div>
     <div class="legend-item"><div class="legend-dot" style="background:#FF8C00;"></div><span>0.70–0.85 · High Chronity</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#FFFF00;border:1px solid #ccc;"></div><span>0.50–0.70 · Moderate</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FFFF00;"></div><span>0.50–0.70 · Moderate</span></div>
     <div class="legend-item"><div class="legend-dot" style="background:#00BFFF;"></div><span>0.30–0.50 · Low Chronity</span></div>
     <div class="legend-item"><div class="legend-dot" style="background:#7B00D4;"></div><span>0.00–0.30 · No Chronity</span></div>
   </div>
@@ -205,6 +203,7 @@ function ciCategory(ci) {
 
 const map = L.map('map', { center: [42.4534, 18.5312], zoom: 15 });
 
+/* ── СВЕТЛАЯ КАРТА, тёмный UI ── */
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '© OpenStreetMap © CARTO', maxZoom: 19,
 }).addTo(map);
@@ -233,7 +232,7 @@ function buildSpectralGradient(objects) {
     const offset = sorted.length === 1 ? 0.5 : (obj.lng - minLng) / range;
     stop.setAttribute('offset', (offset * 100).toFixed(1) + '%');
     stop.setAttribute('stop-color', ciToHex(obj.CI));
-    stop.setAttribute('stop-opacity', '0.50');
+    stop.setAttribute('stop-opacity', '0.55');
     grad.appendChild(stop);
   });
 
@@ -254,13 +253,13 @@ function renderSpectralHull(objects, hullGeoJSON) {
     fillOpacity: 0,
     color: avgHex,
     weight: 2,
-    opacity: 0.7,
+    opacity: 0.8,
     dashArray: '5 4',
   }).addTo(hullLayer);
 
   const patchFill = () => {
     const el = poly.getElement();
-    if (el) { el.setAttribute('fill', `url(#${gradId})`); el.setAttribute('fill-opacity', '0.45'); }
+    if (el) { el.setAttribute('fill', `url(#${gradId})`); el.setAttribute('fill-opacity', '0.50'); }
   };
   poly.on('add', patchFill);
   requestAnimationFrame(patchFill);
@@ -270,7 +269,7 @@ function renderSpectralHull(objects, hullGeoJSON) {
   L.marker([cLat, cLng], {
     icon: L.divIcon({
       className: 'zone-label',
-      html: `<div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;text-shadow:0 1px 3px rgba(255,255,255,0.9);">CI_zone ${avgCI.toFixed(3)}</div>`,
+      html: `<div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;text-shadow:0 0 6px rgba(0,0,0,0.8);">CI_zone ${avgCI.toFixed(3)}</div>`,
       iconAnchor: [40, 8],
     }),
     interactive: false,
@@ -320,7 +319,7 @@ function renderObjects(objects) {
   objects.forEach(obj => {
     const hex = ciToHex(obj.CI);
     L.circleMarker([obj.lat, obj.lng], {
-      radius: 10, fillColor: hex, color: '#ffffff', weight: 2, fillOpacity: 0.92,
+      radius: 10, fillColor: hex, color: '#1a1a1a', weight: 2, fillOpacity: 0.9,
     }).bindPopup(L.popup({ maxWidth: 220 }).setContent(`
       <div class="popup-content">
         <div class="popup-name">${obj.name || 'Unknown object'}</div>
@@ -376,7 +375,6 @@ function loadData() {
       renderObjects(objects.length ? objects : DEMO_DATA);
     },
     error(err) {
-      console.log('CSV error, demo data:', err);
       document.getElementById('loadingOverlay').style.display = 'none';
       document.getElementById('statusDot').style.background = '#888';
       renderObjects(DEMO_DATA);
