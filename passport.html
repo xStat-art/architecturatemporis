@@ -60,7 +60,7 @@
     gap: 16px;
     align-items: center;
   }
-  .qr-box { background: #fff; padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .qr-box { background: #fff; padding: 10px 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; align-self: stretch; }
 
   /* TIMELINE */
   .cp-timeline-wrap {
@@ -324,9 +324,9 @@ function renderPassport(d) {
         <div style="font-size:28px;font-weight:700;color:#fff;line-height:1.1;">${ci.toFixed(3)}</div>
         <div style="font-size:9px;color:#c55a11;letter-spacing:1px;margin-top:2px;">T+${tPlus} · ${ciCategory(ci)}</div>
       </div>
-      <div class="qr-box">
+      <div class="qr-box" style="padding:10px 18px;justify-content:center;">
         <div id="qr-render"></div>
-        <div style="font-size:7px;letter-spacing:1px;color:#999;text-transform:uppercase;text-align:center;">Scan to verify</div>
+        <div style="font-size:7px;letter-spacing:1px;color:#999;text-transform:uppercase;text-align:center;margin-top:4px;">Scan to verify</div>
       </div>
     </div>
 
@@ -456,7 +456,7 @@ function renderPassport(d) {
   // QR код
   new QRCode(document.getElementById('qr-render'), {
     text: passportURL,
-    width: 68, height: 68,
+    width: 84, height: 84,
     colorDark: '#111111', colorLight: '#ffffff',
     correctLevel: QRCode.CorrectLevel.M
   });
