@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chrono-Passport Registry · ATRC</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:        #0e0e0e;
+    --bg2:       #161616;
+    --bg3:       #1e1e1e;
+    --border:    #2a2a2a;
+    --text:      #d4d0c8;
+    --text-dim:  #666;
+    --text-mid:  #999;
+    --accent:    #c55a11;
+    --accent2:   #8b3d08;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
+
+    /* CI spectrum colours */
+    --deep:      #1A1A1A;
+    --high:      #7B4F00;
+    --moderate:  #C8A400;
+    --low:       #C55A11;
+    --none:      #C00000;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(14,14,14,0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    height: 52px;
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--text-mid);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--accent); }
+
+  .nav-links {
+    display: flex;
+    gap: 24px;
+    list-style: none;
+  }
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover,
+  .nav-links a.active { color: var(--text); }
+
+  /* ── HEADER ── */
+  .page-header {
+    padding: 48px 32px 32px;
+    border-bottom: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .page-title {
+    font-family: var(--mono);
+    font-size: clamp(22px, 3vw, 36px);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: #f0ece0;
+    margin-bottom: 8px;
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-mid);
+    max-width: 520px;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex;
+    gap: 40px;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: #f0ece0;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  /* ── FILTERS ── */
+  .filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .filter-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .filter-group input,
+  .filter-group select {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 7px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 140px;
+  }
+
+  .filter-group input:focus,
+  .filter-group select:focus { border-color: var(--accent); }
+
+  .filter-group select option { background: var(--bg2); }
+
+  .filter-search { min-width: 240px; }
+
+  .btn-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 7px 16px;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+    align-self: flex-end;
+  }
+  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── RESULTS INFO ── */
+  .results-info {
+    padding: 12px 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sort-controls {
+    display: flex;
+    gap: 16px;
+  }
+
+  .sort-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+    letter-spacing: 0.08em;
+    transition: color 0.2s;
+  }
+  .sort-btn:hover,
+  .sort-btn.active { color: var(--text); }
+  .sort-btn.active::after { content: ' ↓'; }
+  .sort-btn.active.asc::after { content: ' ↑'; }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 16px;
+    text-align: left;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  th:first-child { padding-left: 32px; }
+  th:last-child { padding-right: 32px; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  tbody tr:hover { background: var(--bg2); }
+
+  td {
+    padding: 14px 16px;
+    vertical-align: middle;
+  }
+
+  td:first-child { padding-left: 32px; }
+  td:last-child { padding-right: 32px; }
+
+  /* CP ID */
+  .cp-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  /* Object name */
+  .obj-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #f0ece0;
+    margin-bottom: 2px;
+  }
+  .obj-architect {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Location */
+  .loc-city {
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 1px;
+  }
+  .loc-country {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  /* Zone */
+  .zone-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-mid);
+  }
+
+  /* Year */
+  .year-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-mid);
+  }
+
+  /* CI badge */
+  .ci-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ci-bar-wrap {
+    width: 48px;
+    height: 3px;
+    background: var(--bg3);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .ci-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    transition: width 0.4s ease;
+  }
+
+  .ci-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 38px;
+  }
+
+  /* Status dot */
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+  .status-active { background: #4a7c59; }
+  .status-pending { background: var(--accent); }
+  .status-archived { background: var(--text-dim); }
+
+  .status-text {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* CI category colours */
+  .cat-deep     { color: #aaa; }
+  .cat-high     { color: #c8920a; }
+  .cat-moderate { color: #c8a400; }
+  .cat-low      { color: #c55a11; }
+  .cat-none     { color: #c00000; }
+
+  .bar-deep     { background: #aaa; }
+  .bar-high     { background: #c8920a; }
+  .bar-moderate { background: #c8a400; }
+  .bar-low      { background: #c55a11; }
+  .bar-none     { background: #c00000; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 80px 32px;
+    display: none;
+  }
+  .empty-state.visible { display: block; }
+  .empty-icon {
+    font-family: var(--mono);
+    font-size: 32px;
+    color: var(--border);
+    margin-bottom: 16px;
+  }
+  .empty-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .empty-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* ── LOADING ── */
+  .loading-state {
+    text-align: center;
+    padding: 80px 32px;
+  }
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  /* ── ERROR ── */
+  .error-state {
+    text-align: center;
+    padding: 60px 32px;
+    display: none;
+  }
+  .error-state.visible { display: block; }
+  .error-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .error-sub { font-size: 12px; color: var(--text-dim); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 32px;
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 40px auto 0;
+  }
+
+  .footer-left {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+  .footer-left span { color: var(--accent); }
+
+  .footer-right {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    nav { padding: 0 16px; }
+    .nav-links { display: none; }
+    .page-header, .stats-bar, .filters-row,
+    .results-info, .table-wrap { padding-left: 16px; padding-right: 16px; }
+    th:first-child, td:first-child { padding-left: 16px; }
+    th:last-child, td:last-child { padding-right: 16px; }
+    .stats-bar { gap: 20px; flex-wrap: wrap; }
+    td.hide-mobile, th.hide-mobile { display: none; }
+    footer { flex-direction: column; gap: 8px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="https://architecturatemporis.com">
+    ARCHITECTURA<span>·</span>TEMPORIS
+  </a>
+  <ul class="nav-links">
+    <li><a href="https://architecturatemporis.com/#methodology">Methodology</a></li>
+    <li><a href="https://architecturatemporis.com/#research">Research</a></li>
+    <li><a href="registry.html" class="active">Registry</a></li>
+    <li><a href="https://architecturatemporis.com/ATRC_CI_Map.html">Map</a></li>
+    <li><a href="https://architecturatemporis.com/#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HEADER -->
+<header class="page-header">
+  <div class="page-eyebrow">ATRC · Chrono-Passport Registry</div>
+  <h1 class="page-title">Global Index of Measured Places</h1>
+  <p class="page-subtitle">Every entry is a verified field measurement. CI computed from physical evidence — materials, acoustics, spatial integrity.</p>
+</header>
+
+<!-- STATS -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat">
+    <span class="stat-value" id="statTotal">—</span>
+    <span class="stat-label">Objects</span>
+  </div>
+  <div class="stat">
+    <span class="stat-value" id="statCountries">—</span>
+    <span class="stat-label">Countries</span>
+  </div>
+  <div class="stat">
+    <span class="stat-value" id="statCities">—</span>
+    <span class="stat-label">Cities</span>
+  </div>
+  <div class="stat">
+    <span class="stat-value" id="statAvgCI">—</span>
+    <span class="stat-label">Avg CI</span>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters-row">
+  <div class="filter-group">
+    <span class="filter-label">Search</span>
+    <input class="filter-search" type="text" id="filterSearch" placeholder="Object name, architect…">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Country</span>
+    <select id="filterCountry">
+      <option value="">All countries</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">City</span>
+    <select id="filterCity">
+      <option value="">All cities</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">CI Category</span>
+    <select id="filterCI">
+      <option value="">All categories</option>
+      <option value="deep">⬛ Deep Chronity (0.85–1.00)</option>
+      <option value="high">🟫 High Chronity (0.70–0.85)</option>
+      <option value="moderate">🟨 Moderate (0.50–0.70)</option>
+      <option value="low">🟧 Low (0.30–0.50)</option>
+      <option value="none">🟥 No Chronity (0.00–0.30)</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Zone</span>
+    <select id="filterZone">
+      <option value="">All zones</option>
+    </select>
+  </div>
+  <button class="btn-reset" id="btnReset">Reset</button>
+</div>
+
+<!-- RESULTS INFO -->
+<div class="results-info">
+  <span id="resultsCount">Loading…</span>
+  <div class="sort-controls">
+    <button class="sort-btn active" id="sortCI" data-col="ci">Sort by CI</button>
+    <button class="sort-btn" id="sortYear" data-col="year">Year</button>
+    <button class="sort-btn" id="sortName" data-col="name">Name</button>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <div class="loading-state" id="loadingState">
+    <div class="loading-text">Loading registry…</div>
+  </div>
+  <div class="error-state" id="errorState">
+    <div class="error-text">Could not load registry data</div>
+    <div class="error-sub">Check connection or try again later</div>
+  </div>
+  <table id="registryTable" style="display:none">
+    <thead>
+      <tr>
+        <th>CP · ID</th>
+        <th>Object</th>
+        <th class="hide-mobile">Location</th>
+        <th class="hide-mobile">Zone</th>
+        <th class="hide-mobile">Year</th>
+        <th>CI</th>
+        <th class="hide-mobile">Status</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">◻</div>
+    <div class="empty-title">No objects match the current filters</div>
+    <div class="empty-sub">Try widening your search</div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-left">
+    ATRC · <span>Understanding before change</span>
+  </div>
+  <div class="footer-right">
+    <a href="https://architecturatemporis.com" style="color:inherit;text-decoration:none;">architecturatemporis.com</a>
+    &nbsp;·&nbsp; Registry auto-updates from field measurements
+  </div>
+</footer>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSEvYYY_XY88tuVBOXk2FYHabWAOLXZwSsvil5VD6_oZRdP1lm2YNSUt8eTQhn0kwq-61_c5BnOzqv9/pub?gid=1404791980&single=true&output=csv';
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let allRecords = [];
+let sortCol = 'ci';
+let sortAsc = false; // CI: high first by default
+
+// ── CI HELPERS ───────────────────────────────────────────────────────────────
+function ciCategory(ci) {
+  if (ci >= 0.85) return 'deep';
+  if (ci >= 0.70) return 'high';
+  if (ci >= 0.50) return 'moderate';
+  if (ci >= 0.30) return 'low';
+  return 'none';
+}
+
+function ciLabel(cat) {
+  return { deep: 'Deep Chronity', high: 'High Chronity', moderate: 'Moderate', low: 'Low', none: 'No Chronity' }[cat];
+}
+
+// ── CSV PARSE ────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(1).map(line => {
+    const vals = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; continue; }
+      if (c === ',' && !inQ) { vals.push(cur); cur = ''; }
+      else cur += c;
+    }
+    vals.push(cur);
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (vals[i] || '').trim());
+    return obj;
+  }).filter(r => r.CP_ID);
+}
+
+// Normalise ID spacing: "CP-IT-VE-MB-002-0001" or "CP · IT · VE · MB · 002 · 0001"
+// → canonical display with spaces around ·
+function formatID(id) {
+  return id.replace(/[-·\s]+/g, ' · ').replace(/\s+/g, ' ').trim();
+}
+
+// Build passport URL
+function passportURL(id) {
+  const urlId = id.replace(/\s*·\s*/g, '-').replace(/\s+/g, '-');
+  return `passport.html?id=${urlId}`;
+}
+
+// Extract zone from CP_ID or ZN_ID
+function extractZone(record) {
+  const zn = record.ZN_ID || record.CP_ID || '';
+  // Try to read zone segment (5th field)
+  const parts = zn.split(/[\s·\-]+/).filter(Boolean);
+  if (parts.length >= 5) return parts.slice(0, 5).join(' · ');
+  return zn;
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function renderTable(records) {
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  const table = document.getElementById('registryTable');
+
+  tbody.innerHTML = '';
+
+  if (records.length === 0) {
+    table.style.display = 'none';
+    empty.classList.add('visible');
+    document.getElementById('resultsCount').textContent = '0 objects';
+    return;
+  }
+
+  empty.classList.remove('visible');
+  table.style.display = 'table';
+
+  records.forEach(r => {
+    const ci = parseFloat(r.CI) || 0;
+    const cat = ciCategory(ci);
+    const barPct = Math.round(ci * 100);
+    const displayID = formatID(r.CP_ID);
+    const zoneDisplay = formatID(r.ZN_ID || '');
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="cp-id">${displayID}</span></td>
+      <td>
+        <div class="obj-name">${r.Object_name || '—'}</div>
+        <div class="obj-architect">${r.Architect || ''}</div>
+      </td>
+      <td class="hide-mobile">
+        <div class="loc-city">${r.Location || '—'}</div>
+        <div class="loc-country">${extractCountryCity(r.CP_ID).country}</div>
+      </td>
+      <td class="hide-mobile">
+        <span class="zone-id">${zoneDisplay}</span>
+      </td>
+      <td class="hide-mobile">
+        <span class="year-val">${r.Year_built || '—'}</span>
+      </td>
+      <td>
+        <div class="ci-cell">
+          <div>
+            <div class="ci-bar-wrap">
+              <div class="ci-bar bar-${cat}" style="width:${barPct}%"></div>
+            </div>
+          </div>
+          <span class="ci-value cat-${cat}">${ci.toFixed(3)}</span>
+        </div>
+      </td>
+      <td class="hide-mobile">
+        <span class="status-dot status-${(r.Status||'active').toLowerCase()}"></span>
+        <span class="status-text">${r.Status || 'Active'}</span>
+      </td>
+    `;
+    tr.addEventListener('click', () => {
+      window.open(passportURL(r.CP_ID), '_blank');
+    });
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('resultsCount').textContent =
+    `${records.length} object${records.length !== 1 ? 's' : ''}`;
+}
+
+// Extract country code from CP_ID
+function extractCountryCity(id) {
+  const parts = id.replace(/\s*·\s*/g, '-').split('-').filter(Boolean);
+  // CP · COUNTRY · REGION · CITY · ZONE · OBJECT
+  return {
+    country: parts[1] || '',
+    region: parts[2] || '',
+    city: parts[3] || ''
+  };
+}
+
+// ── FILTERS ──────────────────────────────────────────────────────────────────
+function getFiltered() {
+  const search = document.getElementById('filterSearch').value.toLowerCase();
+  const country = document.getElementById('filterCountry').value;
+  const city = document.getElementById('filterCity').value;
+  const ciCat = document.getElementById('filterCI').value;
+  const zone = document.getElementById('filterZone').value;
+
+  return allRecords.filter(r => {
+    const ci = parseFloat(r.CI) || 0;
+    const cat = ciCategory(ci);
+    const loc = extractCountryCity(r.CP_ID);
+    const zn = r.ZN_ID || '';
+
+    if (search && !(
+      (r.Object_name || '').toLowerCase().includes(search) ||
+      (r.Architect || '').toLowerCase().includes(search) ||
+      (r.Location || '').toLowerCase().includes(search) ||
+      (r.CP_ID || '').toLowerCase().includes(search)
+    )) return false;
+
+    if (country && loc.country !== country) return false;
+    if (city && loc.city !== city) return false;
+    if (ciCat && cat !== ciCat) return false;
+    if (zone && !zn.includes(zone)) return false;
+
+    return true;
+  });
+}
+
+function getSorted(records) {
+  return [...records].sort((a, b) => {
+    let va, vb;
+    if (sortCol === 'ci') {
+      va = parseFloat(a.CI) || 0;
+      vb = parseFloat(b.CI) || 0;
+    } else if (sortCol === 'year') {
+      va = parseInt(a.Year_built) || 0;
+      vb = parseInt(b.Year_built) || 0;
+    } else {
+      va = (a.Object_name || '').toLowerCase();
+      vb = (b.Object_name || '').toLowerCase();
+    }
+    if (va < vb) return sortAsc ? -1 : 1;
+    if (va > vb) return sortAsc ? 1 : -1;
+    return 0;
+  });
+}
+
+function applyFilters() {
+  renderTable(getSorted(getFiltered()));
+}
+
+// ── POPULATE SELECTS ─────────────────────────────────────────────────────────
+function populateSelects(records) {
+  const countries = [...new Set(records.map(r => extractCountryCity(r.CP_ID).country).filter(Boolean))].sort();
+  const cities    = [...new Set(records.map(r => extractCountryCity(r.CP_ID).city).filter(Boolean))].sort();
+  const zones     = [...new Set(records.map(r => r.ZN_ID || '').filter(Boolean))].sort();
+
+  const countryEl = document.getElementById('filterCountry');
+  const cityEl    = document.getElementById('filterCity');
+  const zoneEl    = document.getElementById('filterZone');
+
+  countries.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    countryEl.appendChild(opt);
+  });
+  cities.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    cityEl.appendChild(opt);
+  });
+  zones.forEach(z => {
+    const opt = document.createElement('option');
+    const display = formatID(z);
+    opt.value = z; opt.textContent = display;
+    zoneEl.appendChild(opt);
+  });
+}
+
+// ── STATS ────────────────────────────────────────────────────────────────────
+function updateStats(records) {
+  const countries = new Set(records.map(r => extractCountryCity(r.CP_ID).country).filter(Boolean));
+  const cities    = new Set(records.map(r => extractCountryCity(r.CP_ID).city).filter(Boolean));
+  const ciVals    = records.map(r => parseFloat(r.CI)).filter(v => !isNaN(v));
+  const avgCI     = ciVals.length ? (ciVals.reduce((a,b)=>a+b,0)/ciVals.length).toFixed(3) : '—';
+
+  document.getElementById('statTotal').textContent     = records.length;
+  document.getElementById('statCountries').textContent = countries.size;
+  document.getElementById('statCities').textContent    = cities.size;
+  document.getElementById('statAvgCI').textContent     = avgCI;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const res = await fetch(CSV_URL + '&t=' + Date.now());
+    if (!res.ok) throw new Error('Fetch failed');
+    const text = await res.text();
+    allRecords = parseCSV(text);
+
+    document.getElementById('loadingState').style.display = 'none';
+
+    if (allRecords.length === 0) {
+      // Show demo entry so page is not empty
+      allRecords = [{
+        CP_ID: 'CP · IT · VE · MB · 002 · 0001',
+        ZN_ID: 'ZN · IT · VE · MB · 002',
+        Status: 'Active',
+        Object_name: 'Casa Zamprogno',
+        Architect: 'Carlo Scarpa',
+        Year_built: '1971',
+        Location: 'Montebelluna, Italy',
+        Heritage: '1.5',
+        CI: '0.828',
+        AD: '0.84',
+        II: '90',
+        PI: '19.33',
+        Last_measured: '2024',
+      }];
+    }
+
+    populateSelects(allRecords);
+    updateStats(allRecords);
+    renderTable(getSorted(allRecords));
+
+  } catch(err) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').classList.add('visible');
+
+    // Still show demo data
+    allRecords = [{
+      CP_ID: 'CP · IT · VE · MB · 002 · 0001',
+      ZN_ID: 'ZN · IT · VE · MB · 002',
+      Status: 'Active',
+      Object_name: 'Casa Zamprogno',
+      Architect: 'Carlo Scarpa',
+      Year_built: '1971',
+      Location: 'Montebelluna, Italy',
+      Heritage: '1.5',
+      CI: '0.828',
+      AD: '0.84',
+      II: '90',
+    }];
+    populateSelects(allRecords);
+    updateStats(allRecords);
+    renderTable(getSorted(allRecords));
+  }
+}
+
+// ── EVENT LISTENERS ──────────────────────────────────────────────────────────
+document.getElementById('filterSearch').addEventListener('input', applyFilters);
+document.getElementById('filterCountry').addEventListener('change', applyFilters);
+document.getElementById('filterCity').addEventListener('change', applyFilters);
+document.getElementById('filterCI').addEventListener('change', applyFilters);
+document.getElementById('filterZone').addEventListener('change', applyFilters);
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  document.getElementById('filterSearch').value = '';
+  document.getElementById('filterCountry').value = '';
+  document.getElementById('filterCity').value = '';
+  document.getElementById('filterCI').value = '';
+  document.getElementById('filterZone').value = '';
+  applyFilters();
+});
+
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const col = btn.dataset.col;
+    if (sortCol === col) {
+      sortAsc = !sortAsc;
+      btn.classList.toggle('asc', sortAsc);
+    } else {
+      document.querySelectorAll('.sort-btn').forEach(b => {
+        b.classList.remove('active','asc');
+      });
+      sortCol = col;
+      sortAsc = col !== 'ci'; // CI: high first; others: ascending
+      btn.classList.add('active');
+      btn.classList.toggle('asc', sortAsc);
+    }
+    applyFilters();
+  });
+});
+
+// Country → filter cities dynamically
+document.getElementById('filterCountry').addEventListener('change', function() {
+  const selected = this.value;
+  const cityEl = document.getElementById('filterCity');
+  cityEl.innerHTML = '<option value="">All cities</option>';
+  const cities = [...new Set(
+    allRecords
+      .filter(r => !selected || extractCountryCity(r.CP_ID).country === selected)
+      .map(r => extractCountryCity(r.CP_ID).city)
+      .filter(Boolean)
+  )].sort();
+  cities.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    cityEl.appendChild(opt);
+  });
+  applyFilters();
+});
+
+init();
+</script>
+</body>
+</html>
