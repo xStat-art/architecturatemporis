@@ -83,12 +83,20 @@
     border-radius: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   .leaflet-popup-tip { background: #1a1a1a; }
-  .popup-content { padding: 4px; min-width: 180px; }
+  .popup-content { padding: 4px; min-width: 200px; }
   .popup-name { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 8px; letter-spacing: 0.3px; }
   .popup-ci { font-size: 28px; font-weight: 700; margin-bottom: 4px; letter-spacing: -1px; }
   .popup-cat { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #aaaaaa; margin-bottom: 10px; }
   .popup-row { display: flex; justify-content: space-between; font-size: 10px; color: #888888; letter-spacing: 0.5px; margin-bottom: 3px; }
   .popup-row span:last-child { color: #cccccc; }
+  .popup-passport {
+    display: block; margin-top: 12px; padding: 7px 12px;
+    background: transparent; border: 1px solid #c55a11;
+    color: #c55a11; font-size: 9px; letter-spacing: 2px;
+    text-transform: uppercase; text-decoration: none; text-align: center;
+    transition: all 0.2s;
+  }
+  .popup-passport:hover { background: #c55a11; color: #fff; }
 
   .loading-overlay {
     position: absolute; inset: 0; background: rgba(15,15,15,0.9);
@@ -161,14 +169,19 @@
 
 <script>
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=67053185&single=true&output=csv';
+const PASSPORT_BASE = 'https://architecturatemporis.com/passport.html?id=';
 
+// Demo data — Casa Zamprogno has a real CP_ID; HN objects will get passport links once CP_IDs are added to the sheet
 const DEMO_DATA = [
-  { name: 'Crkva Sv. Mihaila — north', lat: 42.4534, lng: 18.5312, CI: 0.808, ad: 0.80, ii: 75 },
-  { name: 'Stara zgrada — east',       lat: 42.4528, lng: 18.5320, CI: 0.743, ad: 0.65, ii: 70 },
-  { name: 'Kula Tvrdjava',             lat: 42.4540, lng: 18.5305, CI: 0.821, ad: 0.84, ii: 82 },
-  { name: 'Ulica Njegoseva 12',        lat: 42.4522, lng: 18.5330, CI: 0.511, ad: 0.50, ii: 50 },
-  { name: 'Nova zgrada — south',       lat: 42.4515, lng: 18.5340, CI: 0.426, ad: 0.40, ii: 35 },
+  { name: 'Casa Zamprogno (Scarpa, 1971)', lat: 45.7765, lng: 11.9715, CI: 0.828, ad: 0.84, ii: 90, cp_id: 'CP-IT-VE-MB-002-0001' },
+  { name: 'Crkva Sv. Mihaila — north',     lat: 42.4534, lng: 18.5312, CI: 0.808, ad: 0.80, ii: 75, cp_id: '' },
+  { name: 'Stara zgrada — east',           lat: 42.4528, lng: 18.5320, CI: 0.743, ad: 0.65, ii: 70, cp_id: '' },
+  { name: 'Kula Tvrdjava',                 lat: 42.4540, lng: 18.5305, CI: 0.821, ad: 0.84, ii: 82, cp_id: '' },
+  { name: 'Ulica Njegoseva 12',            lat: 42.4522, lng: 18.5330, CI: 0.511, ad: 0.50, ii: 50, cp_id: '' },
+  { name: 'Nova zgrada — south',           lat: 42.4515, lng: 18.5340, CI: 0.426, ad: 0.40, ii: 35, cp_id: '' },
 ];
+
+// ── Spectral colour helpers ──────────────────────────────────────────────────
 
 function wavelengthToRGB(wl) {
   let r=0, g=0, b=0;
@@ -201,9 +214,10 @@ function ciCategory(ci) {
   return 'No Chronity';
 }
 
+// ── Map init ─────────────────────────────────────────────────────────────────
+
 const map = L.map('map', { center: [42.4534, 18.5312], zoom: 15 });
 
-/* ── СВЕТЛАЯ КАРТА, тёмный UI ── */
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '© OpenStreetMap © CARTO', maxZoom: 19,
 }).addTo(map);
@@ -211,6 +225,8 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 let markersLayer = L.layerGroup().addTo(map);
 let hullLayer    = L.layerGroup().addTo(map);
 let gradientCounter = 0;
+
+// ── Hull + spectral gradient ──────────────────────────────────────────────────
 
 function buildSpectralGradient(objects) {
   const defs   = document.getElementById('gradient-defs');
@@ -276,6 +292,8 @@ function renderSpectralHull(objects, hullGeoJSON) {
   }).addTo(hullLayer);
 }
 
+// ── Parsing helpers ───────────────────────────────────────────────────────────
+
 function parseGPS(text) {
   if (!text || !text.trim()) return null;
   const parts = text.replace(/\s/g,'').split(',');
@@ -291,6 +309,38 @@ function parseCI(val) {
   if (isNaN(n)||n<0||n>1) return null;
   return Math.round(n * 1000) / 1000;
 }
+
+// Normalise CP_ID: dots and dashes are interchangeable → canonical form with dashes
+function normaliseCpId(raw) {
+  if (!raw || !raw.trim()) return '';
+  return raw.trim().replace(/\./g, '-').toUpperCase();
+}
+
+// ── Popup builder ─────────────────────────────────────────────────────────────
+
+function buildPopup(obj, hex) {
+  const cpId = normaliseCpId(obj.cp_id || '');
+  const passportBtn = cpId
+    ? `<a class="popup-passport" href="${PASSPORT_BASE}${cpId}" target="_blank" rel="noopener">
+         View Chrono-Passport →
+       </a>`
+    : '';
+
+  return `
+    <div class="popup-content">
+      <div class="popup-name">${obj.name || 'Unknown object'}</div>
+      <div class="popup-ci" style="color:${hex}">${obj.CI.toFixed(3)}</div>
+      <div class="popup-cat">${ciCategory(obj.CI)}</div>
+      ${obj.location ? `<div class="popup-row"><span>Location</span><span>${obj.location}</span></div>` : ''}
+      ${obj.ad   ? `<div class="popup-row"><span>AD</span><span>${obj.ad}</span></div>` : ''}
+      ${obj.ii   ? `<div class="popup-row"><span>II</span><span>${obj.ii}</span></div>` : ''}
+      ${obj.date ? `<div class="popup-row"><span>Measured</span><span>${obj.date}</span></div>` : ''}
+      ${cpId     ? `<div class="popup-row"><span>CP ID</span><span style="font-size:9px;letter-spacing:0.5px;">${cpId}</span></div>` : ''}
+      ${passportBtn}
+    </div>`;
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
 
 function renderObjects(objects) {
   markersLayer.clearLayers();
@@ -320,17 +370,9 @@ function renderObjects(objects) {
     const hex = ciToHex(obj.CI);
     L.circleMarker([obj.lat, obj.lng], {
       radius: 10, fillColor: hex, color: '#1a1a1a', weight: 2, fillOpacity: 0.9,
-    }).bindPopup(L.popup({ maxWidth: 220 }).setContent(`
-      <div class="popup-content">
-        <div class="popup-name">${obj.name || 'Unknown object'}</div>
-        <div class="popup-ci" style="color:${hex}">${obj.CI.toFixed(3)}</div>
-        <div class="popup-cat">${ciCategory(obj.CI)}</div>
-        ${obj.location ? `<div class="popup-row"><span>Location</span><span>${obj.location}</span></div>` : ''}
-        ${obj.ad  ? `<div class="popup-row"><span>AD</span><span>${obj.ad}</span></div>` : ''}
-        ${obj.ii  ? `<div class="popup-row"><span>II</span><span>${obj.ii}</span></div>` : ''}
-        ${obj.date? `<div class="popup-row"><span>Measured</span><span>${obj.date}</span></div>` : ''}
-      </div>
-    `)).addTo(markersLayer);
+    })
+    .bindPopup(L.popup({ maxWidth: 260 }).setContent(buildPopup(obj, hex)))
+    .addTo(markersLayer);
   });
 
   const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
@@ -346,6 +388,8 @@ function renderObjects(objects) {
   map.fitBounds(L.latLngBounds(objects.map(o => [o.lat, o.lng])), { padding: [60, 60] });
 }
 
+// ── Data loading ──────────────────────────────────────────────────────────────
+
 function loadData() {
   document.getElementById('loadingOverlay').style.display = 'flex';
   document.getElementById('statusDot').style.background = '#c55a11';
@@ -355,26 +399,42 @@ function loadData() {
     complete(results) {
       document.getElementById('loadingOverlay').style.display = 'none';
       document.getElementById('statusDot').style.background = '#4CAF50';
+
       const objects = [];
       results.data.forEach(row => {
         let coords = parseGPS(row['GPS coordinates (if address unknown)'] || '');
         if (!coords) coords = parseGPS(row['Location / Address'] || '');
         if (!coords) return;
+
         let ci = null;
-        for (const col of ['CI','ci','Chronity Index','CI_zone']) { if (row[col]) { ci = parseCI(row[col]); break; } }
+        for (const col of ['CI','ci','Chronity Index','CI_zone']) {
+          if (row[col]) { ci = parseCI(row[col]); break; }
+        }
         if (ci === null) {
           const ad = parseFloat(row['AD — Exact value (if known)']||row['AD']||'')||0.50;
           const ii = parseFloat(row['II — Exact value (if known)']||row['II']||'')||50;
           ci = Math.min(1, Math.max(0, Math.round((ad*0.35+(ii/100)*0.25+0.40*0.5)*1000)/1000));
         }
-        objects.push({ name: row['Object name']||'', location: row['Location / Address']||'',
-          lat: coords.lat, lng: coords.lng, CI: ci,
-          ad: row['AD — Exact value (if known)']||'', ii: row['II — Exact value (if known)']||'',
-          date: row['Timestamp'] ? row['Timestamp'].split(' ')[0] : '' });
+
+        // CP_ID — колонка в листе карты (добавить при наличии)
+        const cp_id = normaliseCpId(row['CP_ID'] || row['cp_id'] || '');
+
+        objects.push({
+          name:     row['Object name'] || '',
+          location: row['Location / Address'] || '',
+          lat:      coords.lat,
+          lng:      coords.lng,
+          CI:       ci,
+          ad:       row['AD — Exact value (if known)'] || '',
+          ii:       row['II — Exact value (if known)'] || '',
+          date:     row['Timestamp'] ? row['Timestamp'].split(' ')[0] : '',
+          cp_id,
+        });
       });
+
       renderObjects(objects.length ? objects : DEMO_DATA);
     },
-    error(err) {
+    error() {
       document.getElementById('loadingOverlay').style.display = 'none';
       document.getElementById('statusDot').style.background = '#888';
       renderObjects(DEMO_DATA);
