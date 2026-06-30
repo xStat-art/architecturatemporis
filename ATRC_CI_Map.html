@@ -2,448 +2,330 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ATRC · Spectral CI Map</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATRC Spectral CI Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Arial', sans-serif;
-    background: #0f0f0f;
-    color: #fff;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+  :root{
+    --bg:#0a0a0a; --panel:#141414; --panel-2:#1c1c1c; --line:#2a2a2a;
+    --text:#f2f0ec; --muted:#9a958c; --orange:#c8650a; --orange-bright:#e8791a;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;}
+  #map{position:fixed;inset:0;z-index:1;background:#e9e6df;}
+  .leaflet-control-attribution{display:none !important;}
 
-  .header {
-    background: #1a1a1a;
-    border-bottom: 1px solid #444444;
-    padding: 12px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-    z-index: 1000;
+  .top-bar{
+    position:fixed;top:0;left:0;right:0;z-index:500;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;pointer-events:none;
+    background:linear-gradient(180deg, rgba(10,10,10,.85), rgba(10,10,10,0));
   }
-  .header-left { display: flex; align-items: baseline; gap: 12px; }
-  .logo { font-size: 11px; letter-spacing: 3px; color: #aaaaaa; text-transform: uppercase; }
-  .logo span { color: #c55a11; }
-  .title { font-size: 13px; letter-spacing: 1px; color: #eeeeee; text-transform: uppercase; }
-  .header-right { display: flex; align-items: center; gap: 16px; }
-
-  .btn-refresh {
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    padding: 6px 16px; border: 1px solid #555555; background: transparent;
-    color: #aaaaaa; cursor: pointer; transition: all 0.2s;
+  .brand{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#cfcac0;font-weight:600;}
+  .brand b{color:#fff;}
+  .live-pill{
+    pointer-events:auto;display:flex;align-items:center;gap:6px;
+    background:var(--panel);border:1px solid var(--line);border-radius:20px;
+    padding:6px 12px;font-size:11px;color:var(--muted);
   }
-  .btn-refresh:hover { border-color: #c55a11; color: #c55a11; }
+  .live-dot{width:6px;height:6px;border-radius:50%;background:#3a8a4a;animation:pulse 2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(58,138,74,.5);}70%{box-shadow:0 0 0 7px rgba(58,138,74,0);}100%{box-shadow:0 0 0 0 rgba(58,138,74,0);}}
 
-  .status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #c55a11; animation: pulse 2s infinite;
+  .legend{
+    position:fixed;left:18px;bottom:18px;z-index:500;
+    background:rgba(20,20,20,.92);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;backdrop-filter:blur(6px);
   }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-  #map { flex: 1; z-index: 1; }
-
-  .legend {
-    position: absolute; bottom: 32px; left: 16px; z-index: 1000;
-    background: rgba(20,20,20,0.95); border: 1px solid #444444;
-    padding: 16px 20px; min-width: 200px;
+  .legend h3{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 8px;}
+  .legend-bar{width:200px;height:10px;border-radius:5px;
+    background:linear-gradient(90deg, rgb(255,0,0), rgb(255,255,0), rgb(0,255,0), rgb(0,255,255), rgb(0,0,255));
   }
-  .legend-title { font-size: 9px; letter-spacing: 3px; color: #aaaaaa; text-transform: uppercase; margin-bottom: 12px; }
-  .legend-spectrum {
-    height: 12px; border-radius: 1px;
-    background: linear-gradient(to right, #7B00D4, #0000FF, #00BFFF, #00FF00, #FFFF00, #FF8C00, #FF0000);
-    margin-bottom: 6px;
-  }
-  .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: #aaaaaa; letter-spacing: 1px; margin-bottom: 14px; }
-  .legend-items { display: flex; flex-direction: column; gap: 6px; }
-  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #cccccc; letter-spacing: 1px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;}
 
-  .stats {
-    position: absolute; top: 70px; right: 16px; z-index: 1000;
-    background: rgba(20,20,20,0.95); border: 1px solid #444444;
-    padding: 16px 20px; min-width: 180px;
+  .toggle-row{
+    position:fixed;right:18px;top:62px;z-index:500;
+    display:flex;flex-direction:column;gap:8px;
   }
-  .stats-title { font-size: 9px; letter-spacing: 3px; color: #aaaaaa; text-transform: uppercase; margin-bottom: 12px; }
-  .stats-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 16px; }
-  .stats-label { font-size: 10px; color: #aaaaaa; letter-spacing: 1px; }
-  .stats-value { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; }
-  .stats-divider { border: none; border-top: 1px solid #444444; margin: 10px 0; }
-
-  .leaflet-popup-content-wrapper {
-    background: #1a1a1a; border: 1px solid #555555;
-    border-radius: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  .toggle-btn{
+    background:var(--panel);border:1px solid var(--line);color:var(--muted);
+    padding:8px 12px;border-radius:8px;font-size:11px;cursor:pointer;
+    display:flex;align-items:center;gap:6px;
   }
-  .leaflet-popup-tip { background: #1a1a1a; }
-  .popup-content { padding: 4px; min-width: 200px; }
-  .popup-name { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 8px; letter-spacing: 0.3px; }
-  .popup-ci { font-size: 28px; font-weight: 700; margin-bottom: 4px; letter-spacing: -1px; }
-  .popup-cat { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #aaaaaa; margin-bottom: 10px; }
-  .popup-row { display: flex; justify-content: space-between; font-size: 10px; color: #888888; letter-spacing: 0.5px; margin-bottom: 3px; }
-  .popup-row span:last-child { color: #cccccc; }
-  .popup-passport {
-    display: block; margin-top: 12px; padding: 7px 12px;
-    background: transparent; border: 1px solid #c55a11;
-    color: #c55a11; font-size: 9px; letter-spacing: 2px;
-    text-transform: uppercase; text-decoration: none; text-align: center;
-    transition: all 0.2s;
+  .toggle-btn.active{border-color:var(--orange);color:var(--orange-bright);}
+
+  .stats-pill{
+    position:fixed;right:18px;bottom:18px;z-index:500;
+    background:rgba(20,20,20,.92);border:1px solid var(--line);border-radius:10px;
+    padding:10px 14px;font-size:11px;color:var(--muted);text-align:right;
   }
-  .popup-passport:hover { background: #c55a11; color: #fff; }
+  .stats-pill b{color:var(--text);font-size:13px;}
 
-  .loading-overlay {
-    position: absolute; inset: 0; background: rgba(15,15,15,0.9);
-    z-index: 2000; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 16px;
-  }
-  .loading-text { font-size: 10px; letter-spacing: 3px; color: #aaaaaa; text-transform: uppercase; }
-  .loading-bar { width: 120px; height: 2px; background: #333333; position: relative; overflow: hidden; }
-  .loading-bar::after {
-    content: ''; position: absolute; left: -40%; width: 40%; height: 100%;
-    background: #c55a11; animation: loading 1s ease-in-out infinite;
-  }
-  @keyframes loading { to { left: 100%; } }
+  .leaflet-popup-content-wrapper{background:var(--panel);color:var(--text);border-radius:8px;}
+  .leaflet-popup-tip{background:var(--panel);}
+  .popup-title{font-weight:700;font-size:13px;margin-bottom:4px;}
+  .popup-id{font-family:monospace;font-size:10px;color:var(--muted);margin-bottom:6px;}
+  .popup-ci{font-size:12px;}
+  .popup-link{display:inline-block;margin-top:8px;font-size:11px;color:var(--orange-bright);text-decoration:none;font-weight:600;}
 
-  .no-data { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 500; text-align: center; }
-  .no-data-title { font-size: 13px; letter-spacing: 2px; color: #888888; text-transform: uppercase; margin-bottom: 8px; }
-  .no-data-sub { font-size: 10px; color: #666666; letter-spacing: 1px; }
-
-  .zone-label { background: transparent; border: none; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
-
-  #svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+  #idwCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:400;}
 </style>
 </head>
 <body>
 
-<svg id="svg-defs" xmlns="http://www.w3.org/2000/svg">
-  <defs id="gradient-defs"></defs>
-</svg>
-
-<div class="header">
-  <div class="header-left">
-    <div class="logo">AT<span>RC</span></div>
-    <div class="title">Spectral CI Map</div>
-  </div>
-  <div class="header-right">
-    <div class="status-dot" id="statusDot"></div>
-    <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
-  </div>
-</div>
-
 <div id="map"></div>
 
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-text">Loading field data</div>
-  <div class="loading-bar"></div>
+<div class="top-bar">
+  <div class="brand">ATRC <b>Spectral CI Map</b></div>
+  <div class="live-pill"><span class="live-dot"></span><span id="liveLabel">Live · updates every 60s</span></div>
 </div>
 
-<div class="stats" id="statsPanel" style="display:none;">
-  <div class="stats-title">Zone Summary</div>
-  <div class="stats-row"><div class="stats-label">CI_zone</div><div class="stats-value" id="statCI">—</div></div>
-  <div class="stats-row"><div class="stats-label">Category</div><div class="stats-value" style="font-size:11px;color:#aaa;" id="statCat">—</div></div>
-  <hr class="stats-divider">
-  <div class="stats-row"><div class="stats-label">Objects</div><div class="stats-value" id="statCount" style="font-size:18px;">—</div></div>
-  <div class="stats-row"><div class="stats-label">Min CI</div><div class="stats-value" id="statMin" style="font-size:14px;color:#aaa;">—</div></div>
-  <div class="stats-row"><div class="stats-label">Max CI</div><div class="stats-value" id="statMax" style="font-size:14px;color:#aaa;">—</div></div>
+<div class="toggle-row">
+  <div class="toggle-btn active" id="idwToggle">◆ IDW gradient</div>
+  <div class="toggle-btn" id="pointsToggle">● Points only</div>
 </div>
 
 <div class="legend">
-  <div class="legend-title">Chronity Index · Spectral Scale</div>
-  <div class="legend-spectrum"></div>
-  <div class="legend-labels"><span>0.00</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.00</span></div>
-  <div class="legend-items">
-    <div class="legend-item"><div class="legend-dot" style="background:#FF0000;"></div><span>0.85–1.00 · Deep Chronity</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#FF8C00;"></div><span>0.70–0.85 · High Chronity</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#FFFF00;"></div><span>0.50–0.70 · Moderate</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#00BFFF;"></div><span>0.30–0.50 · Low Chronity</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#7B00D4;"></div><span>0.00–0.30 · No Chronity</span></div>
-  </div>
+  <h3>Chronity Index (spectral)</h3>
+  <div class="legend-bar"></div>
+  <div class="legend-labels"><span>0.0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1.0</span></div>
 </div>
 
+<div class="stats-pill">
+  <div><b id="statObjects">–</b> objects</div>
+  <div><b id="statZones">–</b> zones</div>
+  <div><b id="statAvg">–</b> avg CI</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=67053185&single=true&output=csv';
-const PASSPORT_BASE = 'https://architecturatemporis.com/passport.html?id=';
+/* ====================== CONFIG ====================== */
+const MAP_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=67053185&single=true&output=csv";
+const ZONES_GEOJSON_URL = "zones.geojson";
+const REFRESH_MS = 60000;
+const IDW_POWER = 2;
+const IDW_GRID_STEP = 6; // px — lower = smoother but slower
 
-// Demo data — Casa Zamprogno has a real CP_ID; HN objects will get passport links once CP_IDs are added to the sheet
-const DEMO_DATA = [
-  { name: 'Casa Zamprogno (Scarpa, 1971)', lat: 45.7765, lng: 11.9715, CI: 0.828, ad: 0.84, ii: 90, cp_id: 'CP-IT-VE-MB-002-0001' },
-  { name: 'Crkva Sv. Mihaila — north',     lat: 42.4534, lng: 18.5312, CI: 0.808, ad: 0.80, ii: 75, cp_id: '' },
-  { name: 'Stara zgrada — east',           lat: 42.4528, lng: 18.5320, CI: 0.743, ad: 0.65, ii: 70, cp_id: '' },
-  { name: 'Kula Tvrdjava',                 lat: 42.4540, lng: 18.5305, CI: 0.821, ad: 0.84, ii: 82, cp_id: '' },
-  { name: 'Ulica Njegoseva 12',            lat: 42.4522, lng: 18.5330, CI: 0.511, ad: 0.50, ii: 50, cp_id: '' },
-  { name: 'Nova zgrada — south',           lat: 42.4515, lng: 18.5340, CI: 0.426, ad: 0.40, ii: 35, cp_id: '' },
-];
-
-// ── Spectral colour helpers ──────────────────────────────────────────────────
-
-function wavelengthToRGB(wl) {
-  let r=0, g=0, b=0;
-  if      (wl >= 380 && wl < 440) { r=(440-wl)/(440-380); g=0; b=1; }
-  else if (wl < 490)              { r=0; g=(wl-440)/(490-440); b=1; }
-  else if (wl < 510)              { r=0; g=1; b=(510-wl)/(510-490); }
-  else if (wl < 580)              { r=(wl-510)/(580-510); g=1; b=0; }
-  else if (wl < 645)              { r=1; g=(645-wl)/(645-580); b=0; }
-  else if (wl <= 780)             { r=1; g=0; b=0; }
-  let factor = 1.0;
-  if      (wl >= 380 && wl < 420)  factor = 0.3 + 0.7*(wl-380)/(420-380);
-  else if (wl >= 700 && wl <= 780) factor = 0.3 + 0.7*(780-wl)/(780-700);
-  return [
-    Math.round(255 * Math.pow(r*factor, 0.8)),
-    Math.round(255 * Math.pow(g*factor, 0.8)),
-    Math.round(255 * Math.pow(b*factor, 0.8))
-  ];
-}
-
-function ciToHex(ci) {
-  const [r,g,b] = wavelengthToRGB(400 + ci * 300);
-  return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
-}
-
-function ciCategory(ci) {
-  if (ci >= 0.85) return 'Deep Chronity';
-  if (ci >= 0.70) return 'High Chronity';
-  if (ci >= 0.50) return 'Moderate';
-  if (ci >= 0.30) return 'Low Chronity';
-  return 'No Chronity';
-}
-
-// ── Map init ─────────────────────────────────────────────────────────────────
-
-const map = L.map('map', { center: [42.4534, 18.5312], zoom: 15 });
-
+/* ====================== MAP INIT ====================== */
+const map = L.map('map', { zoomControl:false }).setView([42.4531, 18.5375], 15);
+L.control.zoom({ position:'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CARTO', maxZoom: 19,
+  maxZoom: 20, subdomains:'abcd'
 }).addTo(map);
 
-let markersLayer = L.layerGroup().addTo(map);
-let hullLayer    = L.layerGroup().addTo(map);
-let gradientCounter = 0;
+/* ====================== IDW CANVAS OVERLAY ====================== */
+const canvas = document.createElement('canvas');
+canvas.id = 'idwCanvas';
+map.getContainer().appendChild(canvas);
+const ctx = canvas.getContext('2d');
+let idwEnabled = true;
 
-// ── Hull + spectral gradient ──────────────────────────────────────────────────
+function resizeCanvas(){
+  const size = map.getSize();
+  canvas.width = size.x;
+  canvas.height = size.y;
+  canvas.style.width = size.x + 'px';
+  canvas.style.height = size.y + 'px';
+  drawIdwLayer();
+}
+map.on('resize move zoom zoomend moveend', drawIdwLayer);
+map.on('resize', resizeCanvas);
 
-function buildSpectralGradient(objects) {
-  const defs   = document.getElementById('gradient-defs');
-  const gradId = 'ci-grad-' + (++gradientCounter);
-  const lngs   = objects.map(o => o.lng);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const range  = maxLng - minLng || 0.0001;
-  const sorted = [...objects].sort((a,b) => a.lng - b.lng);
+/* ====================== HELPERS ====================== */
+function ciToColor(ci){
+  ci = Math.max(0, Math.min(1, ci || 0));
+  const wl = 400 + ci * 300;
+  return wavelengthToRgbArr(wl);
+}
+function wavelengthToRgbArr(wl){
+  let r,g,b;
+  if(wl>=380&&wl<440){r=-(wl-440)/(440-380);g=0;b=1;}
+  else if(wl>=440&&wl<490){r=0;g=(wl-440)/(490-440);b=1;}
+  else if(wl>=490&&wl<510){r=0;g=1;b=-(wl-510)/(510-490);}
+  else if(wl>=510&&wl<580){r=(wl-510)/(580-510);g=1;b=0;}
+  else if(wl>=580&&wl<645){r=1;g=-(wl-645)/(645-580);b=0;}
+  else if(wl>=645&&wl<=780){r=1;g=0;b=0;}
+  else{r=0;g=0;b=0;}
+  return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+}
+function rgbToCss([r,g,b], a){ return `rgba(${r},${g},${b},${a})`; }
 
-  const grad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-  grad.setAttribute('id', gradId);
-  grad.setAttribute('x1', '0%'); grad.setAttribute('y1', '0%');
-  grad.setAttribute('x2', '100%'); grad.setAttribute('y2', '0%');
-  grad.setAttribute('gradientUnits', 'objectBoundingBox');
-
-  sorted.forEach(obj => {
-    const stop   = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    const offset = sorted.length === 1 ? 0.5 : (obj.lng - minLng) / range;
-    stop.setAttribute('offset', (offset * 100).toFixed(1) + '%');
-    stop.setAttribute('stop-color', ciToHex(obj.CI));
-    stop.setAttribute('stop-opacity', '0.55');
-    grad.appendChild(stop);
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  const headers = splitCsvLine(lines[0]);
+  return lines.slice(1).filter(l=>l.trim().length).map(line=>{
+    const cells = splitCsvLine(line);
+    const row = {};
+    headers.forEach((h,i)=>row[h.trim()] = (cells[i]||'').trim());
+    return row;
   });
-
-  const old = document.getElementById(gradId);
-  if (old) old.remove();
-  defs.appendChild(grad);
-  return gradId;
 }
-
-function renderSpectralHull(objects, hullGeoJSON) {
-  const gradId  = buildSpectralGradient(objects);
-  const coords  = hullGeoJSON.geometry.coordinates[0];
-  const latLngs = coords.map(([lng, lat]) => [lat, lng]);
-  const avgCI   = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
-  const avgHex  = ciToHex(avgCI);
-
-  const poly = L.polygon(latLngs, {
-    fillOpacity: 0,
-    color: avgHex,
-    weight: 2,
-    opacity: 0.8,
-    dashArray: '5 4',
-  }).addTo(hullLayer);
-
-  const patchFill = () => {
-    const el = poly.getElement();
-    if (el) { el.setAttribute('fill', `url(#${gradId})`); el.setAttribute('fill-opacity', '0.50'); }
-  };
-  poly.on('add', patchFill);
-  requestAnimationFrame(patchFill);
-
-  const center = turf.centroid(hullGeoJSON);
-  const [cLng, cLat] = center.geometry.coordinates;
-  L.marker([cLat, cLng], {
-    icon: L.divIcon({
-      className: 'zone-label',
-      html: `<div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;text-shadow:0 0 6px rgba(0,0,0,0.8);">CI_zone ${avgCI.toFixed(3)}</div>`,
-      iconAnchor: [40, 8],
-    }),
-    interactive: false,
-  }).addTo(hullLayer);
-}
-
-// ── Parsing helpers ───────────────────────────────────────────────────────────
-
-function parseGPS(text) {
-  if (!text || !text.trim()) return null;
-  const parts = text.replace(/\s/g,'').split(',');
-  if (parts.length !== 2) return null;
-  const lat = parseFloat(parts[0]), lng = parseFloat(parts[1]);
-  if (isNaN(lat)||isNaN(lng)||lat<-90||lat>90||lng<-180||lng>180) return null;
-  return { lat, lng };
-}
-
-function parseCI(val) {
-  if (!val) return null;
-  const n = parseFloat(String(val).replace(',','.'));
-  if (isNaN(n)||n<0||n>1) return null;
-  return Math.round(n * 1000) / 1000;
-}
-
-// Normalise CP_ID: dots and dashes are interchangeable → canonical form with dashes
-function normaliseCpId(raw) {
-  if (!raw || !raw.trim()) return '';
-  return raw.trim().replace(/\./g, '-').toUpperCase();
-}
-
-// ── Popup builder ─────────────────────────────────────────────────────────────
-
-function buildPopup(obj, hex) {
-  const cpId = normaliseCpId(obj.cp_id || '');
-  const passportBtn = cpId
-    ? `<a class="popup-passport" href="${PASSPORT_BASE}${cpId}" target="_blank" rel="noopener">
-         View Chrono-Passport →
-       </a>`
-    : '';
-
-  return `
-    <div class="popup-content">
-      <div class="popup-name">${obj.name || 'Unknown object'}</div>
-      <div class="popup-ci" style="color:${hex}">${obj.CI.toFixed(3)}</div>
-      <div class="popup-cat">${ciCategory(obj.CI)}</div>
-      ${obj.location ? `<div class="popup-row"><span>Location</span><span>${obj.location}</span></div>` : ''}
-      ${obj.ad   ? `<div class="popup-row"><span>AD</span><span>${obj.ad}</span></div>` : ''}
-      ${obj.ii   ? `<div class="popup-row"><span>II</span><span>${obj.ii}</span></div>` : ''}
-      ${obj.date ? `<div class="popup-row"><span>Measured</span><span>${obj.date}</span></div>` : ''}
-      ${cpId     ? `<div class="popup-row"><span>CP ID</span><span style="font-size:9px;letter-spacing:0.5px;">${cpId}</span></div>` : ''}
-      ${passportBtn}
-    </div>`;
-}
-
-// ── Main render ───────────────────────────────────────────────────────────────
-
-function renderObjects(objects) {
-  markersLayer.clearLayers();
-  hullLayer.clearLayers();
-  document.getElementById('gradient-defs').innerHTML = '';
-  gradientCounter = 0;
-
-  if (objects.length === 0) {
-    document.getElementById('statsPanel').style.display = 'none';
-    if (!document.getElementById('noData')) {
-      document.getElementById('map').insertAdjacentHTML('beforeend',
-        '<div class="no-data" id="noData"><div class="no-data-title">No field data yet</div><div class="no-data-sub">Submit the form to see objects on the map</div></div>'
-      );
-    }
-    return;
+function splitCsvLine(line){
+  const out=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){ inQ=!inQ; }
+    else if(c===',' && !inQ){ out.push(cur); cur=''; }
+    else cur+=c;
   }
-  const old = document.getElementById('noData');
-  if (old) old.remove();
-
-  if (objects.length >= 3) {
-    const pts  = turf.featureCollection(objects.map(o => turf.point([o.lng, o.lat])));
-    const hull = turf.convex(pts);
-    if (hull) renderSpectralHull(objects, hull);
+  out.push(cur);
+  return out;
+}
+function parseGPS(str){
+  if(!str) return null;
+  const parts = str.split(',').map(s=>parseFloat(s.trim()));
+  if(parts.length<2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+  return { lat: parts[0], lng: parts[1] };
+}
+function pointInPolygonScreen(px, py, screenRing){
+  let inside = false;
+  for(let i=0,j=screenRing.length-1;i<screenRing.length;j=i++){
+    const xi=screenRing[i].x, yi=screenRing[i].y, xj=screenRing[j].x, yj=screenRing[j].y;
+    const intersect = ((yi>py)!=(yj>py)) && (px < (xj-xi)*(py-yi)/((yj-yi)||1e-12)+xi);
+    if(intersect) inside = !inside;
   }
-
-  objects.forEach(obj => {
-    const hex = ciToHex(obj.CI);
-    L.circleMarker([obj.lat, obj.lng], {
-      radius: 10, fillColor: hex, color: '#1a1a1a', weight: 2, fillOpacity: 0.9,
-    })
-    .bindPopup(L.popup({ maxWidth: 260 }).setContent(buildPopup(obj, hex)))
-    .addTo(markersLayer);
-  });
-
-  const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
-  const minCI = Math.min(...objects.map(o => o.CI));
-  const maxCI = Math.max(...objects.map(o => o.CI));
-  document.getElementById('statCI').textContent    = avgCI.toFixed(3);
-  document.getElementById('statCI').style.color    = ciToHex(avgCI);
-  document.getElementById('statCat').textContent   = ciCategory(avgCI);
-  document.getElementById('statCount').textContent = objects.length;
-  document.getElementById('statMin').textContent   = minCI.toFixed(3);
-  document.getElementById('statMax').textContent   = maxCI.toFixed(3);
-  document.getElementById('statsPanel').style.display = 'block';
-  map.fitBounds(L.latLngBounds(objects.map(o => [o.lat, o.lng])), { padding: [60, 60] });
+  return inside;
 }
 
-// ── Data loading ──────────────────────────────────────────────────────────────
+/* ====================== STATE ====================== */
+let objects = [];
+let zonePolys = []; // {zn_id, ring:[[lng,lat]], name}
+let markers = [];
 
-function loadData() {
-  document.getElementById('loadingOverlay').style.display = 'flex';
-  document.getElementById('statusDot').style.background = '#c55a11';
+/* ====================== DATA LOAD ====================== */
+function loadData(){
+  fetch(MAP_CSV).then(r=>r.text()).then(text=>{
+    const rows = parseCSV(text);
+    objects = rows.map(r=>{
+      const gpsRaw = r['GPS coordinates'] || r.GPS || '';
+      const gps = parseGPS(gpsRaw);
+      if(!gps) return null;
+      return {
+        cpId: r.CP_ID || '',
+        name: r['Object name'] || r.Object_name || 'Unnamed object',
+        ci: parseFloat(r.CI) || 0,
+        zn_id: r.ZN_ID || '',
+        lat: gps.lat, lng: gps.lng
+      };
+    }).filter(Boolean);
 
-  Papa.parse(CSV_URL, {
-    download: true, header: true, skipEmptyLines: true,
-    complete(results) {
-      document.getElementById('loadingOverlay').style.display = 'none';
-      document.getElementById('statusDot').style.background = '#4CAF50';
+    renderMarkers();
+    updateStats();
+    drawIdwLayer();
+  }).catch(err=>console.error('CI Map data load failed', err));
+}
 
-      const objects = [];
-      results.data.forEach(row => {
-        let coords = parseGPS(row['GPS coordinates (if address unknown)'] || '');
-        if (!coords) coords = parseGPS(row['Location / Address'] || '');
-        if (!coords) return;
-
-        let ci = null;
-        for (const col of ['CI','ci','Chronity Index','CI_zone']) {
-          if (row[col]) { ci = parseCI(row[col]); break; }
-        }
-        if (ci === null) {
-          const ad = parseFloat(row['AD — Exact value (if known)']||row['AD']||'')||0.50;
-          const ii = parseFloat(row['II — Exact value (if known)']||row['II']||'')||50;
-          ci = Math.min(1, Math.max(0, Math.round((ad*0.35+(ii/100)*0.25+0.40*0.5)*1000)/1000));
-        }
-
-        // CP_ID — колонка в листе карты (добавить при наличии)
-        const cp_id = normaliseCpId(row['CP_ID'] || row['cp_id'] || '');
-
-        objects.push({
-          name:     row['Object name'] || '',
-          location: row['Location / Address'] || '',
-          lat:      coords.lat,
-          lng:      coords.lng,
-          CI:       ci,
-          ad:       row['AD — Exact value (if known)'] || '',
-          ii:       row['II — Exact value (if known)'] || '',
-          date:     row['Timestamp'] ? row['Timestamp'].split(' ')[0] : '',
-          cp_id,
-        });
+function loadZones(){
+  fetch(ZONES_GEOJSON_URL).then(r=>{ if(!r.ok) throw new Error('no zones.geojson yet'); return r.json(); })
+    .then(gj=>{
+      zonePolys = (gj.features||[]).map(f=>{
+        const ring = f.geometry.type==='Polygon' ? f.geometry.coordinates[0] : f.geometry.coordinates[0][0];
+        return { zn_id: f.properties.ZN_ID, name: f.properties.name || f.properties.ZN_ID, ring };
       });
+      document.getElementById('statZones').textContent = zonePolys.length;
+      drawIdwLayer();
+    })
+    .catch(()=>{ document.getElementById('statZones').textContent = '0'; });
+}
 
-      renderObjects(objects.length ? objects : DEMO_DATA);
-    },
-    error() {
-      document.getElementById('loadingOverlay').style.display = 'none';
-      document.getElementById('statusDot').style.background = '#888';
-      renderObjects(DEMO_DATA);
-    }
+function renderMarkers(){
+  markers.forEach(m=>map.removeLayer(m));
+  markers = [];
+  objects.forEach(o=>{
+    const [r,g,b] = ciToColor(o.ci);
+    const marker = L.circleMarker([o.lat,o.lng], {
+      radius:7, fillColor:`rgb(${r},${g},${b})`, fillOpacity:1, color:'#0a0a0a', weight:2
+    }).addTo(map);
+    marker.bindPopup(
+      `<div class="popup-title">${o.name}</div>`+
+      `<div class="popup-id">${o.cpId || '—'}</div>`+
+      `<div class="popup-ci">CI = ${o.ci.toFixed(3)}</div>`+
+      (o.cpId ? `<a class="popup-link" href="passport.html?id=${o.cpId}">View Chrono-Passport →</a>` : '')
+    );
+    markers.push(marker);
   });
 }
 
+function updateStats(){
+  document.getElementById('statObjects').textContent = objects.length;
+  if(objects.length){
+    const avg = objects.reduce((s,o)=>s+o.ci,0)/objects.length;
+    document.getElementById('statAvg').textContent = avg.toFixed(3);
+  }
+}
+
+/* ====================== IDW RENDER ====================== */
+function drawIdwLayer(){
+  if(!ctx) return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!idwEnabled || !zonePolys.length || !objects.length) return;
+
+  zonePolys.forEach(zone=>{
+    const dominants = objects.filter(o=>o.zn_id === zone.zn_id);
+    if(!dominants.length) return;
+
+    const screenRing = zone.ring.map(c=>map.latLngToContainerPoint([c[1], c[0]]));
+    const xs = screenRing.map(p=>p.x), ys = screenRing.map(p=>p.y);
+    const minX = Math.max(0, Math.floor(Math.min(...xs)));
+    const maxX = Math.min(canvas.width, Math.ceil(Math.max(...xs)));
+    const minY = Math.max(0, Math.floor(Math.min(...ys)));
+    const maxY = Math.min(canvas.height, Math.ceil(Math.max(...ys)));
+    if(maxX<=minX || maxY<=minY) return;
+
+    const domScreen = dominants.map(d=>{
+      const p = map.latLngToContainerPoint([d.lat,d.lng]);
+      return { x:p.x, y:p.y, ci:d.ci };
+    });
+
+    for(let py=minY; py<maxY; py+=IDW_GRID_STEP){
+      for(let px=minX; px<maxX; px+=IDW_GRID_STEP){
+        if(!pointInPolygonScreen(px+IDW_GRID_STEP/2, py+IDW_GRID_STEP/2, screenRing)) continue;
+
+        let weightSum = 0, ciSum = 0, exact = null;
+        domScreen.forEach(d=>{
+          const dx = px-d.x, dy = py-d.y;
+          const distSq = dx*dx + dy*dy;
+          if(distSq < 4){ exact = d.ci; return; }
+          const w = 1 / Math.pow(distSq, IDW_POWER/2);
+          weightSum += w;
+          ciSum += w * d.ci;
+        });
+        const ci = exact != null ? exact : (weightSum > 0 ? ciSum/weightSum : 0);
+        const [r,g,b] = ciToColor(ci);
+        ctx.fillStyle = rgbToCss([r,g,b], 0.38);
+        ctx.fillRect(px, py, IDW_GRID_STEP, IDW_GRID_STEP);
+      }
+    }
+
+    // subtle outline
+    ctx.beginPath();
+    screenRing.forEach((p,i)=> i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(123,79,0,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+}
+
+/* ====================== TOGGLES ====================== */
+document.getElementById('idwToggle').addEventListener('click', ()=>{
+  idwEnabled = true;
+  document.getElementById('idwToggle').classList.add('active');
+  document.getElementById('pointsToggle').classList.remove('active');
+  drawIdwLayer();
+});
+document.getElementById('pointsToggle').addEventListener('click', ()=>{
+  idwEnabled = false;
+  document.getElementById('pointsToggle').classList.add('active');
+  document.getElementById('idwToggle').classList.remove('active');
+  drawIdwLayer();
+});
+
+/* ====================== INIT ====================== */
+resizeCanvas();
+loadZones();
 loadData();
-setInterval(loadData, 60000);
+setInterval(()=>{ loadData(); loadZones(); }, REFRESH_MS);
 </script>
 </body>
 </html>
