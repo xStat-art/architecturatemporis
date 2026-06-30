@@ -61,7 +61,82 @@
     padding: 6px 14px; border-radius: 5px; letter-spacing: 1.5px;
   }
   .nav-links a.nav-cta:hover { background: var(--orange-bright); }
-  @media (max-width: 900px) { .nav-links { display: none; } }
+  @media (max-width: 768px) { .nav-links { display: none; } }
+
+  /* ── MOBILE NAV TOGGLE ── */
+  .nav-toggle {
+    display: none;
+    width: 36px; height: 36px;
+    background: none; border: none;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    z-index: 210;
+  }
+  .nav-toggle span {
+    display: block;
+    position: absolute;
+    left: 4px; right: 4px;
+    height: 2px;
+    background: var(--white);
+    border-radius: 2px;
+    transition: transform .25s ease, opacity .2s ease, top .25s ease;
+  }
+  .nav-toggle span:nth-child(1) { top: 12px; }
+  .nav-toggle span:nth-child(2) { top: 18px; }
+  .nav-toggle span:nth-child(3) { top: 24px; }
+  .nav-toggle.open span:nth-child(1) { top: 18px; transform: rotate(45deg); }
+  .nav-toggle.open span:nth-child(2) { opacity: 0; }
+  .nav-toggle.open span:nth-child(3) { top: 18px; transform: rotate(-45deg); }
+
+  .mobile-menu {
+    position: fixed; inset: 0;
+    background: var(--black);
+    z-index: 200;
+    display: flex; flex-direction: column;
+    justify-content: center;
+    padding: 80px 32px 48px;
+    opacity: 0; visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity .25s ease, transform .25s ease, visibility .25s;
+  }
+  .mobile-menu.open { opacity: 1; visibility: visible; transform: translateY(0); }
+  .mobile-menu nav.mobile-links { display: flex; flex-direction: column; gap: 2px; }
+  .mobile-menu a {
+    font-family: var(--font-body);
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--white);
+    text-decoration: none;
+    letter-spacing: .5px;
+    padding: 16px 4px;
+    border-bottom: 1px solid var(--grey-2);
+  }
+  .mobile-menu a:active { color: var(--grey-4); }
+  .mobile-menu a.mobile-secondary {
+    font-size: 14px;
+    font-weight: normal;
+    color: var(--grey-3);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 14px 4px;
+  }
+  .mobile-menu a.mobile-cta {
+    margin-top: 24px;
+    background: var(--orange);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    text-align: center;
+    padding: 16px;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  body.menu-open { overflow: hidden; }
+
+  @media (max-width: 768px) { .nav-toggle { display: block; } }
+  @media (min-width: 769px) { .mobile-menu { display: none !important; } }
 
   .inner { max-width: 1080px; margin: 0 auto; padding: 0 48px; }
 
@@ -197,7 +272,28 @@
     <li><a href="explore.html">Explore</a></li>
     <li><a href="field-workspace.html" class="nav-cta">Field Workspace</a></li>
   </ul>
+  <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <nav class="mobile-links">
+    <a href="index.html#hero">Home</a>
+    <a href="index.html#problem">Problem</a>
+    <a href="index.html#ci">Methodology</a>
+    <a href="index.html#acap">ACAP</a>
+    <a href="index.html#research">Research</a>
+    <a href="index.html#atu">ATU</a>
+    <a href="index.html#roadmap">Roadmap</a>
+    <a href="index.html#contact">Contact</a>
+    <a href="explore.html" class="mobile-secondary">Explore — public data</a>
+    <a href="field.html" class="mobile-secondary">Field Launcher</a>
+    <a href="zone-editor.html" class="mobile-secondary">Zone Editor</a>
+    <a href="gps.html" class="mobile-secondary">GPS Locator</a>
+    <a href="registry.html" class="mobile-secondary">Passport Registry</a>
+  </nav>
+</div>
 
 <div class="hero">
   <div class="inner">
@@ -287,5 +383,41 @@
   <div>Understanding before change</div>
 </footer>
 
+<script>
+(function(){
+  var toggle = document.getElementById('navToggle');
+  var menu = document.getElementById('mobileMenu');
+  if(!toggle || !menu) return;
+
+  function openMenu(){
+    menu.classList.add('open');
+    toggle.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('menu-open');
+  }
+  function closeMenu(){
+    menu.classList.remove('open');
+    toggle.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('menu-open');
+  }
+
+  toggle.addEventListener('click', function(){
+    menu.classList.contains('open') ? closeMenu() : openMenu();
+  });
+
+  menu.querySelectorAll('a').forEach(function(link){
+    link.addEventListener('click', closeMenu);
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeMenu();
+  });
+
+  window.addEventListener('resize', function(){
+    if(window.innerWidth > 768) closeMenu();
+  });
+})();
+</script>
 </body>
 </html>
