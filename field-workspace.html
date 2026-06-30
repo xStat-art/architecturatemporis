@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Workspace — ATRC</title>
+<meta name="description" content="ATRC field tools: live GPS field launcher, zone editor, GPS locator, registry and public data explorer.">
+<meta name="author" content="Sergei Tatarnikov">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #0A0A0A;
+    --dark:    #111111;
+    --white:   #F8F8F6;
+    --off-white: #EFEFEC;
+    --grey-1:  #1C1C1C;
+    --grey-2:  #303030;
+    --grey-3:  #6A6A6A;
+    --grey-4:  #A0A0A0;
+    --grey-5:  #D8D8D8;
+    --orange:  #C8650A;
+    --orange-bright: #E8791A;
+    --font-display: 'Arial Black','Helvetica Neue',Arial,sans-serif;
+    --font-body:    Arial,'Helvetica Neue',sans-serif;
+    --font-mono:    'Courier New',Courier,monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background: var(--dark);
+    color: var(--white);
+  }
+
+  /* ── NAV (matches index.html) ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: var(--dark);
+    border-bottom: 1px solid var(--grey-2);
+    padding: 0 48px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: var(--font-body); font-size: 13px; font-weight: bold;
+    letter-spacing: 3px; color: var(--white); text-decoration: none;
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    font-size: 12px; color: var(--grey-3); text-decoration: none;
+    letter-spacing: 1.5px; text-transform: uppercase; transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--white); }
+  .nav-links a.nav-cta {
+    background: var(--orange); color: var(--white);
+    padding: 6px 14px; border-radius: 5px; letter-spacing: 1.5px;
+  }
+  .nav-links a.nav-cta:hover { background: var(--orange-bright); }
+  @media (max-width: 900px) { .nav-links { display: none; } }
+
+  .inner { max-width: 1080px; margin: 0 auto; padding: 0 48px; }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 160px 0 80px;
+    border-bottom: 1px solid var(--grey-2);
+  }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 4px; color: var(--grey-3);
+    text-transform: uppercase; margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(32px, 5vw, 52px);
+    letter-spacing: -1px;
+    margin-bottom: 24px;
+  }
+  .hero p {
+    max-width: 640px;
+    font-size: 16px;
+    color: var(--grey-4);
+  }
+
+  /* ── TOOLS GRID ── */
+  .section-wrap { padding: 80px 0; }
+  .sec-hdr {
+    display: flex; align-items: baseline; gap: 20px;
+    padding-bottom: 20px; margin-bottom: 48px;
+    border-bottom: 1px solid var(--grey-2);
+  }
+  .sec-num  { font-family: var(--font-mono); font-size: 12px; color: var(--grey-3); letter-spacing: 2px; }
+  .sec-label{ font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--grey-3); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--grey-1);
+    border: 1px solid var(--grey-2);
+    border-radius: 10px;
+    padding: 28px;
+    text-decoration: none;
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    transition: border-color .2s, transform .15s;
+  }
+  .card:hover { border-color: var(--orange); transform: translateY(-2px); }
+
+  .card .status {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    font-weight: bold; padding: 3px 8px; border-radius: 4px;
+    width: fit-content; margin-bottom: 16px;
+  }
+  .status.live   { background: rgba(58,138,74,.18); color: #5cb96f; border: 1px solid #3a8a4a; }
+  .status.beta   { background: rgba(200,101,10,.18); color: var(--orange-bright); border: 1px solid var(--orange); }
+  .status.todo   { background: rgba(255,255,255,.06); color: var(--grey-4); border: 1px solid var(--grey-2); }
+
+  .card h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  .card p {
+    font-size: 13px;
+    color: var(--grey-4);
+    line-height: 1.6;
+    flex-grow: 1;
+    margin-bottom: 18px;
+  }
+  .card .open {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--orange-bright);
+    font-weight: bold;
+  }
+  .card .open::after { content: " →"; }
+
+  .data-row {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .data-row code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--grey-3);
+    background: var(--black);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .note {
+    margin-top: 64px;
+    padding: 24px;
+    background: var(--grey-1);
+    border-left: 3px solid var(--orange);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--grey-4);
+    line-height: 1.7;
+  }
+  .note strong { color: var(--white); }
+
+  footer {
+    border-top: 1px solid var(--grey-2);
+    padding: 32px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--grey-3); flex-wrap: wrap; gap: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .inner { padding: 0 24px; }
+    nav { padding: 0 24px; }
+    footer { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html#hero" class="nav-logo">ATRC</a>
+  <ul class="nav-links">
+    <li><a href="index.html#problem">Problem</a></li>
+    <li><a href="index.html#ci">Methodology</a></li>
+    <li><a href="index.html#acap">ACAP</a></li>
+    <li><a href="index.html#research">Research</a></li>
+    <li><a href="index.html#atu">ATU</a></li>
+    <li><a href="index.html#roadmap">Roadmap</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+    <li><a href="registry.html">Registry</a></li>
+    <li><a href="explore.html">Explore</a></li>
+    <li><a href="field-workspace.html" class="nav-cta">Field Workspace</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="inner">
+    <p class="eyebrow">Architectura Temporis Research Centre · Internal tools</p>
+    <h1>Field Workspace</h1>
+    <p>Tools for measuring, mapping, and managing Chronity Zones in the field. Built for researchers collecting AT v5.0 data — GPS capture, zone drawing, live spectral mapping, and the full passport registry.</p>
+  </div>
+</div>
+
+<div class="section-wrap">
+  <div class="inner">
+    <div class="sec-hdr"><span class="sec-num">01</span><span class="sec-label">Field Tools</span></div>
+
+    <div class="grid">
+
+      <a href="field.html" class="card">
+        <span class="status beta">v2 · Live</span>
+        <h3>Field Launcher</h3>
+        <p>Live GPS map for fieldwork. Highlights the Chronity Zone you're standing in, flags nearby dominants within ~10m, and tells you whether you're auditing an existing object or registering a new one.</p>
+        <div class="data-row"><code>watchPosition</code><code>zones.geojson</code><code>PASSPORT_REGISTRY</code></div>
+        <span class="open">Open Field Launcher</span>
+      </a>
+
+      <a href="zone-editor.html" class="card">
+        <span class="status beta">v1</span>
+        <h3>Zone Editor</h3>
+        <p>Draw Chronity Zone contours directly on the map by physical boundaries — walls, roads, coastline. Upload and edit an existing zones.geojson, or export a new one for the repository.</p>
+        <div class="data-row"><code>exports zones.geojson</code></div>
+        <span class="open">Open Zone Editor</span>
+      </a>
+
+      <a href="gps.html" class="card">
+        <span class="status live">v1 · Live</span>
+        <h3>GPS Locator</h3>
+        <p>Simple GPS readout for the field — auto-updates as you move, with quick links to the field form and the Spectral CI Map.</p>
+        <span class="open">Open GPS Locator</span>
+      </a>
+
+    </div>
+  </div>
+</div>
+
+<div class="section-wrap" style="border-top: 1px solid var(--grey-2); padding-top: 64px;">
+  <div class="inner">
+    <div class="sec-hdr"><span class="sec-num">02</span><span class="sec-label">Data & Registry</span></div>
+
+    <div class="grid">
+
+      <a href="explore.html" class="card">
+        <span class="status live">Live</span>
+        <h3>Explore</h3>
+        <p>Public data portal — live statistics, full spectral CI map, and a searchable table of every measured object. Auto-refreshes every 60 seconds.</p>
+        <span class="open">Open Explore</span>
+      </a>
+
+      <a href="registry.html" class="card">
+        <span class="status live">Live</span>
+        <h3>Passport Registry</h3>
+        <p>Full catalog of Chrono-Passports — filter by country, city, CI category and zone, search by name or architect, click through to any passport.</p>
+        <span class="open">Open Registry</span>
+      </a>
+
+      <a href="ATRC_CI_Map.html" class="card">
+        <span class="status beta">v2 · IDW</span>
+        <h3>Spectral CI Map</h3>
+        <p>Standalone spectral visualization — CI mapped to visible wavelength, with IDW gradient fill across zone contours.</p>
+        <span class="open">Open CI Map</span>
+      </a>
+
+      <a href="https://forms.gle/B29DyntFByrk24xD8" class="card" target="_blank" rel="noopener">
+        <span class="status live">Form</span>
+        <h3>Field Data Form</h3>
+        <p>22-question Google Form for recording field measurements. Submissions feed the Apps Script pipeline and update the registry automatically.</p>
+        <span class="open">Open Form</span>
+      </a>
+
+    </div>
+
+    <div class="note">
+      <strong>Internal note:</strong> this hub is the central entry point for the field toolkit while the number of Chronity Zones stays small enough to manage manually. As the registry scales, consider moving this into the planned PWA (<code>atrc-field</code>) as the primary field interface.
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div>Architectura Temporis Research Centre (ATRC) · Herceg Novi, Montenegro · Est. 2024</div>
+  <div>Understanding before change</div>
+</footer>
+
+</body>
+</html>
