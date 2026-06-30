@@ -1,478 +1,436 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ATRC · Field</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ATRC Field Launcher</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg:#0a0a0a;
+    --panel:#141414;
+    --panel-2:#1c1c1c;
+    --line:#2a2a2a;
+    --text:#f2f0ec;
+    --muted:#9a958c;
+    --orange:#c8650a;
+    --orange-bright:#e8791a;
+    --green:#3a8a4a;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;}
 
-    :root {
-      --bg: #111;
-      --bg2: #1a1a1a;
-      --border: #2a2a2a;
-      --accent: #c55a11;
-      --accent-dim: rgba(197,90,17,0.15);
-      --text: #e8e8e8;
-      --text-dim: #999;
-      --text-bright: #fff;
-      --green: #4caf50;
-      --yellow: #f5a623;
-      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --mono: 'SF Mono', 'Menlo', 'Courier New', monospace;
-    }
+  #map{position:fixed;inset:0;z-index:1;}
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      -webkit-font-smoothing: antialiased;
-    }
+  .top-bar{
+    position:fixed;top:0;left:0;right:0;z-index:500;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px;
+    background:linear-gradient(180deg, rgba(10,10,10,.92), rgba(10,10,10,0));
+    pointer-events:none;
+  }
+  .top-bar .brand{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+  .top-bar .brand b{color:var(--text);}
+  .gps-pill{
+    pointer-events:auto;
+    display:flex;align-items:center;gap:6px;
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;padding:6px 12px;font-size:11px;color:var(--muted);
+  }
+  .gps-dot{width:7px;height:7px;border-radius:50%;background:#555;flex-shrink:0;}
+  .gps-dot.live{background:var(--green);box-shadow:0 0 0 0 rgba(58,138,74,.6);animation:pulse-dot 2s infinite;}
+  @keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(58,138,74,.5);}70%{box-shadow:0 0 0 8px rgba(58,138,74,0);}100%{box-shadow:0 0 0 0 rgba(58,138,74,0);}}
 
-    .page {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 0 0 32px;
-    }
+  .zone-banner{
+    position:fixed;top:54px;left:16px;right:16px;z-index:480;
+    background:rgba(20,20,20,.92);border:1px solid var(--orange);
+    border-radius:10px;padding:10px 14px;
+    display:none;align-items:center;justify-content:space-between;gap:10px;
+    backdrop-filter:blur(6px);
+  }
+  .zone-banner.show{display:flex;}
+  .zone-banner .zname{font-size:13px;font-weight:600;color:var(--orange-bright);}
+  .zone-banner .zsub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .zone-banner .zci{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;}
 
-    /* ── HEADER ── */
-    header {
-      padding: 20px 20px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+  .dominant-toast{
+    position:fixed;left:16px;right:16px;bottom:170px;z-index:490;
+    background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--orange-bright);
+    border-radius:10px;padding:12px 14px;
+    display:none;
+  }
+  .dominant-toast.show{display:block;animation:slideup .25s ease-out;}
+  @keyframes slideup{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .dominant-toast .dt-row{display:flex;justify-content:space-between;align-items:baseline;}
+  .dominant-toast .dt-name{font-size:14px;font-weight:600;}
+  .dominant-toast .dt-id{font-size:10px;color:var(--muted);font-family:monospace;margin-top:2px;}
+  .dominant-toast .dt-mode{
+    font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;
+    padding:3px 8px;border-radius:5px;flex-shrink:0;margin-left:8px;
+  }
+  .dt-mode.audit{background:rgba(200,101,10,.18);color:var(--orange-bright);border:1px solid var(--orange);}
+  .dt-mode.new{background:rgba(58,138,74,.18);color:#5cb96f;border:1px solid var(--green);}
+  .dominant-toast .dt-ci{font-size:12px;color:var(--muted);margin-top:6px;}
 
-    .logo {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      color: var(--text-bright);
-      text-transform: uppercase;
-    }
+  .bottom-sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:500;
+    background:linear-gradient(0deg, rgba(10,10,10,.97) 60%, rgba(10,10,10,.85));
+    padding:14px 16px calc(16px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line);
+  }
+  .stats-row{
+    display:flex;gap:10px;margin-bottom:12px;
+  }
+  .stat-box{
+    flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:8px 10px;text-align:center;
+  }
+  .stat-box .v{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stat-box .l{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-top:2px;}
 
-    .logo span {
-      color: var(--accent);
-    }
+  .btn-row{display:flex;gap:10px;}
+  .btn{
+    flex:1;text-align:center;text-decoration:none;
+    padding:13px 10px;border-radius:10px;font-size:13px;font-weight:600;
+    border:1px solid var(--orange);color:var(--orange-bright);background:transparent;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .btn.primary{background:var(--orange);color:#0a0a0a;border-color:var(--orange);}
 
-    .map-link {
-      font-size: 12px;
-      color: var(--accent);
-      text-decoration: none;
-      border: 1px solid var(--accent);
-      padding: 5px 10px;
-      border-radius: 3px;
-      letter-spacing: 0.05em;
-      transition: background 0.2s;
-    }
-    .map-link:hover { background: var(--accent-dim); }
+  .crosshair-btn{
+    position:fixed;right:16px;bottom:175px;z-index:490;
+    width:44px;height:44px;border-radius:50%;
+    background:var(--panel);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;color:var(--text);
+    font-size:18px;
+  }
 
-    /* ── GPS BLOCK ── */
-    .gps-block {
-      margin: 20px 20px 0;
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-    }
+  .leaflet-control-attribution{display:none !important;}
 
-    .gps-status {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-    }
+  .pulse-marker{
+    width:16px;height:16px;border-radius:50%;
+    background:#4a9eff;border:2px solid #fff;
+    box-shadow:0 0 0 0 rgba(74,158,255,.6);
+    animation:pulse-loc 2s infinite;
+  }
+  @keyframes pulse-loc{0%{box-shadow:0 0 0 0 rgba(74,158,255,.55);}70%{box-shadow:0 0 0 16px rgba(74,158,255,0);}100%{box-shadow:0 0 0 0 rgba(74,158,255,0);}}
 
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--text-dim);
-      flex-shrink: 0;
-      transition: background 0.3s;
-    }
-    .status-dot.acquiring { background: var(--yellow); animation: pulse 1.2s infinite; }
-    .status-dot.ready     { background: var(--green); }
-    .status-dot.error     { background: #e53935; }
+  .leaflet-popup-content-wrapper{background:var(--panel);color:var(--text);border-radius:8px;}
+  .leaflet-popup-tip{background:var(--panel);}
+  .popup-title{font-weight:700;font-size:13px;margin-bottom:4px;}
+  .popup-id{font-family:monospace;font-size:10px;color:var(--muted);margin-bottom:6px;}
+  .popup-ci{font-size:12px;}
+  .popup-link{display:inline-block;margin-top:8px;font-size:11px;color:var(--orange-bright);text-decoration:none;font-weight:600;}
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .status-text {
-      font-size: 13px;
-      color: var(--text-dim);
-    }
-    .status-text strong { color: var(--text); }
-
-    .gps-coords {
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .coords-value {
-      font-family: var(--mono);
-      font-size: 15px;
-      color: var(--text-bright);
-      letter-spacing: 0.03em;
-      flex: 1;
-      min-width: 0;
-      word-break: break-all;
-    }
-    .coords-value.waiting { color: var(--text-dim); font-size: 13px; font-family: var(--font); }
-
-    .coords-meta {
-      font-size: 11px;
-      color: var(--text-dim);
-      margin-top: 4px;
-      font-family: var(--font);
-    }
-
-    .btn-copy {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      font-size: 12px;
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: all 0.2s;
-      font-family: var(--font);
-    }
-    .btn-copy:hover { border-color: var(--text-dim); color: var(--text); }
-    .btn-copy.copied { border-color: var(--green); color: var(--green); }
-
-    /* ── ACTION BUTTON ── */
-    .btn-form {
-      display: block;
-      margin: 16px 20px 0;
-      background: var(--accent);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-align: center;
-      padding: 16px 20px;
-      border-radius: 6px;
-      text-decoration: none;
-      cursor: pointer;
-      border: none;
-      width: calc(100% - 40px);
-      transition: background 0.2s, opacity 0.2s;
-    }
-    .btn-form:hover { background: #a84c0e; }
-    .btn-form.disabled {
-      opacity: 0.45;
-      pointer-events: none;
-      cursor: default;
-    }
-
-    .btn-hint {
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-dim);
-      margin-top: 8px;
-      padding: 0 20px;
-    }
-
-    /* ── SECONDARY ACTIONS ── */
-    .secondary-actions {
-      margin: 20px 20px 0;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .btn-sec {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      font-size: 12px;
-      padding: 11px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      transition: all 0.2s;
-      font-family: var(--font);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    .btn-sec:hover { border-color: var(--text-dim); color: var(--text); }
-
-    /* ── CI SCALE ── */
-    .ci-scale {
-      margin: 24px 20px 0;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    .ci-scale-title {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      padding: 10px 14px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .ci-bar {
-      height: 6px;
-      background: linear-gradient(to right,
-        #7b2fff 0%,
-        #2979ff 20%,
-        #00c853 40%,
-        #ffe600 60%,
-        #ff9800 75%,
-        #e53935 100%
-      );
-    }
-
-    .ci-labels {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      padding: 8px 10px 10px;
-      gap: 2px;
-    }
-
-    .ci-label {
-      text-align: center;
-    }
-    .ci-label-name {
-      font-size: 9px;
-      color: var(--text-dim);
-      display: block;
-      margin-bottom: 2px;
-    }
-    .ci-label-range {
-      font-size: 9px;
-      font-family: var(--mono);
-      color: var(--text-dim);
-      opacity: 0.7;
-    }
-
-    /* ── FOOTER ── */
-    footer {
-      margin-top: auto;
-      padding: 24px 20px 0;
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-dim);
-      letter-spacing: 0.06em;
-    }
-    footer em {
-      font-style: normal;
-      color: var(--accent);
-    }
-  </style>
+  .loading-banner{
+    position:fixed;top:54px;left:16px;right:16px;z-index:470;
+    font-size:11px;color:var(--muted);text-align:center;
+  }
+</style>
 </head>
 <body>
-<div class="page">
 
-  <header>
-    <div class="logo">AT<span>R</span>C · Field</div>
-    <a class="map-link" href="https://architecturatemporis.com/ATRC_CI_Map.html" target="_blank">↗ CI Map</a>
-  </header>
+<div id="map"></div>
 
-  <!-- GPS BLOCK -->
-  <div class="gps-block">
-    <div class="gps-status">
-      <div class="status-dot acquiring" id="statusDot"></div>
-      <div class="status-text" id="statusText">Acquiring GPS location…</div>
-    </div>
-    <div class="gps-coords">
-      <div>
-        <div class="coords-value waiting" id="coordsDisplay">Waiting for signal</div>
-        <div class="coords-meta" id="coordsMeta"></div>
-      </div>
-      <button class="btn-copy" id="btnCopy" onclick="copyCoords()" disabled>Copy</button>
-    </div>
-  </div>
-
-  <!-- PRIMARY ACTION -->
-  <a class="btn-form disabled" id="btnForm" href="#" target="_blank">→ Open Field Form</a>
-  <div class="btn-hint" id="btnHint">Waiting for GPS to prefill coordinates…</div>
-
-  <!-- SECONDARY ACTIONS -->
-  <div class="secondary-actions">
-    <button class="btn-sec" onclick="refreshGPS()">↻ Refresh GPS</button>
-    <a class="btn-sec" href="https://forms.gle/B29DyntFByrk24xD8" target="_blank">⎘ Form (no GPS)</a>
-  </div>
-
-  <!-- CI SCALE -->
-  <div class="ci-scale">
-    <div class="ci-scale-title">Chronity Index · Reference Scale</div>
-    <div class="ci-bar"></div>
-    <div class="ci-labels">
-      <div class="ci-label">
-        <span class="ci-label-name">No Chronity</span>
-        <span class="ci-label-range">0.00–0.30</span>
-      </div>
-      <div class="ci-label">
-        <span class="ci-label-name">Low</span>
-        <span class="ci-label-range">0.30–0.50</span>
-      </div>
-      <div class="ci-label">
-        <span class="ci-label-name">Moderate</span>
-        <span class="ci-label-range">0.50–0.70</span>
-      </div>
-      <div class="ci-label">
-        <span class="ci-label-name">High</span>
-        <span class="ci-label-range">0.70–0.85</span>
-      </div>
-      <div class="ci-label">
-        <span class="ci-label-name">Deep</span>
-        <span class="ci-label-range">0.85–1.00</span>
-      </div>
-    </div>
-  </div>
-
-  <footer>
-    <em>Understanding before change</em> · ATRC 2026
-  </footer>
-
+<div class="top-bar">
+  <div class="brand">ATRC <b>Field</b></div>
+  <div class="gps-pill"><span class="gps-dot" id="gpsDot"></span><span id="gpsLabel">Locating…</span></div>
 </div>
 
+<div class="loading-banner" id="loadingBanner">Loading registry…</div>
+
+<div class="zone-banner" id="zoneBanner">
+  <div>
+    <div class="zname" id="zoneName">—</div>
+    <div class="zsub" id="zoneSub">—</div>
+  </div>
+  <div class="zci" id="zoneCi">—</div>
+</div>
+
+<div class="dominant-toast" id="domToast">
+  <div class="dt-row">
+    <div>
+      <div class="dt-name" id="domName">—</div>
+      <div class="dt-id" id="domId">—</div>
+    </div>
+    <div class="dt-mode audit" id="domMode">AUDIT</div>
+  </div>
+  <div class="dt-ci" id="domCi">—</div>
+</div>
+
+<button class="crosshair-btn" id="centerBtn" title="Center on me">⌖</button>
+
+<div class="bottom-sheet">
+  <div class="stats-row">
+    <div class="stat-box"><div class="v" id="statCount">–</div><div class="l">Objects loaded</div></div>
+    <div class="stat-box"><div class="v" id="statNearest">–</div><div class="l">Nearest (m)</div></div>
+    <div class="stat-box"><div class="v" id="statZoneCi">–</div><div class="l">Zone CI</div></div>
+  </div>
+  <div class="btn-row">
+    <a class="btn primary" id="newObjBtn" href="https://forms.gle/B29DyntFByrk24xD8" target="_blank" rel="noopener">+ New object</a>
+    <a class="btn" href="ATRC_CI_Map.html">View CI Map</a>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  // ── Config ──
-  const FORM_BASE_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe45pgFLqXMaagHHn7W34oeogulfu9Z_dF9iKYa12eX1qlK8w/viewform';
-  const GPS_ENTRY_ID  = 'entry.1075279085';
+/* ====================== CONFIG ====================== */
+const REGISTRY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEvYYY_XY88tuVBOXk2FYHabWAOLXZwSsvil5VD6_oZRdP1lm2YNSUt8eTQhn0kwq-61_c5BnOzqv9/pub?gid=1404791980&single=true&output=csv";
+const ZONES_GEOJSON_URL = "zones.geojson"; // optional, falls back gracefully if absent
+const FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSe45pgFLqXMaagHHn7W34oeogulfu9Z_dF9iKYa12eX1qlK8w/viewform";
+const GPS_ENTRY_ID = "entry.1075279085";
+const PROXIMITY_M = 10;       // dominant highlight radius
+const NEAREST_NEIGHBOR_M = 500; // fallback zone-by-proximity radius (no zones.geojson yet)
 
-  // ── State ──
-  let currentCoords = null;
-  let watchId = null;
+/* ====================== MAP INIT ====================== */
+const map = L.map('map', { zoomControl:false, attributionControl:false }).setView([42.4531, 18.5375], 16); // Herceg Novi default
+L.control.zoom({ position:'bottomright' }).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 20, subdomains: 'abcd'
+}).addTo(map);
 
-  // ── Elements ──
-  const dot     = document.getElementById('statusDot');
-  const txt     = document.getElementById('statusText');
-  const display = document.getElementById('coordsDisplay');
-  const meta    = document.getElementById('coordsMeta');
-  const btnCopy = document.getElementById('btnCopy');
-  const btnForm = document.getElementById('btnForm');
-  const btnHint = document.getElementById('btnHint');
-
-  // ── GPS ──
-  function startGPS() {
-    if (!navigator.geolocation) {
-      setError('Geolocation not supported');
-      return;
-    }
-    watchId = navigator.geolocation.watchPosition(onSuccess, onError, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 5000
-    });
+/* ====================== HELPERS ====================== */
+function ciToColor(ci){
+  ci = Math.max(0, Math.min(1, ci || 0));
+  const wl = 400 + ci * 300;
+  return wavelengthToRgb(wl);
+}
+function wavelengthToRgb(wl){
+  let r,g,b;
+  if(wl>=380&&wl<440){r=-(wl-440)/(440-380);g=0;b=1;}
+  else if(wl>=440&&wl<490){r=0;g=(wl-440)/(490-440);b=1;}
+  else if(wl>=490&&wl<510){r=0;g=1;b=-(wl-510)/(510-490);}
+  else if(wl>=510&&wl<580){r=(wl-510)/(580-510);g=1;b=0;}
+  else if(wl>=580&&wl<645){r=1;g=-(wl-645)/(645-580);b=0;}
+  else if(wl>=645&&wl<=780){r=1;g=0;b=0;}
+  else{r=0;g=0;b=0;}
+  return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+}
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371000, toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  const headers = splitCsvLine(lines[0]);
+  return lines.slice(1).filter(l=>l.trim().length).map(line=>{
+    const cells = splitCsvLine(line);
+    const row = {};
+    headers.forEach((h,i)=>row[h.trim()] = (cells[i]||'').trim());
+    return row;
+  });
+}
+function splitCsvLine(line){
+  const out=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){ inQ=!inQ; }
+    else if(c===',' && !inQ){ out.push(cur); cur=''; }
+    else cur+=c;
   }
-
-  function onSuccess(pos) {
-    const lat = pos.coords.latitude.toFixed(6);
-    const lng = pos.coords.longitude.toFixed(6);
-    const acc = Math.round(pos.coords.accuracy);
-    currentCoords = `${lat}, ${lng}`;
-
-    // Update UI
-    dot.className = 'status-dot ready';
-    txt.innerHTML = `<strong>GPS ready</strong> · ±${acc} m`;
-
-    display.textContent = currentCoords;
-    display.classList.remove('waiting');
-    meta.textContent = `Accuracy: ±${acc} m`;
-
-    btnCopy.disabled = false;
-    btnCopy.classList.remove('copied');
-
-    // Enable form button with prefill
-    const prefillURL = `${FORM_BASE_URL}?${GPS_ENTRY_ID}=${encodeURIComponent(currentCoords)}`;
-    btnForm.href = prefillURL;
-    btnForm.classList.remove('disabled');
-    btnHint.textContent = 'GPS coordinates will be prefilled in the form';
+  out.push(cur);
+  return out;
+}
+function parseGPS(str){
+  if(!str) return null;
+  const parts = str.split(',').map(s=>parseFloat(s.trim()));
+  if(parts.length<2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+  return { lat: parts[0], lng: parts[1] };
+}
+function pointInPolygon(lat, lng, ring){
+  // ring: array of [lng,lat]
+  let inside = false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i][0], yi=ring[i][1], xj=ring[j][0], yj=ring[j][1];
+    const intersect = ((yi>lat)!=(yj>lat)) && (lng < (xj-xi)*(lat-yi)/((yj-yi)||1e-12)+xi);
+    if(intersect) inside = !inside;
   }
+  return inside;
+}
 
-  function onError(err) {
-    const msgs = {
-      1: 'Location access denied. Enable in browser settings.',
-      2: 'Position unavailable. Move to open sky.',
-      3: 'GPS timeout. Tap Refresh to retry.'
+/* ====================== STATE ====================== */
+let objects = [];      // {CP_ID, Object_name, Architect, CI, ZN_ID, lat, lng, marker}
+let zones = null;      // geojson FeatureCollection or null
+let zonePolygons = []; // {name, ring:[[lng,lat]...], ci, layer}
+let userPos = null;
+let activeZone = null;
+let nearestDominant = null;
+
+/* ====================== LOAD REGISTRY ====================== */
+fetch(REGISTRY_CSV).then(r=>r.text()).then(text=>{
+  const rows = parseCSV(text);
+  objects = rows.map(r=>{
+    const gps = parseGPS(r.GPS);
+    if(!gps) return null;
+    return {
+      CP_ID: r.CP_ID, ZN_ID: r.ZN_ID, name: r.Object_name, architect: r.Architect,
+      ci: parseFloat(r.CI) || 0, status: r.Status,
+      lat: gps.lat, lng: gps.lng
     };
-    setError(msgs[err.code] || 'GPS error');
+  }).filter(Boolean);
+
+  document.getElementById('statCount').textContent = objects.length;
+  document.getElementById('loadingBanner').style.display = 'none';
+
+  if(objects.length){
+    const bounds = L.latLngBounds(objects.map(o=>[o.lat,o.lng]));
+    map.fitBounds(bounds.pad(0.3));
   }
 
-  function setError(msg) {
-    dot.className = 'status-dot error';
-    txt.textContent = msg;
-    display.textContent = 'GPS unavailable';
-    display.classList.add('waiting');
-    meta.textContent = '';
-    btnCopy.disabled = true;
+  objects.forEach(o=>{
+    const marker = L.circleMarker([o.lat,o.lng], {
+      radius: 8, fillColor: ciToColor(o.ci), fillOpacity: 0.9,
+      color:'#0a0a0a', weight:2
+    }).addTo(map);
+    marker.bindPopup(
+      `<div class="popup-title">${o.name||'Unnamed object'}</div>`+
+      `<div class="popup-id">${o.CP_ID||'—'}</div>`+
+      `<div class="popup-ci">CI = ${o.ci.toFixed(3)} · ${o.architect||''}</div>`+
+      (o.CP_ID ? `<a class="popup-link" href="passport.html?id=${o.CP_ID}">View Chrono-Passport →</a>` : '')
+    );
+    o.marker = marker;
+  });
+}).catch(err=>{
+  document.getElementById('loadingBanner').textContent = 'Registry unavailable — showing map only.';
+  console.error('Registry load failed', err);
+});
 
-    // Fallback: enable form without GPS
-    btnForm.href = 'https://forms.gle/B29DyntFByrk24xD8';
-    btnForm.classList.remove('disabled');
-    btnHint.textContent = 'No GPS — enter coordinates manually in the form';
-  }
-
-  function refreshGPS() {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-    }
-    dot.className = 'status-dot acquiring';
-    txt.textContent = 'Acquiring GPS location…';
-    display.textContent = 'Waiting for signal';
-    display.classList.add('waiting');
-    meta.textContent = '';
-    btnCopy.disabled = true;
-    btnForm.classList.add('disabled');
-    btnHint.textContent = 'Waiting for GPS to prefill coordinates…';
-    currentCoords = null;
-    startGPS();
-  }
-
-  function copyCoords() {
-    if (!currentCoords) return;
-    navigator.clipboard.writeText(currentCoords).then(() => {
-      btnCopy.textContent = '✓ Copied';
-      btnCopy.classList.add('copied');
-      setTimeout(() => {
-        btnCopy.textContent = 'Copy';
-        btnCopy.classList.remove('copied');
-      }, 2000);
-    }).catch(() => {
-      // Fallback for older iOS
-      const el = document.createElement('textarea');
-      el.value = currentCoords;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      btnCopy.textContent = '✓ Copied';
-      btnCopy.classList.add('copied');
-      setTimeout(() => {
-        btnCopy.textContent = 'Copy';
-        btnCopy.classList.remove('copied');
-      }, 2000);
+/* ====================== LOAD ZONES (optional) ====================== */
+fetch(ZONES_GEOJSON_URL).then(r=>{ if(!r.ok) throw new Error('no zones.geojson yet'); return r.json(); })
+  .then(gj=>{
+    zones = gj;
+    zonePolygons = (gj.features||[]).map(f=>{
+      const ring = f.geometry.type==='Polygon' ? f.geometry.coordinates[0] : f.geometry.coordinates[0][0];
+      const layer = L.polygon(ring.map(c=>[c[1],c[0]]), {
+        color: '#c8650a', weight:1.5, fillOpacity:0.06, dashArray:'4,4'
+      }).addTo(map);
+      return { name: f.properties.name || f.properties.ZN_ID || 'Zone', zn_id: f.properties.ZN_ID,
+        ci: f.properties.CI_zone, ring, layer };
     });
+  })
+  .catch(()=>{ /* zones.geojson not yet created — fallback to nearest-neighbor mode */ });
+
+/* ====================== USER LOCATION ====================== */
+const userIcon = L.divIcon({ className:'', html:'<div class="pulse-marker"></div>', iconSize:[16,16] });
+let userMarker = null;
+let proximityCircle = null;
+
+document.getElementById('centerBtn').addEventListener('click', ()=>{
+  if(userPos) map.setView([userPos.lat, userPos.lng], 18);
+});
+
+if('geolocation' in navigator){
+  navigator.geolocation.watchPosition(onPosition, onPosError, {
+    enableHighAccuracy:true, maximumAge:3000, timeout:10000
+  });
+}else{
+  document.getElementById('gpsLabel').textContent = 'GPS unsupported';
+}
+
+function onPosError(err){
+  document.getElementById('gpsLabel').textContent = 'GPS error';
+  document.getElementById('gpsDot').classList.remove('live');
+}
+
+function onPosition(pos){
+  userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  document.getElementById('gpsDot').classList.add('live');
+  document.getElementById('gpsLabel').textContent =
+    `${userPos.lat.toFixed(5)}, ${userPos.lng.toFixed(5)} · ±${Math.round(pos.coords.accuracy)}m`;
+
+  if(!userMarker){
+    userMarker = L.marker([userPos.lat,userPos.lng], { icon:userIcon, zIndexOffset:1000 }).addTo(map);
+    map.setView([userPos.lat,userPos.lng], 17);
+  }else{
+    userMarker.setLatLng([userPos.lat,userPos.lng]);
   }
 
-  // ── Init ──
-  startGPS();
+  updateZoneStatus();
+  updateNearestDominant();
+  updateNewObjLink();
+}
+
+/* ====================== ZONE HIGHLIGHT ====================== */
+function updateZoneStatus(){
+  if(!userPos) return;
+  let found = null;
+
+  if(zonePolygons.length){
+    for(const z of zonePolygons){
+      if(pointInPolygon(userPos.lat, userPos.lng, z.ring)){ found = z; break; }
+    }
+  } else if(objects.length){
+    // fallback: nearest-neighbor mode (no zones.geojson yet)
+    const inRange = objects.filter(o => haversine(userPos.lat,userPos.lng,o.lat,o.lng) <= NEAREST_NEIGHBOR_M);
+    if(inRange.length){
+      const znId = inRange[0].ZN_ID;
+      const sameZone = objects.filter(o=>o.ZN_ID===znId);
+      const avgCi = sameZone.reduce((s,o)=>s+o.ci,0) / sameZone.length;
+      found = { name: znId || 'Unnamed zone', ci: avgCi, fallback:true };
+    }
+  }
+
+  zonePolygons.forEach(z=>{
+    z.layer.setStyle({ fillOpacity: z===found ? 0.22 : 0.06, weight: z===found ? 2.5 : 1.5 });
+  });
+
+  activeZone = found;
+  const banner = document.getElementById('zoneBanner');
+  if(found){
+    banner.classList.add('show');
+    document.getElementById('zoneName').textContent = found.name + (found.fallback ? ' (nearest-neighbor)' : '');
+    document.getElementById('zoneSub').textContent = 'You are inside this Chronity Zone';
+    document.getElementById('zoneCi').textContent = (found.ci!=null && !isNaN(found.ci)) ? Number(found.ci).toFixed(3) : '—';
+    document.getElementById('statZoneCi').textContent = (found.ci!=null && !isNaN(found.ci)) ? Number(found.ci).toFixed(2) : '–';
+  }else{
+    banner.classList.remove('show');
+    document.getElementById('statZoneCi').textContent = '–';
+  }
+}
+
+/* ====================== DOMINANT PROXIMITY ====================== */
+function updateNearestDominant(){
+  if(!userPos || !objects.length) return;
+  let nearest = null, nearestDist = Infinity;
+  objects.forEach(o=>{
+    const d = haversine(userPos.lat,userPos.lng,o.lat,o.lng);
+    if(d < nearestDist){ nearestDist = d; nearest = o; }
+    o.marker.setStyle({ radius: d<=PROXIMITY_M ? 12 : 8, weight: d<=PROXIMITY_M ? 3 : 2 });
+  });
+
+  document.getElementById('statNearest').textContent = isFinite(nearestDist) ? Math.round(nearestDist) : '–';
+
+  const toast = document.getElementById('domToast');
+  if(nearest && nearestDist <= PROXIMITY_M){
+    nearestDominant = nearest;
+    toast.classList.add('show');
+    document.getElementById('domName').textContent = nearest.name || 'Unnamed object';
+    document.getElementById('domId').textContent = nearest.CP_ID || 'No CP_ID yet';
+    document.getElementById('domCi').textContent = `CI = ${nearest.ci.toFixed(3)} · ${Math.round(nearestDist)}m away`;
+    const modeEl = document.getElementById('domMode');
+    if(nearest.CP_ID){
+      modeEl.textContent = 'AUDIT';
+      modeEl.className = 'dt-mode audit';
+    }else{
+      modeEl.textContent = 'NEW';
+      modeEl.className = 'dt-mode new';
+    }
+  }else{
+    nearestDominant = null;
+    toast.classList.remove('show');
+  }
+}
+
+/* ====================== FORM PREFILL ====================== */
+function updateNewObjLink(){
+  if(!userPos) return;
+  const gpsVal = `${userPos.lat.toFixed(6)}, ${userPos.lng.toFixed(6)}`;
+  const url = `${FORM_BASE}?usp=pp_url&${GPS_ENTRY_ID}=${encodeURIComponent(gpsVal)}`;
+  document.getElementById('newObjBtn').href = url;
+}
 </script>
 </body>
 </html>
