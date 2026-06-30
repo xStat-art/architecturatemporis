@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATRC Zone Editor</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg:#0a0a0a; --panel:#141414; --panel-2:#1c1c1c; --line:#2a2a2a;
+    --text:#f2f0ec; --muted:#9a958c; --orange:#c8650a; --orange-bright:#e8791a;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font);}
+  #map{position:fixed;top:0;bottom:0;left:0;right:340px;z-index:1;}
+  .leaflet-control-attribution{display:none !important;}
+
+  .sidebar{
+    position:fixed;top:0;right:0;bottom:0;width:340px;z-index:10;
+    background:var(--panel);border-left:1px solid var(--line);
+    display:flex;flex-direction:column;
+  }
+  .sidebar-head{padding:18px 18px 12px;border-bottom:1px solid var(--line);}
+  .sidebar-head .brand{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+  .sidebar-head h1{font-size:16px;margin:4px 0 0;font-weight:700;}
+
+  .section{padding:16px 18px;border-bottom:1px solid var(--line);}
+  .section h2{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 10px;font-weight:700;}
+
+  label{display:block;font-size:11px;color:var(--muted);margin:10px 0 4px;}
+  input, select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    padding:9px 10px;border-radius:6px;font-size:13px;font-family:inherit;
+  }
+  input:focus, select:focus{outline:none;border-color:var(--orange);}
+
+  .btn{
+    display:block;width:100%;text-align:center;padding:11px;border-radius:7px;
+    font-size:13px;font-weight:600;border:1px solid var(--orange);color:var(--orange-bright);
+    background:transparent;cursor:pointer;margin-top:10px;
+  }
+  .btn.primary{background:var(--orange);color:#0a0a0a;}
+  .btn.ghost{border-color:var(--line);color:var(--muted);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-row{display:flex;gap:8px;}
+  .btn-row .btn{margin-top:10px;}
+
+  .hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;}
+  .vcount{font-size:12px;color:var(--text);margin-top:8px;}
+  .vcount b{color:var(--orange-bright);}
+
+  .zone-list{flex:1;overflow-y:auto;padding:8px 18px 18px;}
+  .zone-card{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    padding:12px;margin-bottom:10px;
+  }
+  .zone-card .zc-top{display:flex;justify-content:space-between;align-items:baseline;}
+  .zone-card .zc-name{font-weight:700;font-size:13px;}
+  .zone-card .zc-id{font-family:monospace;font-size:10px;color:var(--muted);margin-top:2px;}
+  .zone-card .zc-meta{font-size:11px;color:var(--muted);margin-top:6px;}
+  .zone-card .zc-actions{display:flex;gap:6px;margin-top:8px;}
+  .zone-card .zc-actions button{
+    flex:1;background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:6px;border-radius:5px;font-size:11px;cursor:pointer;
+  }
+  .zone-card .zc-actions button.danger{color:#d9534f;border-color:#3a2222;}
+  .zone-card.editing{border-color:var(--orange);}
+
+  .empty{color:var(--muted);font-size:12px;text-align:center;padding:30px 10px;}
+
+  .footer-note{padding:12px 18px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);text-align:center;}
+
+  .mode-banner{
+    position:fixed;top:14px;left:14px;z-index:20;
+    background:var(--panel);border:1px solid var(--orange);border-radius:8px;
+    padding:8px 14px;font-size:12px;display:none;align-items:center;gap:8px;
+  }
+  .mode-banner.show{display:flex;}
+  .mode-banner .dot{width:7px;height:7px;border-radius:50%;background:var(--orange-bright);}
+
+  @media (max-width: 760px){
+    #map{right:0;bottom:50%;}
+    .sidebar{top:50%;width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<div class="mode-banner" id="modeBanner"><span class="dot"></span> Click on the map to add vertices</div>
+
+<div class="sidebar">
+  <div class="sidebar-head">
+    <div class="brand">ATRC</div>
+    <h1>Zone Editor</h1>
+  </div>
+
+  <div class="section">
+    <h2>Draw contour</h2>
+    <div class="hint">Trace the zone by physical boundaries (fortress wall, road, terrain, coastline) — not administrative borders. Click to add vertices, then finish.</div>
+    <div class="vcount">Vertices: <b id="vcount">0</b></div>
+    <div class="btn-row">
+      <button class="btn primary" id="startBtn" style="flex:1">Start drawing</button>
+      <button class="btn ghost" id="undoBtn" style="flex:1" disabled>Undo point</button>
+    </div>
+    <button class="btn" id="finishBtn" disabled>Finish contour</button>
+    <button class="btn ghost" id="cancelBtn" style="display:none">Cancel drawing</button>
+  </div>
+
+  <div class="section" id="metaSection" style="display:none">
+    <h2>Zone details</h2>
+    <label>Zone ID (ZN·ME·BJ·HN·###)</label>
+    <input id="znId" placeholder="ZN-ME-BJ-HN-003">
+    <label>Display name</label>
+    <input id="znName" placeholder="e.g. Herceg Novi — Stari Grad">
+    <label>CI_zone (optional, can be filled later)</label>
+    <input id="znCi" type="number" step="0.001" min="0" max="1" placeholder="0.000">
+    <div class="btn-row">
+      <button class="btn primary" id="saveZoneBtn" style="flex:1">Save zone</button>
+      <button class="btn ghost" id="discardZoneBtn" style="flex:1">Discard</button>
+    </div>
+  </div>
+
+  <div class="zone-list" id="zoneList">
+    <div class="empty">No zones drawn yet</div>
+  </div>
+
+  <div class="section">
+    <h2>Load existing</h2>
+    <div class="hint">Load a zones.geojson already on GitHub to edit, delete, or add more zones to it.</div>
+    <input type="file" id="uploadInput" accept=".geojson,.json,application/geo+json,application/json" style="display:none">
+    <button class="btn ghost" id="uploadBtn">Upload zones.geojson</button>
+  </div>
+
+  <div class="section" style="border-bottom:none;">
+    <button class="btn primary" id="downloadBtn" disabled>Download zones.geojson</button>
+    <div class="hint">Upload the downloaded file to the repository root (github.com/architecturatemporis) — field.html and the CI Map will pick it up automatically.</div>
+  </div>
+
+  <div class="footer-note">Understanding before change · ATRC 2026</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map', { zoomControl:true }).setView([42.4531, 18.5375], 16); // Herceg Novi
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 20, subdomains:'abcd'
+}).addTo(map);
+
+let zones = [];          // {id, zn_id, name, ci, ring:[[lng,lat],...], layer}
+let drawing = false;
+let currentPoints = [];  // [[lat,lng],...]
+let vertexMarkers = [];
+let drawLayer = null;
+let editingZoneId = null;
+let zoneIdCounter = 1;
+let pendingEditMeta = null;
+
+const startBtn = document.getElementById('startBtn');
+const finishBtn = document.getElementById('finishBtn');
+const undoBtn = document.getElementById('undoBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const vcountEl = document.getElementById('vcount');
+const modeBanner = document.getElementById('modeBanner');
+const metaSection = document.getElementById('metaSection');
+const zoneList = document.getElementById('zoneList');
+const downloadBtn = document.getElementById('downloadBtn');
+
+startBtn.addEventListener('click', startDrawing);
+cancelBtn.addEventListener('click', cancelDrawing);
+undoBtn.addEventListener('click', undoPoint);
+finishBtn.addEventListener('click', finishDrawing);
+document.getElementById('saveZoneBtn').addEventListener('click', saveZone);
+document.getElementById('discardZoneBtn').addEventListener('click', discardZone);
+downloadBtn.addEventListener('click', downloadGeojson);
+document.getElementById('uploadBtn').addEventListener('click', ()=>document.getElementById('uploadInput').click());
+document.getElementById('uploadInput').addEventListener('change', onUploadFile);
+
+function startDrawing(){
+  drawing = true;
+  currentPoints = [];
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = [];
+  if(drawLayer){ map.removeLayer(drawLayer); drawLayer = null; }
+  startBtn.style.display = 'none';
+  cancelBtn.style.display = 'block';
+  undoBtn.disabled = true;
+  finishBtn.disabled = true;
+  modeBanner.classList.add('show');
+  metaSection.style.display = 'none';
+  map.on('click', onMapClick);
+}
+
+function onMapClick(e){
+  if(!drawing) return;
+  currentPoints.push([e.latlng.lat, e.latlng.lng]);
+  const m = L.circleMarker(e.latlng, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map);
+  vertexMarkers.push(m);
+  redrawCurrentShape();
+  vcountEl.textContent = currentPoints.length;
+  undoBtn.disabled = false;
+  finishBtn.disabled = currentPoints.length < 3;
+}
+
+function redrawCurrentShape(){
+  if(drawLayer) map.removeLayer(drawLayer);
+  if(currentPoints.length < 2) return;
+  drawLayer = L.polyline(currentPoints, { color:'#e8791a', weight:2, dashArray:'5,5' }).addTo(map);
+}
+
+function undoPoint(){
+  if(!currentPoints.length) return;
+  currentPoints.pop();
+  const m = vertexMarkers.pop();
+  if(m) map.removeLayer(m);
+  redrawCurrentShape();
+  vcountEl.textContent = currentPoints.length;
+  undoBtn.disabled = currentPoints.length === 0;
+  finishBtn.disabled = currentPoints.length < 3;
+}
+
+function cancelDrawing(){
+  drawing = false;
+  pendingEditMeta = null;
+  map.off('click', onMapClick);
+  currentPoints = [];
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = [];
+  if(drawLayer){ map.removeLayer(drawLayer); drawLayer = null; }
+  startBtn.style.display = 'block';
+  cancelBtn.style.display = 'none';
+  modeBanner.classList.remove('show');
+  vcountEl.textContent = 0;
+}
+
+function finishDrawing(){
+  if(currentPoints.length < 3) return;
+  drawing = false;
+  map.off('click', onMapClick);
+  modeBanner.classList.remove('show');
+  cancelBtn.style.display = 'none';
+  startBtn.style.display = 'block';
+
+  // close the ring visually
+  if(drawLayer) map.removeLayer(drawLayer);
+  drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
+
+  editingZoneId = null;
+  if(pendingEditMeta){
+    document.getElementById('znId').value = pendingEditMeta.znId;
+    document.getElementById('znName').value = pendingEditMeta.name;
+    document.getElementById('znCi').value = pendingEditMeta.ci != null ? pendingEditMeta.ci : '';
+    pendingEditMeta = null;
+  }else{
+    document.getElementById('znId').value = `ZN-ME-BJ-HN-${String(zones.length+1).padStart(3,'0')}`;
+    document.getElementById('znName').value = '';
+    document.getElementById('znCi').value = '';
+  }
+  metaSection.style.display = 'block';
+}
+
+function saveZone(){
+  const znId = document.getElementById('znId').value.trim();
+  const name = document.getElementById('znName').value.trim() || znId;
+  const ci = parseFloat(document.getElementById('znCi').value);
+  if(!znId){ alert('Zone ID is required'); return; }
+  if(currentPoints.length < 3){ alert('Draw at least 3 vertices first'); return; }
+
+  const ring = currentPoints.map(p => [p[1], p[0]]); // to [lng,lat]
+  ring.push(ring[0]); // close ring for valid GeoJSON
+
+  if(drawLayer){
+    drawLayer.setStyle({ color:'#7B4F00', fillOpacity:0.08, dashArray:null });
+    drawLayer.bindPopup(`<b>${name}</b><br>${znId}`);
+  }
+
+  zones.push({
+    id: 'z' + (zoneIdCounter++),
+    zn_id: znId,
+    name: name,
+    ci: isNaN(ci) ? null : ci,
+    ring: ring,
+    layer: drawLayer
+  });
+
+  // reset draw state
+  currentPoints = [];
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = [];
+  drawLayer = null;
+  vcountEl.textContent = 0;
+  undoBtn.disabled = true;
+  finishBtn.disabled = true;
+  metaSection.style.display = 'none';
+
+  renderZoneList();
+}
+
+function discardZone(){
+  if(drawLayer){ map.removeLayer(drawLayer); drawLayer = null; }
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = [];
+  currentPoints = [];
+  vcountEl.textContent = 0;
+  metaSection.style.display = 'none';
+}
+
+function renderZoneList(){
+  if(!zones.length){
+    zoneList.innerHTML = '<div class="empty">No zones drawn yet</div>';
+    downloadBtn.disabled = true;
+    return;
+  }
+  downloadBtn.disabled = false;
+  zoneList.innerHTML = '';
+  zones.forEach(z=>{
+    const card = document.createElement('div');
+    card.className = 'zone-card';
+    card.innerHTML = `
+      <div class="zc-top">
+        <div class="zc-name">${z.name}</div>
+      </div>
+      <div class="zc-id">${z.zn_id}</div>
+      <div class="zc-meta">${z.ring.length-1} vertices · CI_zone: ${z.ci!=null ? z.ci.toFixed(3) : '—'}</div>
+      <div class="zc-actions">
+        <button data-action="focus" data-id="${z.id}">Focus</button>
+        <button data-action="edit" data-id="${z.id}">Edit</button>
+        <button data-action="delete" data-id="${z.id}" class="danger">Delete</button>
+      </div>
+    `;
+    zoneList.appendChild(card);
+  });
+
+  zoneList.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      const zone = zones.find(z=>z.id===id);
+      if(!zone) return;
+      if(btn.dataset.action === 'focus'){
+        map.fitBounds(zone.layer.getBounds().pad(0.2));
+        zone.layer.openPopup();
+      } else if(btn.dataset.action === 'delete'){
+        if(confirm(`Delete zone "${zone.name}"?`)){
+          map.removeLayer(zone.layer);
+          zones = zones.filter(z=>z.id!==id);
+          renderZoneList();
+        }
+      } else if(btn.dataset.action === 'edit'){
+        editZone(id);
+      }
+    });
+  });
+}
+
+function onUploadFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    let gj;
+    try{ gj = JSON.parse(ev.target.result); }
+    catch(err){ alert('Could not parse this file as JSON/GeoJSON.'); return; }
+
+    const features = gj.type === 'FeatureCollection' ? gj.features
+                    : gj.type === 'Feature' ? [gj] : [];
+    if(!features.length){ alert('No polygon features found in this file.'); return; }
+
+    let added = 0, skipped = 0;
+    features.forEach(f=>{
+      if(!f.geometry) { skipped++; return; }
+      let ring;
+      if(f.geometry.type === 'Polygon') ring = f.geometry.coordinates[0];
+      else if(f.geometry.type === 'MultiPolygon') ring = f.geometry.coordinates[0][0];
+      else { skipped++; return; }
+
+      const props = f.properties || {};
+      const znId = props.ZN_ID || props.zn_id || `ZN-ME-BJ-HN-${String(zones.length+1).padStart(3,'0')}`;
+      const name = props.name || znId;
+      const ci = (props.CI_zone != null) ? parseFloat(props.CI_zone) : null;
+
+      const layer = L.polygon(ring.map(c=>[c[1],c[0]]), {
+        color:'#7B4F00', weight:1.5, fillOpacity:0.08
+      }).addTo(map);
+      layer.bindPopup(`<b>${name}</b><br>${znId}`);
+
+      zones.push({
+        id: 'z' + (zoneIdCounter++),
+        zn_id: znId,
+        name: name,
+        ci: isNaN(ci) ? null : ci,
+        ring: ring,
+        layer: layer
+      });
+      added++;
+    });
+
+    renderZoneList();
+    if(zones.length){
+      const allBounds = L.featureGroup(zones.map(z=>z.layer)).getBounds();
+      if(allBounds.isValid()) map.fitBounds(allBounds.pad(0.2));
+    }
+    if(skipped) alert(`Loaded ${added} zone(s). Skipped ${skipped} feature(s) with unsupported geometry.`);
+  };
+  reader.readAsText(file);
+  e.target.value = ''; // allow re-uploading the same file later
+}
+
+function editZone(id){
+  const zone = zones.find(z=>z.id===id);
+  if(!zone) return;
+  if(drawing){ alert('Finish or cancel the current drawing first.'); return; }
+
+  // remove the zone from the saved list and put its vertices back into edit mode
+  map.removeLayer(zone.layer);
+  zones = zones.filter(z=>z.id!==id);
+  renderZoneList();
+
+  // ring is [lng,lat...] with a closing point — drop the closing point, convert to [lat,lng]
+  const ringNoClose = zone.ring.slice(0, -1);
+  currentPoints = ringNoClose.map(c=>[c[1], c[0]]);
+
+  drawing = true;
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = currentPoints.map(p=>
+    L.circleMarker(p, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map)
+  );
+  redrawCurrentShape();
+  vcountEl.textContent = currentPoints.length;
+
+  startBtn.style.display = 'none';
+  cancelBtn.style.display = 'block';
+  undoBtn.disabled = currentPoints.length === 0;
+  finishBtn.disabled = currentPoints.length < 3;
+  modeBanner.classList.add('show');
+  map.on('click', onMapClick);
+  map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
+
+  // store metadata so "Finish contour" pre-fills the form with the original values
+  pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci };
+}
+
+function downloadGeojson(){
+  const fc = {
+    type: 'FeatureCollection',
+    features: zones.map(z=>({
+      type: 'Feature',
+      properties: { ZN_ID: z.zn_id, name: z.name, CI_zone: z.ci },
+      geometry: { type: 'Polygon', coordinates: [z.ring] }
+    }))
+  };
+  const blob = new Blob([JSON.stringify(fc, null, 2)], { type: 'application/geo+json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'zones.geojson';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
