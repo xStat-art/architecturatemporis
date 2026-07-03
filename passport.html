@@ -444,15 +444,21 @@ function renderPassport(d) {
     <!-- TIMELINE -->
     <div class="cp-timeline-wrap">${buildTimeline(d.First_Audit_Date)}</div>
 
+    <!-- LEGACY BANNER -->
+    ${d._legacy ? `
+    <div style="background:#fdf3e0;border-left:3px solid #c55a11;padding:12px 16px;margin:0 0 -1px;font-size:11px;color:#7a5a2a;line-height:1.6;">
+      <strong>Pre-Appendix J v2.0 measurement</strong> — ${d._legacyNote}
+    </div>` : ''}
+
     <!-- 1: IDENTITY -->
     <div class="cp-section">
       <div class="cp-num">1</div>
       <div class="cp-body">
         <div class="cp-label">Identity &amp; Context</div>
         <div style="font-size:14px;font-weight:500;color:#1a1a1a;margin-bottom:3px;">${d.Object_Name || '—'}</div>
-        <div style="font-size:11px;color:#666;margin-bottom:10px;">${lat && lon ? `${lat}, ${lon}` : '—'} · Zone ${zoneId || '—'}</div>
+        <div style="font-size:11px;color:#666;margin-bottom:10px;">${d.Location ? d.Location : (lat && lon ? `${lat}, ${lon}` : '—')}${d.Architect ? ` · ${d.Architect}` : ''}${d.Year_built ? ` · ${d.Year_built}` : ''} · Zone ${zoneId || '—'}</div>
         <div class="cp-card" style="border-left-color:#ddd;cursor:default;">
-          <div class="cp-card-title"><span style="color:#bbb;">Internal Eidos, architect, construction year — pending (not part of current field protocol)</span></div>
+          <div class="cp-card-title"><span style="color:#bbb;">${d._legacy ? 'Internal Eidos — pending' : 'Internal Eidos, architect, construction year — pending (not part of current field protocol)'}</span></div>
           <div class="cp-card-sub">PI ${pi}/25</div>
         </div>
       </div>
@@ -661,6 +667,27 @@ function closeModalDirect() {
   document.getElementById('modal-bg').classList.remove('open');
 }
 
+/* ── LEGACY CASES ── Real field measurements taken before Appendix J v2.0 was
+   finalized (June 2026). Not part of the live PASSPORT_REGISTRY — the current
+   field protocol didn't exist yet when these were measured — but they are real
+   data, not illustrations, so they get an honest banner rather than silent
+   inclusion or silent exclusion. */
+const LEGACY_CASES = [
+  {
+    CP_ID: 'CP·IT·VE·MB·002·0001',
+    Zone_ID: 'ZN·IT·VE·MB·002',
+    Object_Name: 'Casa Zamprogno',
+    Location: 'Montebelluna, Veneto, Italy',
+    Architect: 'Afra & Tobia Scarpa',
+    Year_built: '1971',
+    First_Audit_Date: '3/1/2026', Last_Audit_Date: '3/1/2026',
+    PI_current: '19.33', AD_current: '0.84', II_current: '90', CI_current: '0.828',
+    Audit_Count: '1',
+    _legacy: true,
+    _legacyNote: 'Measured March 2026, before Appendix J v2.0 was finalized (June 2026). This measurement used the methodology version current at the time — group-averaged parameter weighting and a "Natural materials %" field later replaced by the Patina Maturity Index (PMI). Real field data, not an illustration — but not directly comparable, parameter-for-parameter, to entries below measured under the current formula.'
+  }
+];
+
 /* ── DEMO DATA (fallback, real schema) ── */
 const DEMO = {
   CP_ID: 'CP·ME·BJ·HN·003·0001',
@@ -677,6 +704,16 @@ const DEMO = {
 /* ── LOAD DATA ── */
 function loadPassport() {
   const id = getPassportId();
+  const normalizeId = s => String(s).replace(/^'/,'').replace(/[\s·\-.]/g,'').toLowerCase().trim();
+
+  // Особые случаи — реальные полевые замеры, сделанные ДО финализации Appendix J v2.0.
+  // Не входят в живой PASSPORT_REGISTRY (не текущий протокол), но это честные данные,
+  // не иллюстрация — поэтому у них свой путь рендера с явной пометкой версии методики.
+  const legacyMatch = LEGACY_CASES.find(c => normalizeId(c.CP_ID) === normalizeId(id));
+  if (legacyMatch) {
+    renderPassport(legacyMatch);
+    return;
+  }
 
   // Попробуем загрузить из Google Sheets
   // Если GID не настроен — используем демо-данные
@@ -689,7 +726,7 @@ function loadPassport() {
   Papa.parse(REGISTRY_CSV + '&t=' + Date.now(), {
     download: true, header: true, skipEmptyLines: true,
     complete(results) {
-      const normalizeId = s => String(s).replace(/^'/,'').replace(/[\s·\-.]/g,'').toLowerCase().trim(); const normalId = normalizeId(id);
+      const normalId = normalizeId(id);
       const row = results.data.find(r => {
         const rowId = normalizeId(r.CP_ID || '');
         return rowId === normalId;
