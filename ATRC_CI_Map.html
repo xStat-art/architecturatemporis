@@ -18,8 +18,8 @@
 
   body {
     font-family: 'Arial', sans-serif;
-    background: #0f0f0f;
-    color: #fff;
+    background: #f5f5f2;
+    color: #1a1a1a;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -27,8 +27,8 @@
 
   /* ── HEADER ─────────────────────────────────────────────── */
   .header {
-    background: #1a1a1a;
-    border-bottom: 1px solid #2e2e2e;
+    background: #ffffff;
+    border-bottom: 1px solid #ddd;
     padding: 12px 20px;
     display: flex;
     align-items: center;
@@ -55,7 +55,7 @@
   .title {
     font-size: 13px;
     letter-spacing: 1px;
-    color: #ccc;
+    color: #333;
     text-transform: uppercase;
   }
 
@@ -70,9 +70,9 @@
     letter-spacing: 2px;
     text-transform: uppercase;
     padding: 6px 16px;
-    border: 1px solid #333;
+    border: 1px solid #ccc;
     background: transparent;
-    color: #888;
+    color: #666;
     cursor: pointer;
     transition: all 0.2s;
   }
@@ -103,8 +103,9 @@
     bottom: 32px;
     left: 16px;
     z-index: 1000;
-    background: rgba(20,20,20,0.92);
-    border: 1px solid #2e2e2e;
+    background: rgba(255,255,255,0.95);
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     padding: 16px 20px;
     min-width: 200px;
   }
@@ -168,8 +169,9 @@
     top: 70px;
     right: 16px;
     z-index: 1000;
-    background: rgba(20,20,20,0.92);
-    border: 1px solid #2e2e2e;
+    background: rgba(255,255,255,0.95);
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     padding: 16px 20px;
     min-width: 180px;
   }
@@ -204,26 +206,26 @@
 
   .stats-divider {
     border: none;
-    border-top: 1px solid #2e2e2e;
+    border-top: 1px solid #ddd;
     margin: 10px 0;
   }
 
   /* ── POPUP ───────────────────────────────────────────────── */
   .leaflet-popup-content-wrapper {
-    background: #1a1a1a;
-    border: 1px solid #333;
+    background: #ffffff;
+    border: 1px solid #ddd;
     border-radius: 0;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   }
 
-  .leaflet-popup-tip { background: #1a1a1a; }
+  .leaflet-popup-tip { background: #ffffff; }
 
   .popup-content { padding: 4px; min-width: 180px; }
 
   .popup-name {
     font-size: 12px;
     font-weight: 600;
-    color: #fff;
+    color: #1a1a1a;
     margin-bottom: 8px;
     letter-spacing: 0.3px;
   }
@@ -239,7 +241,7 @@
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #888;
+    color: #777;
     margin-bottom: 10px;
   }
 
@@ -247,18 +249,18 @@
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: #666;
+    color: #777;
     letter-spacing: 0.5px;
     margin-bottom: 3px;
   }
 
-  .popup-row span:last-child { color: #aaa; }
+  .popup-row span:last-child { color: #333; }
 
   /* ── LOADING ─────────────────────────────────────────────── */
   .loading-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15,15,15,0.9);
+    background: rgba(245,245,242,0.95);
     z-index: 2000;
     display: flex;
     flex-direction: column;
@@ -277,7 +279,7 @@
   .loading-bar {
     width: 120px;
     height: 2px;
-    background: #222;
+    background: #ddd;
     position: relative;
     overflow: hidden;
   }
@@ -309,14 +311,14 @@
   .no-data-title {
     font-size: 13px;
     letter-spacing: 2px;
-    color: #444;
+    color: #999;
     text-transform: uppercase;
     margin-bottom: 8px;
   }
 
   .no-data-sub {
     font-size: 10px;
-    color: #333;
+    color: #aaa;
     letter-spacing: 1px;
   }
 
@@ -327,7 +329,7 @@
     font-size: 9px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
+    color: rgba(30,30,30,0.75);
     white-space: nowrap;
     pointer-events: none;
   }
@@ -682,7 +684,7 @@ const map = L.map('map', {
 });
 
 // Dark OSM tiles
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '© OpenStreetMap © CARTO',
   maxZoom: 19,
 }).addTo(map);
@@ -777,9 +779,9 @@ function renderZones(zonesMap) {
       icon: L.divIcon({
         className: 'zone-label',
         html: `<div style="text-align:center;">
-                 <div style="color:${color};font-size:10px;letter-spacing:2px;text-shadow:0 0 8px rgba(0,0,0,0.8);margin-bottom:2px;">CI_zone ${avgCI.toFixed(3)} · ${objects.length} pts</div>
-                 <div style="color:rgba(255,255,255,0.55);font-size:8px;letter-spacing:1px;font-family:monospace;text-shadow:0 0 6px rgba(0,0,0,0.9);margin-bottom:4px;">σ ${signature.stddev} · ∇ ${signature.gradient_magnitude} · #${signature.hash}</div>
-                 <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(20,20,20,0.85);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;">⬇ Export gradient</button>
+                 <div style="color:${color};font-size:10px;letter-spacing:2px;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff;margin-bottom:2px;font-weight:600;">CI_zone ${avgCI.toFixed(3)} · ${objects.length} pts</div>
+                 <div style="color:rgba(30,30,30,0.8);font-size:8px;letter-spacing:1px;font-family:monospace;text-shadow:0 0 4px #fff,0 0 4px #fff;margin-bottom:4px;">σ ${signature.stddev} · ∇ ${signature.gradient_magnitude} · #${signature.hash}</div>
+                 <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.92);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.15);">⬇ Export gradient</button>
                </div>`,
         iconAnchor: [60, -6],
         iconSize: [120, 50],
