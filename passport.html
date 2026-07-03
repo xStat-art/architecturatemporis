@@ -225,12 +225,12 @@
 
 <script>
 /* ── CONFIG ── */
-const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSEvYYY_XY88tuVBOXk2FYHabWAOLXZwSsvil5VD6_oZRdP1lm2YNSUt8eTQhn0kwq-61_c5BnOzqv9/pub?gid=1404791980&single=true&output=csv';
+const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
 
 /* ── GET ID FROM URL ── */
 function getPassportId() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('id') || 'CP-IT-VE-MB-002-0001';
+  return params.get('id') || 'CP·ME·BJ·HN·003·0001';
 }
 
 /* ── COLOUR SCIENCE ── */
@@ -260,29 +260,128 @@ function ciCategory(ci) {
   return 'No Chronity';
 }
 
-/* ── TIMELINE ── */
-function buildTimeline(yearBuilt) {
-  const yearNow  = new Date().getFullYear();
-  const tCurrent = yearNow - yearBuilt;
-  const milestones = [10,25,50,75,100].filter(t => t < tCurrent);
-  const points = [0, ...milestones, tCurrent];
+/* ── AUTO-GENERATED RECOMMENDATIONS (Variant 1 — from measured data only) ──
+   These derive text from AD/II/CI thresholds per Appendix D of the theory
+   methodology, adapted for automatic generation from field measurements
+   rather than manual architect input. Thresholds are a first working pass —
+   refine with field experience. */
+
+function materialProfile(ad) {
+  if (ad >= 0.70) return {
+    label: 'Type A-dominant · noble ageing',
+    color: '#4a7c5a',
+    text: `Measured Authenticity Density (AD = ${ad.toFixed(2)}) indicates the visual field is dominated by Type A materials — natural materials that age with dignity (stone with patina, aged wood, weathering metals). This is a positive signal: the object's material biography is intact.`,
+    rules: [
+      'Do not clean patina with aggressive chemicals, sandblasting, or pressure washing',
+      'Do not paint or seal natural stone and weathering metals — this stops the material from breathing and accumulating value',
+      'Do not replace aged elements with modern surrogates (plastic, composite panels, unweathered glass) even for "restoration" purposes'
+    ]
+  };
+  if (ad >= 0.50) return {
+    label: 'Mixed Type A/B',
+    color: '#7a8a4a',
+    text: `Measured Authenticity Density (AD = ${ad.toFixed(2)}) indicates a mix of Type A materials (noble ageing) and Type B materials (compatible, moderate temporal potential). The object retains meaningful authenticity but has some neutral or replaced elements.`,
+    rules: [
+      'Preserve remaining Type A elements — do not chemically clean or replace them',
+      'When replacing Type B elements, favour compatible traditional materials (lime plaster, traditional ceramics) over synthetic alternatives',
+      'Consider a targeted material audit to identify which specific elements are Type A before any renovation'
+    ]
+  };
+  if (ad >= 0.30) return {
+    label: 'Type C-dominant · neutral',
+    color: '#a08858',
+    text: `Measured Authenticity Density (AD = ${ad.toFixed(2)}) indicates the visual field is dominated by Type C materials — newer materials without strong temporal value, but without aggressive dissonance either. Chronity is present but not yet deeply expressed.`,
+    rules: [
+      'Any future renovation is an opportunity to raise AD — prefer Type A/B materials for replacements rather than repeating Type C',
+      'Avoid introducing Type D materials (plastic, aluminium composite panels, synthetic renders, unweathered glass)',
+      'A full material inventory would help identify where targeted upgrades give the most Chronity benefit'
+    ]
+  };
+  return {
+    label: 'Type D-dominant · degraded',
+    color: '#b05050',
+    text: `Measured Authenticity Density (AD = ${ad.toFixed(2)}) indicates the visual field is dominated by Type D materials — anti-temporal materials that degrade without accumulating value (plastic, aluminium composite panels, synthetic renders, unweathered glass).`,
+    rules: [
+      'Reversal to Type A/B materials should be a priority in any future renovation, budget permitting',
+      'Do not add further Type D elements — this actively lowers CI and Authenticity Premium',
+      'A detailed material audit is strongly recommended before any intervention is planned'
+    ]
+  };
+}
+
+function transformationProfile(ii) {
+  if (ii >= 80) return {
+    label: 'High integrity · strict protection',
+    color: '#4a7c5a',
+    freeLevel: 'Cosmetic changes only (furniture, textiles, planting, lighting within the existing concept)',
+    checkLevel: 'Any change to internal layout, partitions, or room function — verify against this passport and, if uncertain, consult an architect before proceeding',
+    architectLevel: 'Any change to structure, openings (windows/doors), material interfaces (Shadow Gap), or facade elements — architect oversight required. Measured Integrity Index (II = ' + ii + '/100) indicates temporal layers are exceptionally well preserved; unsupervised structural intervention would cause disproportionate damage to accumulated chronity.'
+  };
+  if (ii >= 50) return {
+    label: 'Moderate integrity',
+    color: '#a08858',
+    freeLevel: 'Cosmetic changes (furniture, textiles, planting, lighting)',
+    checkLevel: 'Layout changes, partition removal or addition — recommended to verify against original material zones before proceeding',
+    architectLevel: 'Structural changes, opening modifications, facade work — architect oversight recommended. Measured Integrity Index (II = ' + ii + '/100) indicates partial preservation; some historical layers are already lost, so remaining ones carry proportionally more weight.'
+  };
+  return {
+    label: 'Low integrity · reduced constraints',
+    color: '#888',
+    freeLevel: 'Cosmetic and most functional changes',
+    checkLevel: 'Larger interventions — a quick check is still worthwhile to avoid removing what authentic material remains',
+    architectLevel: 'Structural work still benefits from professional oversight, though the constraint is lower. Measured Integrity Index (II = ' + ii + '/100) indicates significant prior loss of temporal layers — this is also the strongest case for a restoration strategy that actively raises II rather than further reducing it.'
+  };
+}
+
+function tcoDirection(ad) {
+  if (ad >= 0.60) {
+    return 'Type A/B-dominant materials (AD ≥ 0.60) are associated, in the theoretical TCO model, with roughly 35–40% lower long-term maintenance cost versus surrogate materials, and a growing "Authenticity Premium" on market value from ~year 15 onward — because natural materials use weather (rain, sun) as a free finishing process rather than requiring active cleaning.';
+  }
+  return 'Type C/D-dominant materials (AD < 0.60) are associated, in the theoretical TCO model, with higher long-term maintenance cost (frequent cleaning, earlier replacement cycles) and no Authenticity Premium on market value. Raising AD through targeted material replacement is the main lever available to shift this object onto a lower-cost trajectory.';
+}
+
+function auditJournalText(d) {
+  const count = parseInt(d.Audit_Count) || 1;
+  const first = d.First_Audit_Date || '—';
+  const last  = d.Last_Audit_Date || '—';
+  if (count <= 1) {
+    return `First measurement recorded ${first}. This is the baseline — no trend data yet. Recommended: repeat measurement at T+5 years to establish whether Chronity is accumulating or degrading.`;
+  }
+  return `${count} measurements recorded between ${first} and ${last}. See field log (INPUT sheet) for the full history of individual audits and any flagged anomalies.`;
+}
+
+/* ── TIMELINE — from first measurement, projecting forward ── */
+function buildTimeline(firstAuditDateStr) {
+  const now = new Date();
+  const first = firstAuditDateStr ? new Date(firstAuditDateStr) : now;
+  const firstYear = isNaN(first.getFullYear()) ? now.getFullYear() : first.getFullYear();
+  const nowYear = now.getFullYear();
+  const tCurrent = Math.max(0, nowYear - firstYear);
+
+  // Standard monitoring horizons ahead of *today*
+  const horizons = [5, 10, 25, 50];
+  const points = [0, ...(tCurrent > 0 ? [tCurrent] : []), ...horizons.map(h => tCurrent + h)]
+    .filter((v, i, arr) => arr.indexOf(v) === i)
+    .sort((a,b) => a-b);
 
   let track = '<div class="tl-track">';
   points.forEach((t,i) => {
     if (i>0) track += '<div class="tl-line"></div>';
-    const isLast  = i === points.length-1;
-    const isFirst = i === 0;
-    if (isFirst)     track += '<div style="width:8px;height:8px;border-radius:50%;background:#ccc;border:1.5px solid #888;flex-shrink:0;"></div>';
-    else if (isLast) track += '<div style="width:11px;height:11px;border-radius:50%;background:#c55a11;flex-shrink:0;"></div>';
-    else             track += '<div style="width:7px;height:7px;border-radius:50%;background:#fff;border:1.5px solid #bbb;flex-shrink:0;"></div>';
+    const isCurrent = t === tCurrent;
+    const isFirst = i === 0 && t === 0;
+    if (isCurrent) track += '<div style="width:11px;height:11px;border-radius:50%;background:#c55a11;flex-shrink:0;"></div>';
+    else if (isFirst) track += '<div style="width:8px;height:8px;border-radius:50%;background:#ccc;border:1.5px solid #888;flex-shrink:0;"></div>';
+    else track += '<div style="width:7px;height:7px;border-radius:50%;background:#fff;border:1.5px solid #bbb;flex-shrink:0;"></div>';
   });
   track += '</div>';
 
   let labels = '<div class="tl-labels">';
-  points.forEach((t,i) => {
-    const isLast = i === points.length-1;
-    const cls = isLast ? 'tl-lbl current' : 'tl-lbl';
-    labels += `<div class="${cls}">T+${t}<span>${yearBuilt+t}</span></div>`;
+  points.forEach((t) => {
+    const isCurrent = t === tCurrent;
+    const cls = isCurrent ? 'tl-lbl current' : 'tl-lbl';
+    const yr = firstYear + t;
+    const lbl = t === 0 ? 'First audit' : (isCurrent ? 'Today' : `+${t - tCurrent}y`);
+    labels += `<div class="${cls}">${lbl}<span>${yr}</span></div>`;
   });
   labels += '</div>';
 
@@ -291,22 +390,32 @@ function buildTimeline(yearBuilt) {
 
 /* ── RENDER PASSPORT ── */
 function renderPassport(d) {
-  const ci     = parseFloat(d.CI) || 0;
-  const ad     = parseFloat(d.AD) || 0;
-  const ii     = parseFloat(d.II) || 0;
-  const pi     = parseFloat(d.PI) || 0;
-  const yr     = parseInt(d.Year_built) || 1900;
-  const tPlus  = new Date().getFullYear() - yr;
+  const ci     = parseFloat(d.CI_current) || 0;
+  const ad     = parseFloat(d.AD_current) || 0;
+  const ii     = parseFloat(d.II_current) || 0;
+  const pi     = parseFloat(d.PI_current) || 0;
   const cpId   = d.CP_ID || getPassportId();
-  const czId   = d.CZ_ID || '';
-  const ciHex  = ciToHex(ci);
+  const zoneId = d.Zone_ID || '';
+  const lat    = d.GPS_Lat_anchor || '';
+  const lon    = d.GPS_Lon_anchor || '';
   const passportURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(cpId)}`;
 
   const piComp = ((pi/25)*0.40).toFixed(3);
   const adComp = (ad*0.35).toFixed(3);
   const iiComp = ((ii/100)*0.25).toFixed(3);
 
-  document.getElementById('top-title').textContent = `Chrono-Passport · ${d.Object_name || cpId}`;
+  const mat = materialProfile(ad);
+  const trans = transformationProfile(ii);
+  const tcoText = tcoDirection(ad);
+  const journal = auditJournalText(d);
+
+  const tCurrentYears = (() => {
+    const f = new Date(d.First_Audit_Date);
+    if (isNaN(f.getFullYear())) return 0;
+    return Math.max(0, new Date().getFullYear() - f.getFullYear());
+  })();
+
+  document.getElementById('top-title').textContent = `Chrono-Passport · ${d.Object_Name || cpId}`;
 
   const html = `
   <div class="cp-wrap">
@@ -317,13 +426,13 @@ function renderPassport(d) {
         <div style="font-size:9px;letter-spacing:3px;color:#666;text-transform:uppercase;margin-bottom:5px;">Architectura Temporis™</div>
         <div style="font-size:22px;font-weight:700;color:#fff;letter-spacing:0.5px;margin-bottom:8px;">Chrono-Passport</div>
         <div style="font-size:12px;color:#c55a11;letter-spacing:1.5px;font-weight:700;margin-bottom:3px;">${cpId}</div>
-        ${czId ? `<div style="font-size:10px;color:#999;letter-spacing:1px;">Zone: ${czId}</div>` : ''}
+        ${zoneId ? `<div style="font-size:10px;color:#999;letter-spacing:1px;">Zone: ${zoneId}</div>` : ''}
       </div>
       <div style="display:flex;gap:0;align-items:stretch;">
         <div style="text-align:center;border:0.5px solid #444;padding:10px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
           <div style="font-size:9px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:2px;">Chronity Index</div>
           <div style="font-size:28px;font-weight:700;color:#fff;line-height:1.1;">${ci.toFixed(3)}</div>
-          <div style="font-size:9px;color:#c55a11;letter-spacing:1px;margin-top:2px;">T+${tPlus} · ${ciCategory(ci)}</div>
+          <div style="font-size:9px;color:#c55a11;letter-spacing:1px;margin-top:2px;">T+${tCurrentYears} · ${ciCategory(ci)}</div>
         </div>
         <div style="background:#fff;border:0.5px solid #444;padding:10px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;margin-left:-0.5px;">
           <div id="qr-render"></div>
@@ -333,23 +442,19 @@ function renderPassport(d) {
     </div>
 
     <!-- TIMELINE -->
-    <div class="cp-timeline-wrap">${buildTimeline(yr)}</div>
+    <div class="cp-timeline-wrap">${buildTimeline(d.First_Audit_Date)}</div>
 
     <!-- 1: IDENTITY -->
     <div class="cp-section">
       <div class="cp-num">1</div>
       <div class="cp-body">
-        <div class="cp-label">Identity &amp; Internal Eidos</div>
-        <div style="font-size:14px;font-weight:500;color:#1a1a1a;margin-bottom:3px;">${d.Object_name || '—'} · ${d.Location || '—'}</div>
-        <div style="font-size:11px;color:#666;margin-bottom:10px;">${d.Architect || '—'} · ${yr} · Heritage ${d.Heritage || '—'}</div>
-        ${d.Internal_Eidos ? `
-        <div class="cp-card" onclick="openModal('eidos')" style="border-left-color:#c55a11;">
-          <div class="cp-card-title"><span style="font-style:italic;">«${d.Internal_Eidos.substring(0,60)}...»</span><span class="cp-card-hint">↗ details</span></div>
-          <div class="cp-card-sub">Internal Eidos · PI ${pi}/25</div>
-        </div>` : `<div class="cp-card" style="border-left-color:#ddd;cursor:default;">
-          <div class="cp-card-title"><span style="color:#bbb;">Internal Eidos — pending</span></div>
+        <div class="cp-label">Identity &amp; Context</div>
+        <div style="font-size:14px;font-weight:500;color:#1a1a1a;margin-bottom:3px;">${d.Object_Name || '—'}</div>
+        <div style="font-size:11px;color:#666;margin-bottom:10px;">${lat && lon ? `${lat}, ${lon}` : '—'} · Zone ${zoneId || '—'}</div>
+        <div class="cp-card" style="border-left-color:#ddd;cursor:default;">
+          <div class="cp-card-title"><span style="color:#bbb;">Internal Eidos, architect, construction year — pending (not part of current field protocol)</span></div>
           <div class="cp-card-sub">PI ${pi}/25</div>
-        </div>`}
+        </div>
       </div>
     </div>
 
@@ -357,18 +462,10 @@ function renderPassport(d) {
     <div class="cp-section">
       <div class="cp-num">2</div>
       <div class="cp-body">
-        <div class="cp-label">Material Biography · AD: ${ad}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          ${d.Material_Type_A ? `
-          <div class="cp-card" onclick="openModal('typeA')" style="border-left-color:#4a7c5a;">
-            <div class="cp-card-title">Type A — noble ageing <span class="cp-card-hint">↗</span></div>
-            <div class="cp-card-sub">${d.Material_Type_A.substring(0,50)}...</div>
-          </div>` : `<div class="cp-card" style="border-left-color:#ddd;cursor:default;"><div class="cp-card-title" style="color:#bbb;">Type A — pending</div></div>`}
-          ${d.Material_Type_D ? `
-          <div class="cp-card" onclick="openModal('typeD')" style="border-left-color:#b05050;">
-            <div class="cp-card-title">Type D — degraded <span class="cp-card-hint">↗</span></div>
-            <div class="cp-card-sub">${d.Material_Type_D.substring(0,50)}...</div>
-          </div>` : `<div class="cp-card" style="border-left-color:#ddd;cursor:default;"><div class="cp-card-title" style="color:#bbb;">Type D — not detected</div></div>`}
+        <div class="cp-label">Material Biography · AD: ${ad.toFixed(2)}</div>
+        <div class="cp-card" onclick="openModal('material')" style="border-left-color:${mat.color};">
+          <div class="cp-card-title"><span>${mat.label}</span><span class="cp-card-hint">↗ full recommendations</span></div>
+          <div class="cp-card-sub">${mat.text.substring(0,90)}...</div>
         </div>
       </div>
     </div>
@@ -377,23 +474,20 @@ function renderPassport(d) {
     <div class="cp-section">
       <div class="cp-num">3</div>
       <div class="cp-body">
-        <div class="cp-label">Intervention Protocol · II: ${ii}/100</div>
+        <div class="cp-label">Intervention Protocol · II: ${ii}/100 · ${trans.label}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-          ${d.Leave_Alone ? `
-          <div class="cp-card" onclick="openModal('leave')" style="border-left-color:#666;">
-            <div class="cp-card-title">Leave alone <span class="cp-card-hint">↗</span></div>
-            <div class="cp-card-sub">${d.Leave_Alone.split('·').length} elements</div>
-          </div>` : `<div class="cp-card" style="border-left-color:#ddd;cursor:default;"><div class="cp-card-title" style="color:#bbb;">Leave alone — pending</div></div>`}
-          ${d.Periodic_Care ? `
-          <div class="cp-card" onclick="openModal('care')" style="border-left-color:#888858;">
-            <div class="cp-card-title">Periodic care <span class="cp-card-hint">↗</span></div>
-            <div class="cp-card-sub">${d.Periodic_Care.split('·').length} cycles</div>
-          </div>` : `<div class="cp-card" style="border-left-color:#ddd;cursor:default;"><div class="cp-card-title" style="color:#bbb;">Periodic care — pending</div></div>`}
-          ${d.Prohibited ? `
-          <div class="cp-card" onclick="openModal('prohib')" style="border-left-color:#b05050;">
-            <div class="cp-card-title">Prohibited <span class="cp-card-hint">↗</span></div>
-            <div class="cp-card-sub">${d.Prohibited.split('·').length} interventions</div>
-          </div>` : `<div class="cp-card" style="border-left-color:#ddd;cursor:default;"><div class="cp-card-title" style="color:#bbb;">Prohibited — pending</div></div>`}
+          <div class="cp-card" onclick="openModal('freeLevel')" style="border-left-color:#4a7c5a;">
+            <div class="cp-card-title">Free <span class="cp-card-hint">↗</span></div>
+            <div class="cp-card-sub">No architect needed</div>
+          </div>
+          <div class="cp-card" onclick="openModal('checkLevel')" style="border-left-color:#888858;">
+            <div class="cp-card-title">Check first <span class="cp-card-hint">↗</span></div>
+            <div class="cp-card-sub">Verify against passport</div>
+          </div>
+          <div class="cp-card" onclick="openModal('architectLevel')" style="border-left-color:#b05050;">
+            <div class="cp-card-title">Architect required <span class="cp-card-hint">↗</span></div>
+            <div class="cp-card-sub">Structural / facade / openings</div>
+          </div>
         </div>
       </div>
     </div>
@@ -402,10 +496,22 @@ function renderPassport(d) {
     <div class="cp-section">
       <div class="cp-num">4</div>
       <div class="cp-body">
-        <div class="cp-label">Ownership Economics · methodology in development</div>
+        <div class="cp-label">Ownership Economics (TCO) · directional estimate, methodology in development</div>
         <div class="cp-card" onclick="openModal('tco')" style="border-left-color:#bbb;">
-          <div class="cp-card-title"><span>TCO analysis — Type A strategy advantage</span><span class="cp-card-hint">↗</span></div>
-          <div class="cp-card-sub">Long-term economic data accumulating across ATRC passport database</div>
+          <div class="cp-card-title"><span>Long-term cost direction, based on measured AD</span><span class="cp-card-hint">↗</span></div>
+          <div class="cp-card-sub">${tcoText.substring(0,90)}...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5: JOURNAL -->
+    <div class="cp-section">
+      <div class="cp-num">5</div>
+      <div class="cp-body">
+        <div class="cp-label">Audit Journal · ${d.Audit_Count || 1} measurement(s)</div>
+        <div class="cp-card" style="border-left-color:#666;cursor:default;">
+          <div class="cp-card-title">Measurement history</div>
+          <div class="cp-card-sub">${journal}</div>
         </div>
       </div>
     </div>
@@ -444,8 +550,8 @@ function renderPassport(d) {
     <div class="cp-footer">
       <div style="font-size:9px;color:#999;line-height:1.8;">
         <div>Sergei Tatarnikov · ATRC · Herceg Novi · ${new Date().getFullYear()}</div>
-        <div>First issue · T+${tPlus} · ${d.Next_audit ? `Next audit: ${d.Next_audit}` : ''} ${d.Projected_CI ? `· Projected CI: ${d.Projected_CI}` : ''}</div>
-        <div style="margin-top:2px;font-size:8px;color:#bbb;">Last updated: ${d.Last_measured || '—'}</div>
+        <div>Auto-generated from ${d.Audit_Count || 1} field measurement(s) · Appendix J v2.0</div>
+        <div style="margin-top:2px;font-size:8px;color:#bbb;">Last updated: ${d.Last_Audit_Date || '—'}</div>
       </div>
       <div style="background:#111;padding:5px 12px;font-size:11px;font-weight:700;color:#fff;letter-spacing:2px;">AT™</div>
     </div>
@@ -470,88 +576,73 @@ function renderPassport(d) {
 /* ── MODAL ── */
 function openModal(key) {
   const d = window._passportData || {};
+  const ad = parseFloat(d.AD_current) || 0;
+  const ii = parseFloat(d.II_current) || 0;
+  const mat = materialProfile(ad);
+  const trans = transformationProfile(ii);
+
   const MODALS = {
-    eidos: {
-      title: 'Identity & Internal Eidos',
+    material: {
+      title: 'Material Biography',
       html: `
         <div class="modal-section">
-          <div class="modal-section-title">Internal Eidos</div>
-          <div class="modal-text" style="font-style:italic;border-left:2px solid #c55a11;padding-left:10px;">«${d.Internal_Eidos || '—'}»</div>
+          <div class="modal-section-title">${mat.label} · AD ${ad.toFixed(2)}</div>
+          <div class="modal-text" style="margin-bottom:10px;">${mat.text}</div>
         </div>
         <div class="modal-section">
-          <div class="modal-section-title">PI · ${d.PI || '—'} / 25</div>
-          <div class="modal-text" style="color:#666;">Perceptual Index — aggregated sensory measurement from field data</div>
+          <div class="modal-section-title">Recommended practice</div>
+          ${mat.rules.map(s=>
+            `<div class="modal-item"><div class="modal-dot" style="background:${mat.color};"></div><span>${s}</span></div>`
+          ).join('')}
+        </div>
+        <div class="modal-section">
+          <div class="modal-text" style="color:#999;font-size:10px;">Auto-generated from measured Authenticity Density. Element-by-element material breakdown (facade / roof / paving / joinery) is not yet part of the field protocol — pending future data collection.</div>
         </div>`
     },
-    typeA: {
-      title: 'Material Biography · Type A',
+    freeLevel: {
+      title: 'Intervention Protocol · Free (Level 1)',
       html: `
         <div class="modal-section">
-          <div class="modal-section-title">Type A — noble ageing</div>
-          <div class="modal-text" style="margin-bottom:10px;">Materials that improve with time. Patina is a feature, not a defect.</div>
-          ${(d.Material_Type_A||'').split('·').map(s=>s.trim()).filter(Boolean).map(s=>
-            `<div class="modal-item"><div class="modal-dot" style="background:#4a7c5a;"></div><span>${s}</span></div>`
-          ).join('')}
+          <div class="modal-section-title">No architect required</div>
+          <div class="modal-text">${trans.freeLevel}</div>
         </div>`
     },
-    typeD: {
-      title: 'Material Biography · Type D',
+    checkLevel: {
+      title: 'Intervention Protocol · Check First (Level 2)',
       html: `
         <div class="modal-section">
-          <div class="modal-section-title">Type D — degraded, reversal priority</div>
-          <div class="modal-text" style="margin-bottom:10px;">Materials where authenticity has been compromised.</div>
-          ${(d.Material_Type_D||'').split('·').map(s=>s.trim()).filter(Boolean).map(s=>
-            `<div class="modal-item"><div class="modal-dot" style="background:#b05050;"></div><span>${s}</span></div>`
-          ).join('')}
+          <div class="modal-section-title">Verify before proceeding</div>
+          <div class="modal-text">${trans.checkLevel}</div>
         </div>`
     },
-    leave: {
-      title: 'Intervention Protocol · Leave Alone',
+    architectLevel: {
+      title: 'Intervention Protocol · Architect Required (Level 3)',
       html: `
         <div class="modal-section">
-          <div class="modal-section-title">Fixed core — DNA of the object</div>
-          ${(d.Leave_Alone||'').split('·').map(s=>s.trim()).filter(Boolean).map(s=>
-            `<div class="modal-item"><div class="modal-dot" style="background:#666;"></div><span>${s}</span></div>`
-          ).join('')}
-        </div>`
-    },
-    care: {
-      title: 'Intervention Protocol · Periodic Care',
-      html: `
-        <div class="modal-section">
-          <div class="modal-section-title">Maintenance schedule</div>
-          ${(d.Periodic_Care||'').split('·').map(s=>s.trim()).filter(Boolean).map(s=>
-            `<div class="modal-item"><div class="modal-dot" style="background:#888858;"></div><span>${s}</span></div>`
-          ).join('')}
-        </div>`
-    },
-    prohib: {
-      title: 'Intervention Protocol · Prohibited',
-      html: `
-        <div class="modal-section">
-          <div class="modal-section-title">Interventions that reduce CI</div>
-          ${(d.Prohibited||'').split('·').map(s=>s.trim()).filter(Boolean).map(s=>
-            `<div class="modal-item"><div class="modal-dot" style="background:#b05050;"></div><span>${s}</span></div>`
-          ).join('')}
+          <div class="modal-section-title">Full oversight required · II ${ii}/100</div>
+          <div class="modal-text">${trans.architectLevel}</div>
         </div>`
     },
     tco: {
       title: 'Ownership Economics · Methodology',
       html: `
         <div class="modal-section">
-          <div class="modal-section-title">Status</div>
-          <div class="modal-text">TCO methodology is under development. Economic data will accumulate across the ATRC passport database and be published as a separate research module.</div>
+          <div class="modal-section-title">Directional estimate</div>
+          <div class="modal-text">${tcoDirection(ad)}</div>
         </div>
         <div class="modal-section">
-          <div class="modal-section-title">What will be measured</div>
-          <div class="modal-item"><div class="modal-dot" style="background:#bbb;"></div><span>Maintenance cost — Type A vs Type D over 30–50 yr horizon</span></div>
+          <div class="modal-section-title">Status</div>
+          <div class="modal-text">Precise cost figures in local currency require a real cost estimate and are not auto-generated from field measurements. The direction above (higher/lower relative cost trajectory) follows from the theoretical TCO model in Appendix D.</div>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">What full TCO analysis will add</div>
+          <div class="modal-item"><div class="modal-dot" style="background:#bbb;"></div><span>Maintenance cost — Type A vs Type D over 30–50 yr horizon, in €</span></div>
           <div class="modal-item"><div class="modal-dot" style="background:#bbb;"></div><span>Market premium of authentic vs. restored objects by region</span></div>
           <div class="modal-item"><div class="modal-dot" style="background:#bbb;"></div><span>Reversal cost vs. long-term CI gain</span></div>
-          <div class="modal-item"><div class="modal-dot" style="background:#bbb;"></div><span>Insurance and heritage protection value</span></div>
         </div>
         <div class="modal-section">
           <div class="modal-section-title">Reference formula</div>
-          <div class="modal-text" style="font-family:monospace;font-size:10px;color:#888;">TCO = C₀ + Σ[Cm × DF(t)] + Σ[Cr × DF(tr)] − [RV × DF(50)]<br>r = 4% (RICS 2016) · methodology pending validation</div>
+          <div class="modal-text" style="font-family:monospace;font-size:10px;color:#888;">TCO = C₀ + Σ[Cm × DF(t)] + Σ[Cr × DF(tr)] − [RV × DF(50)]<br>r = 4% (RICS) · methodology pending full validation</div>
         </div>`
     }
   };
@@ -570,25 +661,17 @@ function closeModalDirect() {
   document.getElementById('modal-bg').classList.remove('open');
 }
 
-/* ── DEMO DATA (fallback) ── */
+/* ── DEMO DATA (fallback, real schema) ── */
 const DEMO = {
-  CP_ID: 'CP · IT · VE · MB · 002 · 0001',
-  CZ_ID: 'CZ · IT · VE · MB · 002',
-  Object_name: 'Casa Zamprogno',
-  Location: 'Montebelluna, Veneto, Italy',
-  Architect: 'Afra & Tobia Scarpa',
-  Year_built: '1971',
-  Heritage: '1.0',
-  Internal_Eidos: 'Chronograph of Silence — the space where material weight dissolves into the rhythm of light',
-  Material_Type_A: 'Concrete with marble aggregate · Light wells · Cantilever geometry · Torcello furniture finish',
-  Material_Type_D: 'Corten grilles — natural oxide layer painted over · Priority: reversal recommended',
-  Leave_Alone: 'Concrete patina · Shadow gaps 100–120 mm · Light wells geometry · Cantilever structure',
-  Periodic_Care: 'Joint inspection every 10 yr · Torcello oil finish every 5 yr · Waterproofing check every 5 yr · Facade photo audit every 5 yr',
-  Prohibited: 'Chemical cleaning of concrete · Painting Corten steel · Filling shadow gaps · Replacing Torcello furniture',
-  CI: '0.828', AD: '0.84', II: '90', PI: '19.33',
-  Last_measured: 'March 2026',
-  Next_audit: 'T+60',
-  Projected_CI: '0.87–0.90'
+  CP_ID: 'CP·ME·BJ·HN·003·0001',
+  Zone_ID: 'ZN·ME·BJ·HN·003',
+  Object_Name: 'Bellavista',
+  GPS_Lat_anchor: '42.451494',
+  GPS_Lon_anchor: '18.537486',
+  First_Audit_Date: '7/2/2026 17:52:37',
+  Last_Audit_Date: '7/2/2026 17:52:37',
+  PI_current: '22.833', AD_current: '0.75', II_current: '90', CI_current: '0.853',
+  Audit_Count: '1'
 };
 
 /* ── LOAD DATA ── */
