@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATRC · CI Field Data Collection</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f0ede8;
+    font-family: 'Inter', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .card {
+    background: #1a1a1a;
+    width: 340px;
+    padding: 36px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .logo-row {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .logo {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #888;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .logo span {
+    color: #c55a11;
+  }
+
+  .version {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: #555;
+    text-transform: uppercase;
+  }
+
+  .title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    text-align: center;
+    line-height: 1.3;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+
+  .qr-wrap {
+    background: #ffffff;
+    padding: 16px;
+    width: 220px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .qr-wrap img {
+    width: 188px;
+    height: 188px;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: #2e2e2e;
+    margin-bottom: 20px;
+  }
+
+  .steps {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .step-num {
+    width: 20px;
+    height: 20px;
+    background: #c55a11;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .step-text {
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.5;
+  }
+
+  .step-text strong {
+    color: #ddd;
+    font-weight: 500;
+  }
+
+  .url-box {
+    width: 100%;
+    background: #111;
+    border: 1px solid #2e2e2e;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+  }
+
+  .url-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .url-text {
+    font-size: 12px;
+    color: #c55a11;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  .footer {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-site {
+    font-size: 9px;
+    color: #444;
+    letter-spacing: 1px;
+  }
+
+  .footer-ci {
+    font-size: 9px;
+    color: #444;
+    letter-spacing: 1px;
+  }
+
+  .motto {
+    font-size: 10px;
+    font-style: italic;
+    color: #666;
+    text-align: center;
+    letter-spacing: 0.3px;
+    margin-top: -14px;
+    margin-bottom: 24px;
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; padding: 0; }
+    .card { margin: 20px auto; }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div class="logo-row">
+    <div class="logo">AT<span>RC</span></div>
+    <div class="version">Appendix J v2.0</div>
+  </div>
+
+  <div class="title">CI Field Data Collection</div>
+  <div class="subtitle">Scan to open · Point camera at code</div>
+  <div class="motto">"Understanding before change"</div>
+
+  <div class="qr-wrap">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyAQAAAADAX2ykAAAC6ElEQVR4nO2cQarkOAyGP7UNs0ygDjBHcW4wRxr6SO8GyVHeAR7EywGHfxa2U1WbLpquri6DtLP9LQRCsqTIMfEzsn37KRycd97538pna7JkM7P5MABsAWzJkX4eX6OP80/mgyRJQBDpM2JLjui7WbU0SZK0v0of55/HRwAMQgEO0/Z3iWxzwAAEBcgzpI9X6OP8b+Sngi0EkfbDmsPm+Of0cf6X+Tvr5RnIsWibQzEmYWktL9XH+efy1b6tSJoEcJjgMNJHLNoslHaQX6GP88/lI9ASZsiXYunjIkv7pRiApf0CWwXCC/Rx/rk8upe+HQSTRNrD7fH6bvo7/0CkPUhrXYRqUNIOWmvhVCoCBLfvcDySCtVN16m0JZOkdVJ14pZJT+6/4/G0qDy10FyNvPaDauS0A+6/I/JIe7dq9WSVuiSdPS1OT3b7DsY3/031hj0tvbebuPlv92S372h8BI5eBOcZS/vRuxpTATiitvkrtiD9bvo7/0BaQkUQqcdn6l0LLUjXnNrrowH5m/h8UwZV2Xt9tEJPsd9Nf+cfyNWWNQJXh5WklXCmzmc6/W76O/9Aen+j5VI34bqe9urY/XdIvjenpsLVf1uuPJ2fjqbi8XlM/mxjFHpADj0090jt/Y1xeVoG1T0Uav0LLVzfJFlu3/H4dv9Wg9Ktem09n+1Kr4+G5ifJ/j2TaHKE9Bnh2p/cfH5yQP72419z4t7pOE1b9/z+HZU/jKT/zGw+t/NfvR2dzWzhsJZOv6P+zv9Abqcz9ruT8/tRL6H8/h2Sv75fOAc21klimxtjC+DfF4bke/6s+1mr/fbq9fmN0fn2uIjD2GawZSpozW3PbA6SPj1/Ho+/f50QiqVPg23e64YlHVHbP1+Gz8eOyN/ZdyqojrHnWGD6Mm0WVNPpbXmFPs4/l797v8ARVZf5gqUdkQR2MwL/bvo7/5g/avoMOWILQWzzYVqhPv3t45Re/47Hm/+fwXnnh+X/B0MQctrwDWn1AAAAAElFTkSuQmCC" alt="QR Code">
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text"><strong>Open camera</strong> on your phone and point at the QR code</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text"><strong>Allow location access</strong> — GPS coordinates are filled into the form automatically</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text"><strong>Fill in all parameters</strong> — Sound, Patina (PMI), Visual Quality, Light Scenario, Tactile, Smell, Authenticity (AD), Integrity (II)</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text"><strong>Submit</strong> — CI calculates automatically</div>
+    </div>
+  </div>
+
+  <div class="url-box">
+    <div class="url-label">Direct link</div>
+    <div class="url-text">xstat-art.github.io/architecturatemporis/field.html</div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-site">architecturatemporis.com</div>
+    <div class="footer-ci">Chronity Index · Appendix J v2.0</div>
+  </div>
+
+</div>
+</body>
+</html>
