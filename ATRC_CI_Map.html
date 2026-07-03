@@ -122,13 +122,13 @@
     height: 12px;
     border-radius: 1px;
     background: linear-gradient(to right,
-      #7B00D4,
-      #0000FF,
-      #00BFFF,
-      #00FF00,
-      #FFFF00,
+      #FF0000,
       #FF8C00,
-      #FF0000
+      #FFFF00,
+      #00FF00,
+      #00BFFF,
+      #0000FF,
+      #7B00D4
     );
     margin-bottom: 6px;
   }
@@ -397,23 +397,23 @@
   </div>
   <div class="legend-items">
     <div class="legend-item">
-      <div class="legend-dot" style="background:#FF0000;"></div>
+      <div class="legend-dot" style="background:#5f00ff;"></div>
       <span>0.85–1.00 · Deep Chronity</span>
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#FF8C00;"></div>
+      <div class="legend-dot" style="background:#009eff;"></div>
       <span>0.70–0.85 · High Chronity</span>
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#FFFF00;"></div>
+      <div class="legend-dot" style="background:#36ff00;"></div>
       <span>0.50–0.70 · Moderate</span>
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#00BFFF;"></div>
+      <div class="legend-dot" style="background:#FFFF00;"></div>
       <span>0.30–0.50 · Low Chronity</span>
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#7B00D4;"></div>
+      <div class="legend-dot" style="background:#FF0000;"></div>
       <span>0.00–0.30 · No Chronity</span>
     </div>
   </div>
@@ -461,13 +461,13 @@ function wavelengthToRGB(wl) {
 }
 
 function ciToColor(ci) {
-  const wl = 400 + ci * 300; // CI 0→400nm (violet), CI 1→700nm (red)
+  const wl = 700 - ci * 300; // REVERSED: CI 1→400nm (violet, calm/good), CI 0→700nm (red, alarm)
   const [r,g,b] = wavelengthToRGB(wl);
   return `rgb(${r},${g},${b})`;
 }
 
 function ciToHex(ci) {
-  const wl = 400 + ci * 300;
+  const wl = 700 - ci * 300;
   const [r,g,b] = wavelengthToRGB(wl);
   return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
 }
