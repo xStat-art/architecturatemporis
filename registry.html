@@ -536,7 +536,7 @@
 <div class="filters-row">
   <div class="filter-group">
     <span class="filter-label">Search</span>
-    <input class="filter-search" type="text" id="filterSearch" placeholder="Object name, architect…">
+    <input class="filter-search" type="text" id="filterSearch" placeholder="Object name, CP·ID, zone…">
   </div>
   <div class="filter-group">
     <span class="filter-label">Country</span>
@@ -594,9 +594,9 @@
       <tr>
         <th>CP · ID</th>
         <th>Object</th>
-        <th class="hide-mobile">Location</th>
+        <th class="hide-mobile">GPS</th>
         <th class="hide-mobile">Zone</th>
-        <th class="hide-mobile">Year</th>
+        <th class="hide-mobile">Audited</th>
         <th>CI</th>
         <th class="hide-mobile">Status</th>
       </tr>
@@ -622,7 +622,7 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSEvYYY_XY88tuVBOXk2FYHabWAOLXZwSsvil5VD6_oZRdP1lm2YNSUt8eTQhn0kwq-61_c5BnOzqv9/pub?gid=1404791980&single=true&output=csv';
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 let allRecords = [];
@@ -669,10 +669,15 @@ function formatID(id) {
   return id.replace(/[-·\s]+/g, ' · ').replace(/\s+/g, ' ').trim();
 }
 
-// Build passport URL
+// Build passport URL — pass CP_ID through as-is; passport.html normalises on lookup
 function passportURL(id) {
-  const urlId = id.replace(/\s*·\s*/g, '-').replace(/\s+/g, '-');
-  return `passport.html?id=${urlId}`;
+  return `passport.html?id=${encodeURIComponent(id)}`;
+}
+
+// Year of first audit, for sorting/display in place of construction year
+function auditYear(record) {
+  const d = new Date(record.First_Audit_Date);
+  return isNaN(d.getFullYear()) ? null : d.getFullYear();
 }
 
 // Extract zone from CP_ID or ZN_ID
@@ -703,28 +708,29 @@ function renderTable(records) {
   table.style.display = 'table';
 
   records.forEach(r => {
-    const ci = parseFloat(r.CI) || 0;
+    const ci = parseFloat(r.CI_current) || 0;
     const cat = ciCategory(ci);
     const barPct = Math.round(ci * 100);
     const displayID = formatID(r.CP_ID);
-    const zoneDisplay = formatID(r.ZN_ID || '');
+    const zoneDisplay = formatID(r.Zone_ID || '');
+    const gps = (r.GPS_Lat_anchor && r.GPS_Lon_anchor) ? `${r.GPS_Lat_anchor}, ${r.GPS_Lon_anchor}` : '—';
+    const yr = auditYear(r);
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="cp-id">${displayID}</span></td>
       <td>
-        <div class="obj-name">${r.Object_name || '—'}</div>
-        <div class="obj-architect">${r.Architect || ''}</div>
+        <div class="obj-name">${r.Object_Name || '—'}</div>
+        <div class="obj-architect" style="color:#666;">${r.Audit_Count || 1} audit${(r.Audit_Count||1)!='1'?'s':''}</div>
       </td>
       <td class="hide-mobile">
-        <div class="loc-city">${r.Location || '—'}</div>
-        <div class="loc-country">${extractCountryCity(r.CP_ID).country}</div>
+        <div class="loc-city" style="font-family:monospace;font-size:11px;">${gps}</div>
       </td>
       <td class="hide-mobile">
         <span class="zone-id">${zoneDisplay}</span>
       </td>
       <td class="hide-mobile">
-        <span class="year-val">${r.Year_built || '—'}</span>
+        <span class="year-val">${yr || '—'}</span>
       </td>
       <td>
         <div class="ci-cell">
@@ -737,8 +743,8 @@ function renderTable(records) {
         </div>
       </td>
       <td class="hide-mobile">
-        <span class="status-dot status-${(r.Status||'active').toLowerCase()}"></span>
-        <span class="status-text">${r.Status || 'Active'}</span>
+        <span class="status-dot status-active"></span>
+        <span class="status-text">Active</span>
       </td>
     `;
     tr.addEventListener('click', () => {
@@ -771,16 +777,15 @@ function getFiltered() {
   const zone = document.getElementById('filterZone').value;
 
   return allRecords.filter(r => {
-    const ci = parseFloat(r.CI) || 0;
+    const ci = parseFloat(r.CI_current) || 0;
     const cat = ciCategory(ci);
     const loc = extractCountryCity(r.CP_ID);
-    const zn = r.ZN_ID || '';
+    const zn = r.Zone_ID || '';
 
     if (search && !(
-      (r.Object_name || '').toLowerCase().includes(search) ||
-      (r.Architect || '').toLowerCase().includes(search) ||
-      (r.Location || '').toLowerCase().includes(search) ||
-      (r.CP_ID || '').toLowerCase().includes(search)
+      (r.Object_Name || '').toLowerCase().includes(search) ||
+      (r.CP_ID || '').toLowerCase().includes(search) ||
+      (r.Zone_ID || '').toLowerCase().includes(search)
     )) return false;
 
     if (country && loc.country !== country) return false;
@@ -796,14 +801,14 @@ function getSorted(records) {
   return [...records].sort((a, b) => {
     let va, vb;
     if (sortCol === 'ci') {
-      va = parseFloat(a.CI) || 0;
-      vb = parseFloat(b.CI) || 0;
+      va = parseFloat(a.CI_current) || 0;
+      vb = parseFloat(b.CI_current) || 0;
     } else if (sortCol === 'year') {
-      va = parseInt(a.Year_built) || 0;
-      vb = parseInt(b.Year_built) || 0;
+      va = auditYear(a) || 0;
+      vb = auditYear(b) || 0;
     } else {
-      va = (a.Object_name || '').toLowerCase();
-      vb = (b.Object_name || '').toLowerCase();
+      va = (a.Object_Name || '').toLowerCase();
+      vb = (b.Object_Name || '').toLowerCase();
     }
     if (va < vb) return sortAsc ? -1 : 1;
     if (va > vb) return sortAsc ? 1 : -1;
@@ -819,7 +824,7 @@ function applyFilters() {
 function populateSelects(records) {
   const countries = [...new Set(records.map(r => extractCountryCity(r.CP_ID).country).filter(Boolean))].sort();
   const cities    = [...new Set(records.map(r => extractCountryCity(r.CP_ID).city).filter(Boolean))].sort();
-  const zones     = [...new Set(records.map(r => r.ZN_ID || '').filter(Boolean))].sort();
+  const zones     = [...new Set(records.map(r => r.Zone_ID || '').filter(Boolean))].sort();
 
   const countryEl = document.getElementById('filterCountry');
   const cityEl    = document.getElementById('filterCity');
@@ -847,7 +852,7 @@ function populateSelects(records) {
 function updateStats(records) {
   const countries = new Set(records.map(r => extractCountryCity(r.CP_ID).country).filter(Boolean));
   const cities    = new Set(records.map(r => extractCountryCity(r.CP_ID).city).filter(Boolean));
-  const ciVals    = records.map(r => parseFloat(r.CI)).filter(v => !isNaN(v));
+  const ciVals    = records.map(r => parseFloat(r.CI_current)).filter(v => !isNaN(v));
   const avgCI     = ciVals.length ? (ciVals.reduce((a,b)=>a+b,0)/ciVals.length).toFixed(3) : '—';
 
   document.getElementById('statTotal').textContent     = records.length;
@@ -869,19 +874,15 @@ async function init() {
     if (allRecords.length === 0) {
       // Show demo entry so page is not empty
       allRecords = [{
-        CP_ID: 'CP · IT · VE · MB · 002 · 0001',
-        ZN_ID: 'ZN · IT · VE · MB · 002',
-        Status: 'Active',
-        Object_name: 'Casa Zamprogno',
-        Architect: 'Carlo Scarpa',
-        Year_built: '1971',
-        Location: 'Montebelluna, Italy',
-        Heritage: '1.5',
-        CI: '0.828',
-        AD: '0.84',
-        II: '90',
-        PI: '19.33',
-        Last_measured: '2024',
+        CP_ID: 'CP·ME·BJ·HN·003·0001',
+        Zone_ID: 'ZN·ME·BJ·HN·003',
+        Object_Name: 'Bellavista (demo — registry returned no rows)',
+        GPS_Lat_anchor: '42.451494',
+        GPS_Lon_anchor: '18.537486',
+        First_Audit_Date: '7/2/2026',
+        CI_current: '0.853',
+        AD_current: '0.75', II_current: '90', PI_current: '22.833',
+        Audit_Count: '1',
       }];
     }
 
@@ -895,17 +896,15 @@ async function init() {
 
     // Still show demo data
     allRecords = [{
-      CP_ID: 'CP · IT · VE · MB · 002 · 0001',
-      ZN_ID: 'ZN · IT · VE · MB · 002',
-      Status: 'Active',
-      Object_name: 'Casa Zamprogno',
-      Architect: 'Carlo Scarpa',
-      Year_built: '1971',
-      Location: 'Montebelluna, Italy',
-      Heritage: '1.5',
-      CI: '0.828',
-      AD: '0.84',
-      II: '90',
+      CP_ID: 'CP·ME·BJ·HN·003·0001',
+      Zone_ID: 'ZN·ME·BJ·HN·003',
+      Object_Name: 'Bellavista (demo — connection failed)',
+      GPS_Lat_anchor: '42.451494',
+      GPS_Lon_anchor: '18.537486',
+      First_Audit_Date: '7/2/2026',
+      CI_current: '0.853',
+      AD_current: '0.75', II_current: '90',
+      Audit_Count: '1',
     }];
     populateSelects(allRecords);
     updateStats(allRecords);
