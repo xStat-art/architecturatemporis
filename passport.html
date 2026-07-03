@@ -686,10 +686,10 @@ function loadPassport() {
     return;
   }
 
-  Papa.parse(REGISTRY_CSV, {
+  Papa.parse(REGISTRY_CSV + '&t=' + Date.now(), {
     download: true, header: true, skipEmptyLines: true,
     complete(results) {
-      const normalizeId = s => s.replace(/[\s·\-.]/g,'').toLowerCase(); const normalId = normalizeId(id);
+      const normalizeId = s => String(s).replace(/^'/,'').replace(/[\s·\-.]/g,'').toLowerCase().trim(); const normalId = normalizeId(id);
       const row = results.data.find(r => {
         const rowId = normalizeId(r.CP_ID || '');
         return rowId === normalId;
@@ -698,11 +698,16 @@ function loadPassport() {
       if (row) {
         renderPassport(row);
       } else {
-        // Паспорт не найден в реестре
+        // Паспорт не найден в реестре — покажем, что реально загрузилось, для диагностики
+        const foundIds = results.data.map(r => r.CP_ID || '(empty)').filter(Boolean);
         document.getElementById('passport-container').innerHTML = `
           <div class="state-screen">
             <div class="state-title">Passport not found</div>
-            <div style="font-size:11px;color:#bbb;letter-spacing:1px;">ID: ${id}</div>
+            <div style="font-size:11px;color:#bbb;letter-spacing:1px;">Looking for: ${id}</div>
+            <div style="font-size:10px;color:#ccc;letter-spacing:1px;margin-top:10px;max-width:400px;text-align:center;">
+              Loaded ${results.data.length} row(s) from registry. Available IDs:<br>
+              ${foundIds.length ? foundIds.map(x => `<code>${x}</code>`).join('<br>') : '(none found — registry may be empty or column header mismatch)'}
+            </div>
             <a href="index.html" class="btn" style="margin-top:8px;">← Back to ATRC</a>
           </div>`;
       }
