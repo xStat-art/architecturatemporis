@@ -128,28 +128,50 @@
     margin-bottom: 12px;
   }
 
+  .legend-spectrum-wrap {
+    position: relative;
+    margin-bottom: 4px;
+  }
+
   .legend-spectrum {
     height: 12px;
     border-radius: 1px;
-    background: linear-gradient(to right,
-      #FF0000,
-      #FF8C00,
-      #FFFF00,
-      #00FF00,
-      #00BFFF,
-      #0000FF,
-      #7B00D4
-    );
-    margin-bottom: 6px;
+    /* фон задаётся из JS (buildLegend) — кусочно-линейная шкала CI_weighted */
+    background: linear-gradient(to right, #FF0000, #FF8C00, #FFFF00, #00FF00, #00BFFF, #0000FF, #7B00D4);
+  }
+
+  /* Разделитель между "обычным" диапазоном CI (0–1.0) и надбавкой CSM (1.0–1.5).
+     Позиция всегда ровно SPECTRUM_SPLIT (80%) — задаётся из JS. */
+  .legend-split-marker {
+    position: absolute;
+    top: -2px;
+    width: 2px;
+    height: 16px;
+    background: #1a1a1a;
+    opacity: 0.55;
   }
 
   .legend-labels {
-    display: flex;
-    justify-content: space-between;
+    position: relative;
+    height: 12px;
     font-size: 9px;
     color: #666;
     letter-spacing: 1px;
-    margin-bottom: 14px;
+    margin-bottom: 4px;
+  }
+
+  .legend-labels span {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .legend-split-note {
+    font-size: 8px;
+    color: #999;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    text-align: right;
   }
 
   .legend-items {
@@ -523,12 +545,15 @@
 <div class="stats" id="statsPanel" style="display:none;">
   <div class="stats-title">Zone Summary</div>
   <div class="stats-row">
-    <div class="stats-label">CI_zone</div>
+    <div class="stats-label">CI_zone (w)</div>
     <div class="stats-value" id="statCI">—</div>
   </div>
   <div class="stats-row">
     <div class="stats-label">Category</div>
     <div class="stats-value" style="font-size:11px;color:#888;" id="statCat">—</div>
+  </div>
+  <div class="stats-row">
+    <div class="stats-label" style="font-size:9px;color:#aaa;">weighted by CSM</div>
   </div>
   <hr class="stats-divider">
   <div class="stats-row">
@@ -536,30 +561,28 @@
     <div class="stats-value" id="statCount" style="font-size:18px;">—</div>
   </div>
   <div class="stats-row">
-    <div class="stats-label">Min CI</div>
+    <div class="stats-label">Min CI (w)</div>
     <div class="stats-value" id="statMin" style="font-size:14px;color:#888;">—</div>
   </div>
   <div class="stats-row">
-    <div class="stats-label">Max CI</div>
+    <div class="stats-label">Max CI (w)</div>
     <div class="stats-value" id="statMax" style="font-size:14px;color:#888;">—</div>
   </div>
 </div>
 
 <!-- LEGEND -->
 <div class="legend">
-  <div class="legend-title">Chronity Index · Spectral Scale</div>
-  <div class="legend-spectrum"></div>
-  <div class="legend-labels">
-    <span>0.00</span>
-    <span>0.25</span>
-    <span>0.50</span>
-    <span>0.75</span>
-    <span>1.00</span>
+  <div class="legend-title">Chronity Index (weighted) · Spectral Scale</div>
+  <div class="legend-spectrum-wrap">
+    <div class="legend-spectrum" id="legendSpectrum"></div>
+    <div class="legend-split-marker" id="legendSplitMarker"></div>
   </div>
+  <div class="legend-labels" id="legendLabels"></div>
+  <div class="legend-split-note">← CI × CSM=1.0 · 1.0–1.5 = CSM &gt; 1.0 (national/UNESCO) →</div>
   <div class="legend-items">
     <div class="legend-item">
       <div class="legend-dot" style="background:#5f00ff;"></div>
-      <span>0.85–1.00 · Deep Chronity</span>
+      <span>0.85–1.50 · Deep Chronity (1.0+ = CSM-weighted)</span>
     </div>
     <div class="legend-item">
       <div class="legend-dot" style="background:#009eff;"></div>
@@ -595,13 +618,32 @@ const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNv
 // приоритетной заливки для ещё не измеренных зон. Ничего не ломается.
 const ZONES_CSV = 'PASTE_ZONES_SHEET_CSV_URL_HERE';
 
+// ═══════════════════════════════════════════════════════════════
+// CSM (Coefficient of Site Multiplier) — вес охранного статуса:
+// 1.0 локальный · 1.2 национальный реестр · 1.5 ЮНЕСКО.
+// CI_weighted = CI × CSM. Максимум шкалы = 1.0 × CSM_MAX = 1.5.
+//
+// ВАЖНО: эти константы и computeCIWeighted() должны стоять здесь,
+// ВЫШЕ DEMO_DATA — сам DEMO_DATA ниже вызывает computeCIWeighted()
+// сразу при выполнении скрипта (при построении массива), и если
+// const CSM_MAX/SPECTRUM_SPLIT объявлены НИЖЕ по файлу, это падает
+// с ReferenceError (temporal dead zone). Не переносить их вниз.
+// ═══════════════════════════════════════════════════════════════
+const CSM_MAX = 1.5;
+const SPECTRUM_SPLIT = 0.8; // доля цветовой шкалы, отданная диапазону CI_weighted 0–1.0
+
+function computeCIWeighted(ci, csm) {
+  const c = (csm === null || csm === undefined || isNaN(csm)) ? 1.0 : csm;
+  return Math.min(ci * c, CSM_MAX);
+}
+
 // Резервные тестовые данные (если таблица недоступна)
 const DEMO_DATA = [
-  { cpId: 'CP·DEMO·0001', zoneId: 'ZN·DEMO', name: 'Crkva Sv. Mihaila — north', lat: 42.4534, lng: 18.5312, CI: 0.808, ad: 0.80, ii: 75 },
-  { cpId: 'CP·DEMO·0002', zoneId: 'ZN·DEMO', name: 'Stara zgrada — east', lat: 42.4528, lng: 18.5320, CI: 0.743, ad: 0.65, ii: 70 },
-  { cpId: 'CP·DEMO·0003', zoneId: 'ZN·DEMO', name: 'Kula Tvrdjava', lat: 42.4540, lng: 18.5305, CI: 0.821, ad: 0.84, ii: 82 },
-  { cpId: 'CP·DEMO·0004', zoneId: 'ZN·DEMO', name: 'Ulica Njegoseva 12', lat: 42.4522, lng: 18.5330, CI: 0.511, ad: 0.50, ii: 50 },
-  { cpId: 'CP·DEMO·0005', zoneId: 'ZN·DEMO', name: 'Nova zgrada — south', lat: 42.4515, lng: 18.5340, CI: 0.426, ad: 0.40, ii: 35 },
+  { cpId: 'CP·DEMO·0001', zoneId: 'ZN·DEMO', name: 'Crkva Sv. Mihaila — north', lat: 42.4534, lng: 18.5312, CI: 0.808, csm: 1.0, ciWeighted: computeCIWeighted(0.808, 1.0), ad: 0.80, ii: 75 },
+  { cpId: 'CP·DEMO·0002', zoneId: 'ZN·DEMO', name: 'Stara zgrada — east', lat: 42.4528, lng: 18.5320, CI: 0.743, csm: 1.0, ciWeighted: computeCIWeighted(0.743, 1.0), ad: 0.65, ii: 70 },
+  { cpId: 'CP·DEMO·0003', zoneId: 'ZN·DEMO', name: 'Kula Tvrdjava', lat: 42.4540, lng: 18.5305, CI: 0.821, csm: 1.2, ciWeighted: computeCIWeighted(0.821, 1.2), ad: 0.84, ii: 82 },
+  { cpId: 'CP·DEMO·0004', zoneId: 'ZN·DEMO', name: 'Ulica Njegoseva 12', lat: 42.4522, lng: 18.5330, CI: 0.511, csm: 1.0, ciWeighted: computeCIWeighted(0.511, 1.0), ad: 0.50, ii: 50 },
+  { cpId: 'CP·DEMO·0005', zoneId: 'ZN·DEMO', name: 'Nova zgrada — south', lat: 42.4515, lng: 18.5340, CI: 0.426, csm: 1.0, ciWeighted: computeCIWeighted(0.426, 1.0), ad: 0.40, ii: 35 },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -628,16 +670,60 @@ function wavelengthToRGB(wl) {
   ];
 }
 
-function ciToColor(ci) {
-  const wl = 700 - ci * 300; // REVERSED: CI 1→400nm (violet, calm/good), CI 0→700nm (red, alarm)
+// Кусочно-линейное отображение CI_weighted (0..CSM_MAX) в позицию t (0..1)
+// вдоль цветовой шкалы. Диапазон 0–1.0 (обычный CI без надбавки/CSM=1.0)
+// занимает первые SPECTRUM_SPLIT (80%) шкалы; диапазон 1.0–CSM_MAX
+// (объекты с охранным статусом выше локального) — оставшиеся 20%.
+// Так объект с CSM=1.0 и CI=1.0 не "съедает" весь фиолетовый конец
+// спектра — тот зарезервирован под объекты с реальной весовой надбавкой.
+function weightedToT(ciWeighted) {
+  const v = Math.max(0, ciWeighted);
+  if (v <= 1.0) return (v / 1.0) * SPECTRUM_SPLIT;
+  const span = CSM_MAX - 1.0;
+  const extra = Math.min(v, CSM_MAX) - 1.0;
+  return SPECTRUM_SPLIT + (span > 0 ? (extra / span) : 0) * (1 - SPECTRUM_SPLIT);
+}
+
+function ciToColor(ciWeighted) {
+  const t = weightedToT(ciWeighted);
+  const wl = 700 - t * 300; // REVERSED: t 1→400nm (violet, calm/good), t 0→700nm (red, alarm)
   const [r,g,b] = wavelengthToRGB(wl);
   return `rgb(${r},${g},${b})`;
 }
 
-function ciToHex(ci) {
-  const wl = 700 - ci * 300;
+function ciToHex(ciWeighted) {
+  const t = weightedToT(ciWeighted);
+  const wl = 700 - t * 300;
   const [r,g,b] = wavelengthToRGB(wl);
   return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LEGEND — строим градиент и подписи программно из weightedToT/ciToHex,
+// чтобы позиции всегда были математически точны (разделитель ровно на
+// SPECTRUM_SPLIT, где CI_weighted = 1.0), а не подобраны на глаз в CSS.
+// ═══════════════════════════════════════════════════════════════
+function buildLegend() {
+  const steps = 40;
+  const stops = [];
+  for (let i = 0; i <= steps; i++) {
+    const v = (i / steps) * CSM_MAX;
+    stops.push(`${ciToHex(v)} ${(weightedToT(v) * 100).toFixed(2)}%`);
+  }
+  const spectrumEl = document.getElementById('legendSpectrum');
+  if (spectrumEl) spectrumEl.style.background = `linear-gradient(to right, ${stops.join(', ')})`;
+
+  const splitEl = document.getElementById('legendSplitMarker');
+  if (splitEl) splitEl.style.left = (SPECTRUM_SPLIT * 100) + '%';
+
+  const labelValues = [0, 0.25, 0.50, 0.75, 1.00, 1.25, 1.50];
+  const labelsEl = document.getElementById('legendLabels');
+  if (labelsEl) {
+    labelsEl.innerHTML = labelValues.map(v => {
+      const left = (weightedToT(v) * 100).toFixed(2);
+      return `<span style="left:${left}%;">${v.toFixed(2)}</span>`;
+    }).join('');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -740,9 +826,9 @@ function computeIDWGrid(points, bounds, gridSize, power) {
       let wSum = 0, vSum = 0, exact = null;
       for (const p of points) {
         const d = Math.hypot(p.lat - lat, p.lng - lng);
-        if (d < 1e-7) { exact = p.CI; break; }
+        if (d < 1e-7) { exact = p.ciWeighted; break; }
         const w = 1 / Math.pow(d, power);
-        wSum += w; vSum += w * p.CI;
+        wSum += w; vSum += w * p.ciWeighted;
       }
       row.push(exact !== null ? exact : (wSum ? vSum / wSum : null));
     }
@@ -805,18 +891,22 @@ function exportGradientSnapshot(zoneId) {
   const rec = lastGridsByZone[zoneId];
   if (!rec) return;
   const avgCI = rec.objects.reduce((s,o) => s + o.CI, 0) / rec.objects.length;
+  const avgCIWeighted = rec.objects.reduce((s,o) => s + o.ciWeighted, 0) / rec.objects.length;
 
   const signature = computeGradientSignature(rec.grid, rec.gridSize);
 
   const snapshot = {
-    schema_version: '1.1',
+    schema_version: '1.2',
     zone_id: zoneId,
     exported_at: new Date().toISOString(),
     ci_zone_avg: Math.round(avgCI * 1000) / 1000,
+    ci_zone_avg_weighted: Math.round(avgCIWeighted * 1000) / 1000,
+    grid_basis: 'ci_weighted',
     signature: signature,
     source_objects: rec.objects.map(o => ({
       cp_id: o.cpId, name: o.name, lat: o.lat, lng: o.lng,
-      CI: o.CI, AD: o.ad, II: o.ii, last_audit: o.date || null
+      CI: o.CI, CSM: o.csm, CI_weighted: Math.round(o.ciWeighted*1000)/1000,
+      AD: o.ad, II: o.ii, last_audit: o.date || null
     })),
     grid: {
       size: rec.gridSize,
@@ -1193,6 +1283,15 @@ function parseCI(val) {
   return Math.round(n * 1000) / 1000;
 }
 
+// CSM_current может отсутствовать (старые записи до появления колонки) —
+// в этом случае честный дефолт — 1.0 (локальный уровень охраны), а не null.
+function parseCSM(val) {
+  if (val === undefined || val === null || String(val).trim() === '') return 1.0;
+  const n = parseFloat(String(val).replace(',','.'));
+  if (isNaN(n) || n < 1.0 || n > CSM_MAX) return 1.0;
+  return Math.round(n * 100) / 100;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // RENDER OBJECTS ON MAP
 // ═══════════════════════════════════════════════════════════════
@@ -1249,8 +1348,8 @@ function renderZones(zonesMap, drawnZones) {
 
     if (objects.length >= 3) {
       // ── STAGE 3: real IDW gradient ──────────────────────────
-      const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
-      const color = ciToHex(avgCI);
+      const avgCIWeighted = objects.reduce((s,o) => s + o.ciWeighted, 0) / objects.length;
+      const color = ciToHex(avgCIWeighted);
       const bounds = hullBounds.pad(0.35);
       const gridSize = 48;
       const grid = computeIDWGrid(objects, bounds, gridSize, 2);
@@ -1265,7 +1364,7 @@ function renderZones(zonesMap, drawnZones) {
         icon: L.divIcon({
           className: 'zone-label',
           html: `<div style="text-align:center;">
-                   <div style="color:${color};font-size:10px;letter-spacing:2px;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff;margin-bottom:2px;font-weight:600;">CI_zone ${avgCI.toFixed(3)} · ${objects.length} pts</div>
+                   <div style="color:${color};font-size:10px;letter-spacing:2px;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff;margin-bottom:2px;font-weight:600;">CI_zone (w) ${avgCIWeighted.toFixed(3)} · ${objects.length} pts</div>
                    <div style="color:rgba(30,30,30,0.8);font-size:8px;letter-spacing:1px;font-family:monospace;text-shadow:0 0 4px #fff,0 0 4px #fff;margin-bottom:4px;">σ ${signature.stddev} · ∇ ${signature.gradient_magnitude} · #${signature.hash}</div>
                    <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.92);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.15);">⬇ Export gradient</button>
                  </div>`,
@@ -1275,8 +1374,8 @@ function renderZones(zonesMap, drawnZones) {
 
     } else if (objects.length >= 1) {
       // ── STAGE 2: real color, no number yet (too few points for an honest average label) ──
-      const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
-      const color = ciToHex(avgCI);
+      const avgCIWeighted = objects.reduce((s,o) => s + o.ciWeighted, 0) / objects.length;
+      const color = ciToHex(avgCIWeighted);
       L.geoJSON(hull, { style: { fillColor: color, fillOpacity: 0.45, color, weight: 1.5, opacity: 0.6, dashArray: '4 4' } }).addTo(hullLayer);
       L.marker([cLat, cLng], {
         icon: L.divIcon({
@@ -1304,14 +1403,16 @@ function renderZones(zonesMap, drawnZones) {
 
   // ── Object markers (all zones) ─────────────────────────────
   allObjects.forEach(obj => {
-    const hex = ciToHex(obj.CI);
+    const hex = ciToHex(obj.ciWeighted);
     const marker = L.circleMarker([obj.lat, obj.lng], { radius: 10, fillColor: hex, color: '#1a1a1a', weight: 2, fillOpacity: 0.9 });
     const popup = L.popup({ maxWidth: 220, className: '' }).setContent(`
       <div class="popup-content">
         <div class="popup-name">${obj.name || 'Unknown object'}</div>
-        <div class="popup-ci" style="color:${hex}">${obj.CI.toFixed(3)}</div>
-        <div class="popup-cat">${ciCategory(obj.CI)}</div>
+        <div class="popup-ci" style="color:${hex}">${obj.ciWeighted.toFixed(3)}</div>
+        <div class="popup-cat">${ciCategory(obj.ciWeighted)}</div>
         ${obj.cpId ? `<div class="popup-row"><span>ID</span><span>${obj.cpId}</span></div>` : ''}
+        <div class="popup-row"><span>CI (raw)</span><span>${obj.CI.toFixed(3)}</span></div>
+        <div class="popup-row"><span>CSM</span><span>×${obj.csm.toFixed(2)}</span></div>
         ${obj.ad ? `<div class="popup-row"><span>AD</span><span>${obj.ad}</span></div>` : ''}
         ${obj.ii ? `<div class="popup-row"><span>II</span><span>${obj.ii}</span></div>` : ''}
         ${obj.date ? `<div class="popup-row"><span>Measured</span><span>${obj.date}</span></div>` : ''}
@@ -1323,15 +1424,15 @@ function renderZones(zonesMap, drawnZones) {
 
   // ── Update stats (across all loaded objects) ────────────────
   if (allObjects.length > 0) {
-    const avgCI = allObjects.reduce((s,o) => s + o.CI, 0) / allObjects.length;
-    const minCI = Math.min(...allObjects.map(o => o.CI));
-    const maxCI = Math.max(...allObjects.map(o => o.CI));
-    document.getElementById('statCI').textContent    = avgCI.toFixed(3);
-    document.getElementById('statCI').style.color    = ciToHex(avgCI);
-    document.getElementById('statCat').textContent   = ciCategory(avgCI);
+    const avgCIWeighted = allObjects.reduce((s,o) => s + o.ciWeighted, 0) / allObjects.length;
+    const minCIWeighted = Math.min(...allObjects.map(o => o.ciWeighted));
+    const maxCIWeighted = Math.max(...allObjects.map(o => o.ciWeighted));
+    document.getElementById('statCI').textContent    = avgCIWeighted.toFixed(3);
+    document.getElementById('statCI').style.color    = ciToHex(avgCIWeighted);
+    document.getElementById('statCat').textContent   = ciCategory(avgCIWeighted);
     document.getElementById('statCount').textContent = allObjects.length;
-    document.getElementById('statMin').textContent   = minCI.toFixed(3);
-    document.getElementById('statMax').textContent   = maxCI.toFixed(3);
+    document.getElementById('statMin').textContent   = minCIWeighted.toFixed(3);
+    document.getElementById('statMax').textContent   = maxCIWeighted.toFixed(3);
     document.getElementById('statsPanel').style.display = 'block';
   } else {
     document.getElementById('statsPanel').style.display = 'none';
@@ -1404,15 +1505,19 @@ function loadData() {
           const ci = parseCI(row['CI_current']);
           if (ci === null) return;
 
+          const csm = parseCSM(row['CSM_current']); // отсутствует/некорректно -> 1.0 (честный дефолт)
+
           objects.push({
-            cpId:    row['CP_ID'] || '',
-            zoneId:  row['Zone_ID'] || 'UNZONED',
-            name:    row['Object_Name'] || 'Unnamed object',
+            cpId:       row['CP_ID'] || '',
+            zoneId:     row['Zone_ID'] || 'UNZONED',
+            name:       row['Object_Name'] || 'Unnamed object',
             lat, lng,
-            CI:      ci,
-            ad:      row['AD_current'] || '',
-            ii:      row['II_current'] || '',
-            date:    row['Last_Audit_Date'] ? row['Last_Audit_Date'].split(' ')[0] : '',
+            CI:         ci,
+            csm:        csm,
+            ciWeighted: computeCIWeighted(ci, csm),
+            ad:         row['AD_current'] || '',
+            ii:         row['II_current'] || '',
+            date:       row['Last_Audit_Date'] ? row['Last_Audit_Date'].split(' ')[0] : '',
           });
         });
 
@@ -1436,6 +1541,7 @@ function loadData() {
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
+buildLegend();
 loadData();
 
 // Auto-refresh every 60 seconds
