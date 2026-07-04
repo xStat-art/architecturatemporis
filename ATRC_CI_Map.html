@@ -485,7 +485,7 @@
 
   <div class="es-section">
     <h2>Draw contour</h2>
-    <div class="ehint">Trace the zone by physical boundaries (fortress wall, road, terrain, coastline) — not administrative borders. Existing measured objects (colored dots) are shown on the map — draw around them.</div>
+    <div class="ehint">Trace the zone by physical boundaries (fortress wall, road, terrain, coastline) — not administrative borders. Existing measured objects (colored dots) are shown on the map — draw around them. After "Finish contour", vertices within a few meters of a real OSM street/wall line snap to it automatically.</div>
     <div class="evcount">Vertices: <b id="vcount">0</b></div>
     <div class="ebtn-row">
       <button class="ebtn primary" id="startBtn" style="flex:1">Start drawing</button>
@@ -493,6 +493,7 @@
     </div>
     <button class="ebtn" id="finishBtn" disabled>Finish contour</button>
     <button class="ebtn ghost" id="cancelBtn" style="display:none">Cancel drawing</button>
+    <div class="status-bar" id="snapStatus"></div>
   </div>
 
   <div class="es-section" id="metaSection" style="display:none">
@@ -952,6 +953,86 @@ let hullLayer      = L.layerGroup().addTo(map);
 let gradientLayer  = L.layerGroup().addTo(map);
 
 // ═══════════════════════════════════════════════════════════════
+// OSM SNAPPING — привязка нарисованного вручную контура к реальным
+// физическим границам (улицы, крепостные стены, границы площадей) из
+// OpenStreetMap. Ручное рисование мышкой/пальцем почти никогда не
+// попадает точно на физическую линию — эта функция подтягивает каждую
+// вершину контура к ближайшей подходящей линии OSM в пределах
+// OSM_SNAP_TOLERANCE_M; вершины, для которых ничего подходящего рядом
+// не нашлось, остаются как нарисовано вручную (ничего не ломается).
+//
+// Допуск сознательно небольшой (не 15-20м): в плотной исторической
+// застройке граница часто проходит по осевой линии улицы, а соседняя
+// зона может начинаться прямо на противоположной стороне той же
+// улицы — слишком широкий допуск рисковал бы перепрыгнуть через
+// улицу целиком и утянуть контур к чужой, соседней линии.
+//
+// Вызывается из finishDrawingEd() — то есть автоматически и при
+// рисовании нового контура, и при редактировании существующей зоны
+// (editZoneEd переиспользует тот же finishDrawingEd/Finish contour).
+// ═══════════════════════════════════════════════════════════════
+const OSM_SNAP_TOLERANCE_M = 4; // ~половина типичной ширины улицы старого города
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+
+/** Ways OSM (улицы, стены, границы площадей) в районе нарисованного контура, как turf LineString. */
+async function fetchOsmLinesNear(points) {
+  const lats = points.map(p => p[0]), lngs = points.map(p => p[1]);
+  const pad = 0.0006; // ~50-60м запаса вокруг контура — достаточно, чтобы не упустить ближайшую линию у самого края
+  const south = Math.min(...lats) - pad, north = Math.max(...lats) + pad;
+  const west  = Math.min(...lngs) - pad, east  = Math.max(...lngs) + pad;
+  const bbox = `${south},${west},${north},${east}`;
+
+  const query = `[out:json][timeout:20];(` +
+    `way["highway"](${bbox});` +
+    `way["barrier"~"^(wall|city_wall)$"](${bbox});` +
+    `way["historic"="citywalls"](${bbox});` +
+    `);out geom;`;
+
+  const res = await fetch(OVERPASS_URL, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+  if (!res.ok) throw new Error('Overpass HTTP ' + res.status);
+  const data = await res.json();
+
+  return (data.elements || [])
+    .filter(el => el.type === 'way' && el.geometry && el.geometry.length >= 2)
+    .map(el => turf.lineString(el.geometry.map(g => [g.lon, g.lat])));
+}
+
+/**
+ * points: [[lat,lng], ...] нарисованный вручную контур.
+ * Возвращает { points: [[lat,lng],...] той же длины (снаппнутые вершины
+ * заменены координатой на реальной линии OSM, остальные без изменений),
+ * snappedCount }. Если OSM-линий рядом не нашлось вообще — возвращает
+ * контур как есть, snappedCount: 0 (не ошибка, просто нечего подтягивать).
+ */
+async function snapContourToOSM(points) {
+  const lines = await fetchOsmLinesNear(points);
+  if (!lines.length) return { points: points.slice(), snappedCount: 0 };
+
+  let snappedCount = 0;
+  const snapped = points.map(([lat, lng]) => {
+    const pt = turf.point([lng, lat]);
+    let best = null;
+    for (const line of lines) {
+      let np;
+      try { np = turf.nearestPointOnLine(line, pt, { units: 'meters' }); }
+      catch (e) { continue; } // вырожденная геометрия (0-длины и т.п.) — пропускаем эту линию
+      if (np && np.properties && np.properties.dist != null &&
+          (!best || np.properties.dist < best.properties.dist)) {
+        best = np;
+      }
+    }
+    if (best && best.properties.dist <= OSM_SNAP_TOLERANCE_M) {
+      snappedCount++;
+      const [snLng, snLat] = best.geometry.coordinates;
+      return [snLat, snLng];
+    }
+    return [lat, lng];
+  });
+
+  return { points: snapped, snappedCount };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // ZONE EDITOR — draw/edit contours, sync to sheet (Apps Script v7.8 doPost)
 // Toggled via the "Edit Zones" header button — same map, same live objects,
 // no separate page.
@@ -1050,16 +1131,43 @@ function suggestZoneIdEd(cityCode){
   return `ZN·ME·BJ·${city}·${String(existingCount + 1).padStart(3,'0')}`;
 }
 
-function finishDrawingEd(){
+async function finishDrawingEd(){
   if(currentPoints.length < 3) return;
   drawing = false;
   map.off('click', onMapClickEd);
   document.getElementById('editModeBanner').classList.remove('show');
   document.getElementById('cancelBtn').style.display = 'none';
   document.getElementById('startBtn').style.display = 'block';
+  document.getElementById('finishBtn').disabled = true;
 
+  // Черновой контур сразу видно на карте (пунктир), пока идёт снаппинг к OSM —
+  // чтобы не было пустого экрана на время сетевого запроса.
   if(drawLayer) map.removeLayer(drawLayer);
-  drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
+  drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1, dashArray:'3 3' }).addTo(map);
+
+  setEdStatus('snapStatus', 'busy', 'Snapping contour to OSM streets/walls…');
+
+  try {
+    const { points: snappedPoints, snappedCount } = await snapContourToOSM(currentPoints);
+    currentPoints = snappedPoints;
+
+    // Перерисовываем контур и вершины уже по скорректированным координатам
+    vertexMarkers.forEach(m => map.removeLayer(m));
+    vertexMarkers = currentPoints.map(p => L.circleMarker(p, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map));
+    map.removeLayer(drawLayer);
+    drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
+
+    if (snappedCount > 0) {
+      setEdStatus('snapStatus', 'ok', `✓ ${snappedCount} of ${currentPoints.length} vertices snapped to OSM lines (≤${OSM_SNAP_TOLERANCE_M}m).`);
+    } else {
+      setEdStatus('snapStatus', 'ok', `No OSM lines found within ${OSM_SNAP_TOLERANCE_M}m — contour kept exactly as drawn.`);
+    }
+  } catch (err) {
+    console.log('OSM snap error, keeping manual contour unaffected:', err);
+    map.removeLayer(drawLayer);
+    drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
+    setEdStatus('snapStatus', 'err', `✗ OSM snap unavailable (${err.message}) — contour kept exactly as drawn, nothing lost.`);
+  }
 
   if(pendingEditMeta){
     document.getElementById('znCity').value = pendingEditMeta.cityCode || 'HN';
