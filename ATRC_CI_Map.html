@@ -95,6 +95,16 @@
   #map {
     flex: 1;
     z-index: 1;
+    transition: margin-right 0.2s;
+  }
+  body.edit-mode #map { margin-right: 340px; }
+  body.edit-mode .stats { right: 356px; }
+  body.edit-mode .legend { left: 16px; }
+
+  @media (max-width: 760px){
+    #editorSidebar{ width:100%; top:auto; height:60%; border-left:none; border-top:1px solid var(--ed-line); }
+    body.edit-mode #map { margin-right: 0; margin-bottom: 60%; }
+    body.edit-mode .stats { right: 16px; }
   }
 
   /* ── LEGEND ──────────────────────────────────────────────── */
@@ -333,6 +343,94 @@
     white-space: nowrap;
     pointer-events: none;
   }
+
+  /* ═══════════════════════════════════════════════════════════
+     ZONE EDITOR SIDEBAR (dark, brand style) — toggleable panel
+  ═══════════════════════════════════════════════════════════ */
+  :root{
+    --ed-bg:#0a0a0a; --ed-panel:#141414; --ed-panel-2:#1c1c1c; --ed-line:#2a2a2a;
+    --ed-text:#f2f0ec; --ed-muted:#9a958c; --ed-orange:#c8650a; --ed-orange-bright:#e8791a;
+  }
+  #editorSidebar{
+    position:fixed;top:0;right:0;bottom:0;width:340px;z-index:1500;
+    background:var(--ed-panel);border-left:1px solid var(--ed-line);color:var(--ed-text);
+    display:none;flex-direction:column;font-family:'Arial',sans-serif;
+    box-shadow:-4px 0 24px rgba(0,0,0,0.25);
+  }
+  #editorSidebar.open{ display:flex; }
+  #editorSidebar .es-head{padding:16px 18px 12px;border-bottom:1px solid var(--ed-line);display:flex;justify-content:space-between;align-items:flex-start;}
+  #editorSidebar .es-head .brand{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ed-muted);font-weight:600;}
+  #editorSidebar .es-head h1{font-size:15px;margin:4px 0 0;font-weight:700;color:#fff;}
+  #editorSidebar .es-close{background:none;border:none;color:var(--ed-muted);font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;}
+  #editorSidebar .es-close:hover{color:#fff;}
+
+  #editorSidebar .es-section{padding:14px 18px;border-bottom:1px solid var(--ed-line);}
+  #editorSidebar .es-section h2{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ed-muted);margin:0 0 8px;font-weight:700;}
+
+  #editorSidebar label{display:block;font-size:11px;color:var(--ed-muted);margin:9px 0 3px;}
+  #editorSidebar input[type=text], #editorSidebar input[type=number]{
+    width:100%;background:var(--ed-panel-2);border:1px solid var(--ed-line);color:var(--ed-text);
+    padding:8px 9px;border-radius:6px;font-size:13px;font-family:inherit;
+  }
+  #editorSidebar input:focus{outline:none;border-color:var(--ed-orange);}
+
+  #editorSidebar .ebtn{
+    display:block;width:100%;text-align:center;padding:10px;border-radius:7px;
+    font-size:12px;font-weight:600;border:1px solid var(--ed-orange);color:var(--ed-orange-bright);
+    background:transparent;cursor:pointer;margin-top:9px;
+  }
+  #editorSidebar .ebtn.primary{background:var(--ed-orange);color:#0a0a0a;}
+  #editorSidebar .ebtn.ghost{border-color:var(--ed-line);color:var(--ed-muted);}
+  #editorSidebar .ebtn:disabled{opacity:.4;cursor:not-allowed;}
+  #editorSidebar .ebtn-row{display:flex;gap:8px;}
+  #editorSidebar .ebtn-row .ebtn{margin-top:9px;}
+
+  #editorSidebar .ehint{font-size:10px;color:var(--ed-muted);line-height:1.5;margin-top:7px;}
+  #editorSidebar .evcount{font-size:11px;color:var(--ed-text);margin-top:7px;}
+  #editorSidebar .evcount b{color:var(--ed-orange-bright);}
+
+  #editorSidebar .checkbox-row{display:flex;align-items:center;gap:8px;margin:10px 0 3px;}
+  #editorSidebar .checkbox-row input[type=checkbox]{width:auto;margin:0;}
+  #editorSidebar .checkbox-row label{margin:0;font-size:11px;color:var(--ed-text);}
+
+  #editorSidebar .zone-list{flex:1;overflow-y:auto;padding:6px 18px 18px;}
+  #editorSidebar .zone-card{background:var(--ed-panel-2);border:1px solid var(--ed-line);border-radius:8px;padding:10px;margin-bottom:8px;}
+  #editorSidebar .zone-card .zc-name{font-weight:700;font-size:12px;}
+  #editorSidebar .zone-card .zc-id{font-family:monospace;font-size:10px;color:var(--ed-muted);margin-top:2px;}
+  #editorSidebar .zone-card .zc-meta{font-size:10px;color:var(--ed-muted);margin-top:5px;}
+  #editorSidebar .zone-card .zc-actions{display:flex;gap:5px;margin-top:7px;}
+  #editorSidebar .zone-card .zc-actions button{flex:1;background:transparent;border:1px solid var(--ed-line);color:var(--ed-muted);padding:5px;border-radius:5px;font-size:10px;cursor:pointer;}
+  #editorSidebar .zone-card .zc-actions button.danger{color:#d9534f;border-color:#3a2222;}
+  #editorSidebar .badge-central{display:inline-block;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#0a0a0a;background:var(--ed-orange-bright);padding:2px 5px;border-radius:4px;margin-left:5px;font-weight:700;}
+  #editorSidebar .badge-prior{display:inline-block;font-size:8px;color:var(--ed-muted);margin-left:5px;}
+  #editorSidebar .empty{color:var(--ed-muted);font-size:11px;text-align:center;padding:24px 10px;}
+
+  #editorSidebar .status-bar{font-size:10px;padding:7px 9px;border-radius:6px;margin-top:7px;line-height:1.5;display:none;}
+  #editorSidebar .status-bar.show{display:block;}
+  #editorSidebar .status-bar.ok{background:rgba(58,138,74,.15);color:#5cb96f;border:1px solid #3a8a4a;}
+  #editorSidebar .status-bar.err{background:rgba(200,60,50,.15);color:#e07868;border:1px solid #a83a2a;}
+  #editorSidebar .status-bar.busy{background:rgba(200,101,10,.15);color:var(--ed-orange-bright);border:1px solid var(--ed-orange);}
+
+  #editModeBanner{
+    position:fixed;top:70px;left:16px;z-index:1400;
+    background:#141414;border:1px solid var(--ed-orange);border-radius:8px;color:#fff;
+    padding:8px 14px;font-size:12px;display:none;align-items:center;gap:8px;
+  }
+  #editModeBanner.show{display:flex;}
+  #editModeBanner .dot{width:7px;height:7px;border-radius:50%;background:var(--ed-orange-bright);}
+
+  .btn-edit-toggle{
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 16px; border: 1px solid #c55a11; background: transparent;
+    color: #c55a11; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-edit-toggle:hover, .btn-edit-toggle.active { background:#c55a11; color:#fff; }
+
+  /* Prior-CI (unmeasured zone) label style — no numbers, just Zone_ID + priority note */
+  .zone-label-prior{ text-align:center; }
+  .zone-label-prior .zl-id{ font-size:10px; letter-spacing:1.5px; text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff; font-weight:700; }
+  .zone-label-prior .zl-note{ font-size:8px; letter-spacing:1px; text-transform:uppercase; color:rgba(30,30,30,0.65); text-shadow:0 0 4px #fff,0 0 4px #fff; margin-top:1px; }
+</style>
 </style>
 </head>
 <body>
@@ -345,7 +443,70 @@
   </div>
   <div class="header-right">
     <div class="status-dot" id="statusDot"></div>
+    <button class="btn-edit-toggle" id="editToggleBtn" onclick="toggleEditMode()">✎ Edit Zones</button>
     <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
+  </div>
+</div>
+
+<!-- EDIT MODE BANNER -->
+<div id="editModeBanner"><span class="dot"></span> Click on the map to add vertices</div>
+
+<!-- ZONE EDITOR SIDEBAR (hidden by default, toggled from header) -->
+<div id="editorSidebar">
+  <div class="es-head">
+    <div>
+      <div class="brand">ATRC</div>
+      <h1>Edit Zones</h1>
+    </div>
+    <button class="es-close" onclick="toggleEditMode()">✕</button>
+  </div>
+
+  <div class="es-section">
+    <h2>Draw contour</h2>
+    <div class="ehint">Trace the zone by physical boundaries (fortress wall, road, terrain, coastline) — not administrative borders. Existing measured objects (colored dots) are shown on the map — draw around them.</div>
+    <div class="evcount">Vertices: <b id="vcount">0</b></div>
+    <div class="ebtn-row">
+      <button class="ebtn primary" id="startBtn" style="flex:1">Start drawing</button>
+      <button class="ebtn ghost" id="undoBtn" style="flex:1" disabled>Undo point</button>
+    </div>
+    <button class="ebtn" id="finishBtn" disabled>Finish contour</button>
+    <button class="ebtn ghost" id="cancelBtn" style="display:none">Cancel drawing</button>
+  </div>
+
+  <div class="es-section" id="metaSection" style="display:none">
+    <h2>Zone details</h2>
+    <label>City code (e.g. HN, KT)</label>
+    <input type="text" id="znCity" placeholder="HN">
+    <label>Zone ID (ZN·ME·BJ·{city}·###)</label>
+    <input type="text" id="znId" placeholder="ZN-ME-BJ-HN-003">
+    <label>Display name</label>
+    <input type="text" id="znName" placeholder="e.g. Herceg Novi — Stari Grad">
+    <label>CI_zone (optional, can be filled later)</label>
+    <input type="number" id="znCi" step="0.001" min="0" max="1" placeholder="0.000">
+    <div class="checkbox-row">
+      <input type="checkbox" id="znCentral">
+      <label for="znCentral">This is the central zone (one per city)</label>
+    </div>
+    <div class="ehint">The central zone anchors Prior_CI for all other zones in the same city.</div>
+    <div class="ebtn-row">
+      <button class="ebtn primary" id="saveZoneBtn" style="flex:1">Save zone</button>
+      <button class="ebtn ghost" id="discardZoneBtn" style="flex:1">Discard</button>
+    </div>
+  </div>
+
+  <div class="zone-list" id="zoneList">
+    <div class="empty">No zones drawn yet this session</div>
+  </div>
+
+  <div class="es-section">
+    <h2>Sync to live registry</h2>
+    <div class="ehint">Sends all zones above directly to the ZONES sheet.</div>
+    <button class="ebtn primary" id="syncBtn" disabled>⬆ Save all zones to sheet</button>
+    <div class="status-bar" id="syncStatus"></div>
+
+    <button class="ebtn ghost" id="recalcBtn" style="margin-top:14px;">↻ Recalculate zone assignments</button>
+    <div class="ehint">Run after editing a boundary — fixes Zone_ID on existing objects whose GPS now falls in a different zone.</div>
+    <div class="status-bar" id="recalcStatus"></div>
   </div>
 </div>
 
@@ -426,6 +587,13 @@
 const SHEET_ID   = '1mMF9JQscYIhlZYq5tOiZKSJ9zn4PT46W_4CbiEaxeP4';
 const SHEET_NAME = 'Form_Responses';
 const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
+
+// TODO: замени на реальную ссылку после публикации листа ZONES как CSV
+// (File -> Share -> Publish to web -> выбрать лист ZONES -> CSV).
+// Пока не заменено — карта просто не найдёт нарисованные контуры и будет
+// показывать зоны по старой схеме (выпуклая оболочка вокруг точек), без
+// приоритетной заливки для ещё не измеренных зон. Ничего не ломается.
+const ZONES_CSV = 'PASTE_ZONES_SHEET_CSV_URL_HERE';
 
 // Резервные тестовые данные (если таблица недоступна)
 const DEMO_DATA = [
@@ -694,6 +862,314 @@ let hullLayer      = L.layerGroup().addTo(map);
 let gradientLayer  = L.layerGroup().addTo(map);
 
 // ═══════════════════════════════════════════════════════════════
+// ZONE EDITOR — draw/edit contours, sync to sheet (Apps Script v7.8 doPost)
+// Toggled via the "Edit Zones" header button — same map, same live objects,
+// no separate page.
+// ═══════════════════════════════════════════════════════════════
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby2nHTeZAL8_hgbxYdZphPU76HZPKX68KgDyJX2n5RcnWn7UhPcVJ2CobkMeSnjBUh2/exec';
+const API_SECRET = 'hn-zones-secret-8k3f2m';
+
+let editZones = [];       // zones drawn/edited THIS session, not yet necessarily synced
+let drawing = false;
+let currentPoints = [];
+let vertexMarkers = [];
+let drawLayer = null;
+let zoneIdCounter = 1;
+let pendingEditMeta = null;
+let editModeOn = false;
+
+function toggleEditMode(){
+  editModeOn = !editModeOn;
+  document.body.classList.toggle('edit-mode', editModeOn);
+  document.getElementById('editorSidebar').classList.toggle('open', editModeOn);
+  document.getElementById('editToggleBtn').classList.toggle('active', editModeOn);
+  setTimeout(() => map.invalidateSize(), 210); // after CSS transition
+  if (!editModeOn && drawing) cancelDrawingEd();
+}
+
+document.getElementById('startBtn').addEventListener('click', startDrawingEd);
+document.getElementById('cancelBtn').addEventListener('click', cancelDrawingEd);
+document.getElementById('undoBtn').addEventListener('click', undoPointEd);
+document.getElementById('finishBtn').addEventListener('click', finishDrawingEd);
+document.getElementById('saveZoneBtn').addEventListener('click', saveZoneEd);
+document.getElementById('discardZoneBtn').addEventListener('click', discardZoneEd);
+document.getElementById('syncBtn').addEventListener('click', syncZonesToSheet);
+document.getElementById('recalcBtn').addEventListener('click', recalculateZoneAssignments);
+
+function startDrawingEd(){
+  drawing = true;
+  currentPoints = [];
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = [];
+  if(drawLayer){ map.removeLayer(drawLayer); drawLayer = null; }
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('cancelBtn').style.display = 'block';
+  document.getElementById('undoBtn').disabled = true;
+  document.getElementById('finishBtn').disabled = true;
+  document.getElementById('editModeBanner').classList.add('show');
+  document.getElementById('metaSection').style.display = 'none';
+  map.on('click', onMapClickEd);
+}
+
+function onMapClickEd(e){
+  if(!drawing) return;
+  currentPoints.push([e.latlng.lat, e.latlng.lng]);
+  const m = L.circleMarker(e.latlng, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map);
+  vertexMarkers.push(m);
+  redrawCurrentShapeEd();
+  document.getElementById('vcount').textContent = currentPoints.length;
+  document.getElementById('undoBtn').disabled = false;
+  document.getElementById('finishBtn').disabled = currentPoints.length < 3;
+}
+
+function redrawCurrentShapeEd(){
+  if(drawLayer) map.removeLayer(drawLayer);
+  if(currentPoints.length < 2) return;
+  drawLayer = L.polyline(currentPoints, { color:'#e8791a', weight:2, dashArray:'5,5' }).addTo(map);
+}
+
+function undoPointEd(){
+  if(!currentPoints.length) return;
+  currentPoints.pop();
+  const m = vertexMarkers.pop();
+  if(m) map.removeLayer(m);
+  redrawCurrentShapeEd();
+  document.getElementById('vcount').textContent = currentPoints.length;
+  document.getElementById('undoBtn').disabled = currentPoints.length === 0;
+  document.getElementById('finishBtn').disabled = currentPoints.length < 3;
+}
+
+function cancelDrawingEd(){
+  drawing = false;
+  pendingEditMeta = null;
+  map.off('click', onMapClickEd);
+  currentPoints = [];
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = [];
+  if(drawLayer){ map.removeLayer(drawLayer); drawLayer = null; }
+  document.getElementById('startBtn').style.display = 'block';
+  document.getElementById('cancelBtn').style.display = 'none';
+  document.getElementById('editModeBanner').classList.remove('show');
+  document.getElementById('vcount').textContent = 0;
+}
+
+function suggestZoneIdEd(cityCode){
+  const city = (cityCode || 'HN').toUpperCase();
+  const existingCount = editZones.filter(z => (z.cityCode||'').toUpperCase() === city).length
+    + Object.keys(lastDrawnZones).filter(zid => (lastDrawnZones[zid].cityCode||'').toUpperCase() === city).length;
+  return `ZN·ME·BJ·${city}·${String(existingCount + 1).padStart(3,'0')}`;
+}
+
+function finishDrawingEd(){
+  if(currentPoints.length < 3) return;
+  drawing = false;
+  map.off('click', onMapClickEd);
+  document.getElementById('editModeBanner').classList.remove('show');
+  document.getElementById('cancelBtn').style.display = 'none';
+  document.getElementById('startBtn').style.display = 'block';
+
+  if(drawLayer) map.removeLayer(drawLayer);
+  drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
+
+  if(pendingEditMeta){
+    document.getElementById('znCity').value = pendingEditMeta.cityCode || 'HN';
+    document.getElementById('znId').value = pendingEditMeta.znId;
+    document.getElementById('znName').value = pendingEditMeta.name;
+    document.getElementById('znCi').value = pendingEditMeta.ci != null ? pendingEditMeta.ci : '';
+    document.getElementById('znCentral').checked = !!pendingEditMeta.isCentral;
+    pendingEditMeta = null;
+  }else{
+    const lastCity = editZones.length ? editZones[editZones.length-1].cityCode : 'HN';
+    document.getElementById('znCity').value = lastCity;
+    document.getElementById('znId').value = suggestZoneIdEd(lastCity);
+    document.getElementById('znName').value = '';
+    document.getElementById('znCi').value = '';
+    document.getElementById('znCentral').checked = false;
+  }
+  document.getElementById('metaSection').style.display = 'block';
+}
+
+function saveZoneEd(){
+  const cityCode = document.getElementById('znCity').value.trim().toUpperCase();
+  const znId = document.getElementById('znId').value.trim();
+  const name = document.getElementById('znName').value.trim() || znId;
+  const ci = parseFloat(document.getElementById('znCi').value);
+  const isCentral = document.getElementById('znCentral').checked;
+  if(!cityCode){ alert('City code is required (e.g. HN, KT)'); return; }
+  if(!znId){ alert('Zone ID is required'); return; }
+  if(currentPoints.length < 3){ alert('Draw at least 3 vertices first'); return; }
+
+  if(isCentral){
+    const otherCentral = editZones.find(z => z.zn_id !== znId && (z.cityCode||'').toUpperCase() === cityCode && z.isCentral);
+    if(otherCentral){
+      if(!confirm(`"${otherCentral.name}" is currently marked central for ${cityCode} in this session. Make "${name}" central instead?`)) return;
+      otherCentral.isCentral = false;
+    }
+  }
+
+  const ring = currentPoints.map(p => [p[1], p[0]]);
+  ring.push(ring[0]);
+
+  if(drawLayer){
+    drawLayer.setStyle({ color:'#7B4F00', fillOpacity:0.08, dashArray:null });
+    drawLayer.bindPopup(`<b>${name}</b>${isCentral?' <span style="color:#e8791a">★ central</span>':''}<br>${znId}`);
+  }
+
+  const existingIdx = editZones.findIndex(z => z.zn_id === znId);
+  const zoneObj = {
+    id: existingIdx>=0 ? editZones[existingIdx].id : 'z' + (zoneIdCounter++),
+    zn_id: znId, name, cityCode, isCentral,
+    ci: isNaN(ci) ? null : ci, ring, layer: drawLayer, synced: false
+  };
+  if(existingIdx>=0) editZones[existingIdx] = zoneObj; else editZones.push(zoneObj);
+
+  currentPoints = [];
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = [];
+  drawLayer = null;
+  document.getElementById('vcount').textContent = 0;
+  document.getElementById('undoBtn').disabled = true;
+  document.getElementById('finishBtn').disabled = true;
+  document.getElementById('metaSection').style.display = 'none';
+
+  renderEditZoneList();
+}
+
+function discardZoneEd(){
+  if(drawLayer){ map.removeLayer(drawLayer); drawLayer = null; }
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = [];
+  currentPoints = [];
+  document.getElementById('vcount').textContent = 0;
+  document.getElementById('metaSection').style.display = 'none';
+}
+
+function renderEditZoneList(){
+  const zoneList = document.getElementById('zoneList');
+  const syncBtn = document.getElementById('syncBtn');
+  if(!editZones.length){
+    zoneList.innerHTML = '<div class="empty">No zones drawn yet this session</div>';
+    syncBtn.disabled = true;
+    return;
+  }
+  syncBtn.disabled = false;
+  zoneList.innerHTML = '';
+  editZones.forEach(z=>{
+    const card = document.createElement('div');
+    card.className = 'zone-card';
+    card.innerHTML = `
+      <div class="zc-name">${z.name}${z.isCentral?'<span class="badge-central">★ central</span>':''}${z.synced?'<span class="badge-prior">✓ synced</span>':''}</div>
+      <div class="zc-id">${z.zn_id} · ${z.cityCode||'—'}</div>
+      <div class="zc-meta">${z.ring.length-1} vertices · CI_zone: ${z.ci!=null ? z.ci.toFixed(3) : '—'}</div>
+      <div class="zc-actions">
+        <button data-action="focus" data-id="${z.id}">Focus</button>
+        <button data-action="edit" data-id="${z.id}">Edit</button>
+        <button data-action="delete" data-id="${z.id}" class="danger">Delete</button>
+      </div>`;
+    zoneList.appendChild(card);
+  });
+  zoneList.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      const zone = editZones.find(z=>z.id===id);
+      if(!zone) return;
+      if(btn.dataset.action === 'focus'){ map.fitBounds(zone.layer.getBounds().pad(0.2)); zone.layer.openPopup(); }
+      else if(btn.dataset.action === 'delete'){
+        if(confirm(`Delete zone "${zone.name}"?`)){ map.removeLayer(zone.layer); editZones = editZones.filter(z=>z.id!==id); renderEditZoneList(); }
+      } else if(btn.dataset.action === 'edit'){ editZoneEd(id); }
+    });
+  });
+}
+
+function editZoneEd(id){
+  const zone = editZones.find(z=>z.id===id);
+  if(!zone) return;
+  if(drawing){ alert('Finish or cancel the current drawing first.'); return; }
+  map.removeLayer(zone.layer);
+  editZones = editZones.filter(z=>z.id!==id);
+  renderEditZoneList();
+
+  const ringNoClose = zone.ring.slice(0, -1);
+  currentPoints = ringNoClose.map(c=>[c[1], c[0]]);
+  drawing = true;
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = currentPoints.map(p=>L.circleMarker(p, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map));
+  redrawCurrentShapeEd();
+  document.getElementById('vcount').textContent = currentPoints.length;
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('cancelBtn').style.display = 'block';
+  document.getElementById('undoBtn').disabled = currentPoints.length === 0;
+  document.getElementById('finishBtn').disabled = currentPoints.length < 3;
+  document.getElementById('editModeBanner').classList.add('show');
+  map.on('click', onMapClickEd);
+  map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
+  pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci, cityCode: zone.cityCode, isCentral: zone.isCentral };
+}
+
+function setEdStatus(elId, cls, html){
+  const el = document.getElementById(elId);
+  el.className = 'status-bar show ' + cls;
+  el.innerHTML = html;
+}
+
+async function syncZonesToSheet(){
+  if(!editZones.length) return;
+  const syncBtn = document.getElementById('syncBtn');
+  syncBtn.disabled = true;
+  setEdStatus('syncStatus', 'busy', `Sending ${editZones.length} zone(s) to the sheet…`);
+
+  const payload = {
+    secret: API_SECRET,
+    action: 'saveZones',
+    zones: editZones.map(z => ({
+      zoneId: z.zn_id, name: z.name, cityCode: z.cityCode, isCentral: z.isCentral,
+      ring: z.ring.slice(0, -1).map(p => [p[1], p[0]])
+    }))
+  };
+
+  try {
+    const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const data = await res.json();
+    if(data.ok){
+      editZones.forEach(z => z.synced = true);
+      renderEditZoneList();
+      const priorLines = (data.results||[]).map(r => `${r.zoneId}: ${r.priorCI!=null ? 'Prior_CI '+r.priorCI : 'central / no prior'}`).join(' · ');
+      setEdStatus('syncStatus', 'ok', `✓ Saved ${data.saved} zone(s). ${priorLines}`);
+      loadData(); // refresh live map with newly saved zones
+    } else {
+      setEdStatus('syncStatus', 'err', `✗ ${data.error}`);
+    }
+  } catch(err) {
+    setEdStatus('syncStatus', 'err', `✗ Network error: ${err.message}`);
+  } finally {
+    syncBtn.disabled = false;
+  }
+}
+
+async function recalculateZoneAssignments(){
+  if(!confirm('Recalculate Zone_ID for every existing object in PASSPORT_REGISTRY against the zone boundaries currently saved in the sheet?')) return;
+  const recalcBtn = document.getElementById('recalcBtn');
+  recalcBtn.disabled = true;
+  setEdStatus('recalcStatus', 'busy', 'Recalculating…');
+  try {
+    const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify({ secret: API_SECRET, action: 'recalculateZones' }) });
+    const data = await res.json();
+    if(data.ok){
+      if(data.changed === 0){ setEdStatus('recalcStatus', 'ok', '✓ No changes needed.'); }
+      else {
+        const lines = data.changes.map(c => `${c.cpId}: ${c.from} → ${c.to}`).join('<br>');
+        setEdStatus('recalcStatus', 'ok', `✓ Updated ${data.changed} object(s):<br>${lines}`);
+        loadData();
+      }
+    } else { setEdStatus('recalcStatus', 'err', `✗ ${data.error}`); }
+  } catch(err) {
+    setEdStatus('recalcStatus', 'err', `✗ Network error: ${err.message}`);
+  } finally {
+    recalcBtn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // PARSE GPS from text "42.4534, 18.5312" or "42.4534,18.5312"
 // ═══════════════════════════════════════════════════════════════
 function parseGPS(text) {
@@ -720,89 +1196,116 @@ function parseCI(val) {
 // ═══════════════════════════════════════════════════════════════
 // RENDER OBJECTS ON MAP
 // ═══════════════════════════════════════════════════════════════
-function renderZones(zonesMap) {
+// ═══════════════════════════════════════════════════════════════
+// RENDER — реальная геометрия зон (лист ZONES) + измеренные объекты.
+// Три стадии зрелости зоны:
+//   0 замеров   -> плоская заливка Prior_CI (или нейтральный серый, если
+//                  Prior_CI ещё не посчитан), подпись — ТОЛЬКО Zone_ID,
+//                  никаких чисел (это приоритет очерёдности, не измерение)
+//   1–2 замера  -> плоская заливка реальным средним цветом объектов,
+//                  подпись всё ещё без числа CI — рано для честного среднего
+//   3+ замеров  -> полноценный IDW-градиент, подпись CI_zone + сигнатура
+// ═══════════════════════════════════════════════════════════════
+function renderZones(zonesMap, drawnZones) {
   markersLayer.clearLayers();
   hullLayer.clearLayers();
   gradientLayer.clearLayers();
   lastGridsByZone = {};
+  drawnZones = drawnZones || {};
 
-  const zoneIds = Object.keys(zonesMap);
-  const allObjects = zoneIds.flatMap(z => zonesMap[z]);
+  const zoneIds = Array.from(new Set([...Object.keys(zonesMap), ...Object.keys(drawnZones)]));
+  const allObjects = Object.keys(zonesMap).flatMap(z => zonesMap[z]);
 
-  if (allObjects.length === 0) {
+  if (allObjects.length === 0 && zoneIds.length === 0) {
     document.getElementById('statsPanel').style.display = 'none';
     document.getElementById('map').insertAdjacentHTML('beforeend',
       '<div class="no-data" id="noData"><div class="no-data-title">No field data yet</div><div class="no-data-sub">Submit the form to see objects on the map</div></div>'
     );
     return;
   }
-
   const old = document.getElementById('noData');
   if (old) old.remove();
 
-  // ── Per-zone: hull + real IDW gradient + export control ────
   zoneIds.forEach(zoneId => {
-    const objects = zonesMap[zoneId];
-    if (objects.length < 3) return; // need ≥3 points for a hull + meaningful gradient
+    const objects = zonesMap[zoneId] || [];
+    const drawn = drawnZones[zoneId] || null;
 
-    const pts = turf.featureCollection(
-      objects.map(o => turf.point([o.lng, o.lat], { ci: o.CI }))
-    );
-    const hull = turf.convex(pts);
-    if (!hull) return;
+    // Geometry to draw: prefer the real hand-drawn polygon from ZONES sheet;
+    // fall back to a convex hull of measured points if the zone hasn't been
+    // drawn yet but already has ≥3 real measurements (backward-compatible
+    // with zones created before this sheet existed).
+    let hull = null;
+    if (drawn && drawn.ring) {
+      hull = { type: 'Feature', geometry: { type: 'Polygon', coordinates: [drawn.ring.map(p => [p[1], p[0]])] } };
+    } else if (objects.length >= 3) {
+      const pts = turf.featureCollection(objects.map(o => turf.point([o.lng, o.lat])));
+      hull = turf.convex(pts);
+    }
+    if (!hull) return; // nothing to draw for this zone yet
 
-    const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
-    const color = ciToHex(avgCI);
-
-    // Padded bounds around the hull, so the gradient has room to interpolate
-    // before being clipped to the hull outline
     const hullBounds = L.geoJSON(hull).getBounds();
-    const bounds = hullBounds.pad(0.35);
-
-    const gridSize = 48;
-    const grid = computeIDWGrid(objects, bounds, gridSize, 2);
-    const signature = computeGradientSignature(grid, gridSize);
-    lastGridsByZone[zoneId] = { grid, gridSize, bounds, objects, signature };
-
-    const dataURL = renderGradientCanvas(grid, gridSize, hull, bounds);
-    L.imageOverlay(dataURL, bounds, { opacity: 0.55, interactive: false }).addTo(gradientLayer);
-
-    // Hull outline (thin, on top of the gradient fill)
-    L.geoJSON(hull, {
-      style: { fillOpacity: 0, color: color, weight: 1.5, opacity: 0.6, dashArray: '4 4' }
-    }).addTo(hullLayer);
-
-    // Zone label + signature + export button
     const center = turf.centroid(hull);
     const [cLng, cLat] = center.geometry.coordinates;
-    L.marker([cLat, cLng], {
-      icon: L.divIcon({
-        className: 'zone-label',
-        html: `<div style="text-align:center;">
-                 <div style="color:${color};font-size:10px;letter-spacing:2px;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff;margin-bottom:2px;font-weight:600;">CI_zone ${avgCI.toFixed(3)} · ${objects.length} pts</div>
-                 <div style="color:rgba(30,30,30,0.8);font-size:8px;letter-spacing:1px;font-family:monospace;text-shadow:0 0 4px #fff,0 0 4px #fff;margin-bottom:4px;">σ ${signature.stddev} · ∇ ${signature.gradient_magnitude} · #${signature.hash}</div>
-                 <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.92);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.15);">⬇ Export gradient</button>
-               </div>`,
-        iconAnchor: [60, -6],
-        iconSize: [120, 50],
-      }),
-      interactive: true,
-    }).addTo(hullLayer);
+
+    if (objects.length >= 3) {
+      // ── STAGE 3: real IDW gradient ──────────────────────────
+      const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
+      const color = ciToHex(avgCI);
+      const bounds = hullBounds.pad(0.35);
+      const gridSize = 48;
+      const grid = computeIDWGrid(objects, bounds, gridSize, 2);
+      const signature = computeGradientSignature(grid, gridSize);
+      lastGridsByZone[zoneId] = { grid, gridSize, bounds, objects, signature };
+
+      const dataURL = renderGradientCanvas(grid, gridSize, hull, bounds);
+      L.imageOverlay(dataURL, bounds, { opacity: 0.55, interactive: false }).addTo(gradientLayer);
+      L.geoJSON(hull, { style: { fillOpacity: 0, color, weight: 1.5, opacity: 0.6, dashArray: '4 4' } }).addTo(hullLayer);
+
+      L.marker([cLat, cLng], {
+        icon: L.divIcon({
+          className: 'zone-label',
+          html: `<div style="text-align:center;">
+                   <div style="color:${color};font-size:10px;letter-spacing:2px;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff;margin-bottom:2px;font-weight:600;">CI_zone ${avgCI.toFixed(3)} · ${objects.length} pts</div>
+                   <div style="color:rgba(30,30,30,0.8);font-size:8px;letter-spacing:1px;font-family:monospace;text-shadow:0 0 4px #fff,0 0 4px #fff;margin-bottom:4px;">σ ${signature.stddev} · ∇ ${signature.gradient_magnitude} · #${signature.hash}</div>
+                   <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.92);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.15);">⬇ Export gradient</button>
+                 </div>`,
+          iconAnchor: [60, -6], iconSize: [120, 50],
+        }), interactive: true,
+      }).addTo(hullLayer);
+
+    } else if (objects.length >= 1) {
+      // ── STAGE 2: real color, no number yet (too few points for an honest average label) ──
+      const avgCI = objects.reduce((s,o) => s + o.CI, 0) / objects.length;
+      const color = ciToHex(avgCI);
+      L.geoJSON(hull, { style: { fillColor: color, fillOpacity: 0.45, color, weight: 1.5, opacity: 0.6, dashArray: '4 4' } }).addTo(hullLayer);
+      L.marker([cLat, cLng], {
+        icon: L.divIcon({
+          className: 'zone-label-prior',
+          html: `<div class="zl-id">${zoneId}</div><div class="zl-note">${objects.length} measurement${objects.length>1?'s':''} · not enough for CI_zone yet</div>`,
+          iconAnchor: [60, -6], iconSize: [120, 30],
+        }), interactive: false,
+      }).addTo(hullLayer);
+
+    } else {
+      // ── STAGE 1: zero measurements — flat Prior_CI (priority color), no numbers at all ──
+      const priorCI = (drawn && drawn.priorCI !== null && drawn.priorCI !== undefined) ? drawn.priorCI : null;
+      const color = priorCI !== null ? ciToHex(priorCI) : '#bbbbbb';
+      const isCentral = drawn && drawn.isCentral;
+      L.geoJSON(hull, { style: { fillColor: color, fillOpacity: isCentral ? 0.5 : 0.35, color, weight: 1.5, opacity: 0.5, dashArray: '2 6' } }).addTo(hullLayer);
+      L.marker([cLat, cLng], {
+        icon: L.divIcon({
+          className: 'zone-label-prior',
+          html: `<div class="zl-id">${zoneId}${isCentral?' ★':''}</div><div class="zl-note">Research zone · not yet measured</div>`,
+          iconAnchor: [60, -6], iconSize: [120, 30],
+        }), interactive: false,
+      }).addTo(hullLayer);
+    }
   });
 
   // ── Object markers (all zones) ─────────────────────────────
   allObjects.forEach(obj => {
-    const color = ciToColor(obj.CI);
-    const hex   = ciToHex(obj.CI);
-
-    const marker = L.circleMarker([obj.lat, obj.lng], {
-      radius: 10,
-      fillColor: hex,
-      color: '#1a1a1a',
-      weight: 2,
-      fillOpacity: 0.9,
-    });
-
+    const hex = ciToHex(obj.CI);
+    const marker = L.circleMarker([obj.lat, obj.lng], { radius: 10, fillColor: hex, color: '#1a1a1a', weight: 2, fillOpacity: 0.9 });
     const popup = L.popup({ maxWidth: 220, className: '' }).setContent(`
       <div class="popup-content">
         <div class="popup-name">${obj.name || 'Unknown object'}</div>
@@ -814,80 +1317,119 @@ function renderZones(zonesMap) {
         ${obj.date ? `<div class="popup-row"><span>Measured</span><span>${obj.date}</span></div>` : ''}
       </div>
     `);
-
     marker.bindPopup(popup);
     marker.addTo(markersLayer);
   });
 
   // ── Update stats (across all loaded objects) ────────────────
-  const avgCI = allObjects.reduce((s,o) => s + o.CI, 0) / allObjects.length;
-  const minCI = Math.min(...allObjects.map(o => o.CI));
-  const maxCI = Math.max(...allObjects.map(o => o.CI));
-  const avgColor = ciToHex(avgCI);
+  if (allObjects.length > 0) {
+    const avgCI = allObjects.reduce((s,o) => s + o.CI, 0) / allObjects.length;
+    const minCI = Math.min(...allObjects.map(o => o.CI));
+    const maxCI = Math.max(...allObjects.map(o => o.CI));
+    document.getElementById('statCI').textContent    = avgCI.toFixed(3);
+    document.getElementById('statCI').style.color    = ciToHex(avgCI);
+    document.getElementById('statCat').textContent   = ciCategory(avgCI);
+    document.getElementById('statCount').textContent = allObjects.length;
+    document.getElementById('statMin').textContent   = minCI.toFixed(3);
+    document.getElementById('statMax').textContent   = maxCI.toFixed(3);
+    document.getElementById('statsPanel').style.display = 'block';
+  } else {
+    document.getElementById('statsPanel').style.display = 'none';
+  }
 
-  document.getElementById('statCI').textContent    = avgCI.toFixed(3);
-  document.getElementById('statCI').style.color    = avgColor;
-  document.getElementById('statCat').textContent   = ciCategory(avgCI);
-  document.getElementById('statCount').textContent = allObjects.length;
-  document.getElementById('statMin').textContent   = minCI.toFixed(3);
-  document.getElementById('statMax').textContent   = maxCI.toFixed(3);
-  document.getElementById('statsPanel').style.display = 'block';
-
-  const bounds = L.latLngBounds(allObjects.map(o => [o.lat, o.lng]));
-  map.fitBounds(bounds, { padding: [60, 60] });
+  // Fit bounds to whatever we have — objects if any, else drawn zones
+  let fitLayer = null;
+  if (allObjects.length > 0) {
+    fitLayer = L.latLngBounds(allObjects.map(o => [o.lat, o.lng]));
+  } else if (hullLayer.getLayers().length > 0) {
+    fitLayer = hullLayer.getBounds();
+  }
+  if (fitLayer && (!fitLayer.isValid || fitLayer.isValid())) map.fitBounds(fitLayer, { padding: [60, 60] });
 }
 
 // ═══════════════════════════════════════════════════════════════
-// LOAD DATA from Google Sheets CSV
+// LOAD DATA from Google Sheets CSV — регистр объектов + лист зон
 // ═══════════════════════════════════════════════════════════════
+let lastDrawnZones = {}; // exposed for the editor sidebar (draw-around reference)
+
+function loadZonesSheet(callback) {
+  if (!ZONES_CSV || ZONES_CSV.indexOf('PASTE_') === 0) { callback({}); return; }
+  Papa.parse(ZONES_CSV + '&t=' + Date.now(), {
+    download: true, header: true, skipEmptyLines: true,
+    complete(results) {
+      const zones = {};
+      results.data.forEach(row => {
+        const zoneId = row['Zone_ID'];
+        if (!zoneId) return;
+        let ring = null;
+        try {
+          const geo = JSON.parse(row['Polygon_GeoJSON']);
+          ring = geo.coordinates[0].slice(0, -1).map(c => [c[1], c[0]]); // [lng,lat]->[lat,lng]
+        } catch(e) { ring = null; }
+        zones[zoneId] = {
+          name: row['Name'], cityCode: row['City_Code'], ring,
+          isCentral: String(row['Is_Central']).toUpperCase() === 'TRUE',
+          priorCI: row['Prior_CI'] === '' || row['Prior_CI'] == null ? null : Number(row['Prior_CI'])
+        };
+      });
+      callback(zones);
+    },
+    error() { callback({}); }
+  });
+}
+
 function loadData() {
   document.getElementById('loadingOverlay').style.display = 'flex';
   document.getElementById('statusDot').style.background = '#c55a11';
 
-  Papa.parse(REGISTRY_CSV + '&t=' + Date.now(), {
-    download: true,
-    header: true,
-    skipEmptyLines: true,
-    complete: function(results) {
-      document.getElementById('loadingOverlay').style.display = 'none';
-      document.getElementById('statusDot').style.background = '#4CAF50';
+  loadZonesSheet(function(drawnZones) {
+    lastDrawnZones = drawnZones;
 
-      const rows = results.data;
-      const objects = [];
+    Papa.parse(REGISTRY_CSV + '&t=' + Date.now(), {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('statusDot').style.background = '#4CAF50';
 
-      rows.forEach(row => {
-        const lat = parseFloat(row['GPS_Lat_anchor']);
-        const lng = parseFloat(row['GPS_Lon_anchor']);
-        if (isNaN(lat) || isNaN(lng)) return; // skip rows without valid anchor coords
+        const rows = results.data;
+        const objects = [];
 
-        const ci = parseCI(row['CI_current']);
-        if (ci === null) return; // CI_current is always computed by the pipeline — skip only if truly absent
+        rows.forEach(row => {
+          const lat = parseFloat(row['GPS_Lat_anchor']);
+          const lng = parseFloat(row['GPS_Lon_anchor']);
+          if (isNaN(lat) || isNaN(lng)) return;
 
-        objects.push({
-          cpId:    row['CP_ID'] || '',
-          zoneId:  row['Zone_ID'] || 'UNZONED',
-          name:    row['Object_Name'] || 'Unnamed object',
-          lat, lng,
-          CI:      ci,
-          ad:      row['AD_current'] || '',
-          ii:      row['II_current'] || '',
-          date:    row['Last_Audit_Date'] ? row['Last_Audit_Date'].split(' ')[0] : '',
+          const ci = parseCI(row['CI_current']);
+          if (ci === null) return;
+
+          objects.push({
+            cpId:    row['CP_ID'] || '',
+            zoneId:  row['Zone_ID'] || 'UNZONED',
+            name:    row['Object_Name'] || 'Unnamed object',
+            lat, lng,
+            CI:      ci,
+            ad:      row['AD_current'] || '',
+            ii:      row['II_current'] || '',
+            date:    row['Last_Audit_Date'] ? row['Last_Audit_Date'].split(' ')[0] : '',
+          });
         });
-      });
 
-      if (objects.length === 0) {
-        console.log('No valid registry rows, showing demo objects');
-        renderZones(groupByZone(DEMO_DATA));
-      } else {
-        renderZones(groupByZone(objects));
+        if (objects.length === 0 && Object.keys(drawnZones).length === 0) {
+          console.log('No registry rows and no drawn zones — showing demo objects');
+          renderZones(groupByZone(DEMO_DATA), {});
+        } else {
+          renderZones(groupByZone(objects), drawnZones);
+        }
+      },
+      error: function(err) {
+        console.log('CSV load error, using demo data:', err);
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('statusDot').style.background = '#888';
+        renderZones(groupByZone(DEMO_DATA), {});
       }
-    },
-    error: function(err) {
-      console.log('CSV load error, using demo data:', err);
-      document.getElementById('loadingOverlay').style.display = 'none';
-      document.getElementById('statusDot').style.background = '#888';
-      renderZones(groupByZone(DEMO_DATA));
-    }
+    });
   });
 }
 
