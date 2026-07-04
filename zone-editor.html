@@ -71,6 +71,28 @@
 
   .footer-note{padding:12px 18px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);text-align:center;}
 
+  .checkbox-row{display:flex;align-items:center;gap:8px;margin:12px 0 4px;}
+  .checkbox-row input[type=checkbox]{width:auto;margin:0;}
+  .checkbox-row label{margin:0;font-size:12px;color:var(--text);}
+
+  .badge-central{
+    display:inline-block;font-size:9px;letter-spacing:.05em;text-transform:uppercase;
+    color:#0a0a0a;background:var(--orange-bright);padding:2px 6px;border-radius:4px;
+    margin-left:6px;font-weight:700;
+  }
+  .badge-prior{
+    display:inline-block;font-size:9px;color:var(--muted);margin-left:6px;
+  }
+
+  .status-bar{
+    font-size:11px;padding:8px 10px;border-radius:6px;margin-top:8px;line-height:1.5;
+    display:none;
+  }
+  .status-bar.show{display:block;}
+  .status-bar.ok{background:rgba(58,138,74,.15);color:#5cb96f;border:1px solid #3a8a4a;}
+  .status-bar.err{background:rgba(200,60,50,.15);color:#e07868;border:1px solid #a83a2a;}
+  .status-bar.busy{background:rgba(200,101,10,.15);color:var(--orange-bright);border:1px solid var(--orange);}
+
   .mode-banner{
     position:fixed;top:14px;left:14px;z-index:20;
     background:var(--panel);border:1px solid var(--orange);border-radius:8px;
@@ -110,12 +132,19 @@
 
   <div class="section" id="metaSection" style="display:none">
     <h2>Zone details</h2>
-    <label>Zone ID (ZN·ME·BJ·HN·###)</label>
+    <label>City code (e.g. HN, KT)</label>
+    <input id="znCity" placeholder="HN">
+    <label>Zone ID (ZN·ME·BJ·{city}·###)</label>
     <input id="znId" placeholder="ZN-ME-BJ-HN-003">
     <label>Display name</label>
     <input id="znName" placeholder="e.g. Herceg Novi — Stari Grad">
     <label>CI_zone (optional, can be filled later)</label>
     <input id="znCi" type="number" step="0.001" min="0" max="1" placeholder="0.000">
+    <div class="checkbox-row">
+      <input type="checkbox" id="znCentral">
+      <label for="znCentral">This is the central zone (one per city)</label>
+    </div>
+    <div class="hint">The central zone anchors Prior_CI for all other zones in the same city — the further a new zone's center is from this one, the lower its starting (unmeasured) priority color.</div>
     <div class="btn-row">
       <button class="btn primary" id="saveZoneBtn" style="flex:1">Save zone</button>
       <button class="btn ghost" id="discardZoneBtn" style="flex:1">Discard</button>
@@ -126,16 +155,23 @@
     <div class="empty">No zones drawn yet</div>
   </div>
 
-  <div class="section">
-    <h2>Load existing</h2>
-    <div class="hint">Load a zones.geojson already on GitHub to edit, delete, or add more zones to it.</div>
-    <input type="file" id="uploadInput" accept=".geojson,.json,application/geo+json,application/json" style="display:none">
-    <button class="btn ghost" id="uploadBtn">Upload zones.geojson</button>
+  <div class="section" style="border-bottom:none;">
+    <h2>Sync to live registry</h2>
+    <div class="hint">Sends all zones above directly to the ZONES sheet — field.html and the CI Map read from there, no manual file upload needed.</div>
+    <button class="btn primary" id="syncBtn" disabled>⬆ Save all zones to sheet</button>
+    <div class="status-bar" id="syncStatus"></div>
+
+    <button class="btn ghost" id="recalcBtn" style="margin-top:16px;">↻ Recalculate zone assignments</button>
+    <div class="hint">Run this after editing a zone's boundary — re-checks every existing measured object's saved GPS against the current geometry and fixes its Zone_ID if it now falls in a different zone.</div>
+    <div class="status-bar" id="recalcStatus"></div>
   </div>
 
   <div class="section" style="border-bottom:none;">
-    <button class="btn primary" id="downloadBtn" disabled>Download zones.geojson</button>
-    <div class="hint">Upload the downloaded file to the repository root (github.com/architecturatemporis) — field.html and the CI Map will pick it up automatically.</div>
+    <h2>Backup / offline</h2>
+    <input type="file" id="uploadInput" accept=".geojson,.json,application/geo+json,application/json" style="display:none">
+    <button class="btn ghost" id="uploadBtn">Upload zones.geojson</button>
+    <button class="btn ghost" id="downloadBtn" disabled style="margin-top:8px;">Download zones.geojson</button>
+    <div class="hint">Optional local backup — the sheet above is the real source of truth once synced.</div>
   </div>
 
   <div class="footer-note">Understanding before change · ATRC 2026</div>
@@ -147,6 +183,10 @@ const map = L.map('map', { zoomControl:true }).setView([42.4531, 18.5375], 16); 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 20, subdomains:'abcd'
 }).addTo(map);
+
+// ── Web App connection (Apps Script v7.8 doPost) ──
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby2nHTeZAL8_hgbxYdZphPU76HZPKX68KgDyJX2n5RcnWn7UhPcVJ2CobkMeSnjBUh2/exec';
+const API_SECRET = 'hn-zones-secret-8k3f2m';
 
 let zones = [];          // {id, zn_id, name, ci, ring:[[lng,lat],...], layer}
 let drawing = false;
@@ -176,6 +216,8 @@ document.getElementById('discardZoneBtn').addEventListener('click', discardZone)
 downloadBtn.addEventListener('click', downloadGeojson);
 document.getElementById('uploadBtn').addEventListener('click', ()=>document.getElementById('uploadInput').click());
 document.getElementById('uploadInput').addEventListener('change', onUploadFile);
+document.getElementById('syncBtn').addEventListener('click', syncZonesToSheet);
+document.getElementById('recalcBtn').addEventListener('click', recalculateZoneAssignments);
 
 function startDrawing(){
   drawing = true;
@@ -248,41 +290,72 @@ function finishDrawing(){
 
   editingZoneId = null;
   if(pendingEditMeta){
+    document.getElementById('znCity').value = pendingEditMeta.cityCode || 'HN';
     document.getElementById('znId').value = pendingEditMeta.znId;
     document.getElementById('znName').value = pendingEditMeta.name;
     document.getElementById('znCi').value = pendingEditMeta.ci != null ? pendingEditMeta.ci : '';
+    document.getElementById('znCentral').checked = !!pendingEditMeta.isCentral;
     pendingEditMeta = null;
   }else{
-    document.getElementById('znId').value = `ZN-ME-BJ-HN-${String(zones.length+1).padStart(3,'0')}`;
+    const lastCity = zones.length ? zones[zones.length-1].cityCode : 'HN';
+    document.getElementById('znCity').value = lastCity;
+    document.getElementById('znId').value = suggestZoneId(lastCity);
     document.getElementById('znName').value = '';
     document.getElementById('znCi').value = '';
+    document.getElementById('znCentral').checked = false;
   }
   metaSection.style.display = 'block';
 }
 
+/** Next free sequence number for a given city, based on zones already drawn in this session. */
+function suggestZoneId(cityCode){
+  const city = (cityCode || 'HN').toUpperCase();
+  const existing = zones.filter(z => (z.cityCode||'').toUpperCase() === city);
+  const next = String(existing.length + 1).padStart(3, '0');
+  return `ZN·ME·BJ·${city}·${next}`;
+}
+
 function saveZone(){
+  const cityCode = document.getElementById('znCity').value.trim().toUpperCase();
   const znId = document.getElementById('znId').value.trim();
   const name = document.getElementById('znName').value.trim() || znId;
   const ci = parseFloat(document.getElementById('znCi').value);
+  const isCentral = document.getElementById('znCentral').checked;
+  if(!cityCode){ alert('City code is required (e.g. HN, KT)'); return; }
   if(!znId){ alert('Zone ID is required'); return; }
   if(currentPoints.length < 3){ alert('Draw at least 3 vertices first'); return; }
+
+  // Only one central zone per city — silently un-mark any other in the same city
+  if(isCentral){
+    const otherCentral = zones.find(z => z.zn_id !== znId && (z.cityCode||'').toUpperCase() === cityCode && z.isCentral);
+    if(otherCentral){
+      if(!confirm(`"${otherCentral.name}" is currently the central zone for ${cityCode}. Make "${name}" the central zone instead?`)) return;
+      otherCentral.isCentral = false;
+    }
+  }
 
   const ring = currentPoints.map(p => [p[1], p[0]]); // to [lng,lat]
   ring.push(ring[0]); // close ring for valid GeoJSON
 
   if(drawLayer){
     drawLayer.setStyle({ color:'#7B4F00', fillOpacity:0.08, dashArray:null });
-    drawLayer.bindPopup(`<b>${name}</b><br>${znId}`);
+    drawLayer.bindPopup(`<b>${name}</b>${isCentral?' <span style="color:#e8791a">★ central</span>':''}<br>${znId}`);
   }
 
-  zones.push({
-    id: 'z' + (zoneIdCounter++),
+  // replace if editing an existing zn_id, else push new
+  const existingIdx = zones.findIndex(z => z.zn_id === znId);
+  const zoneObj = {
+    id: existingIdx>=0 ? zones[existingIdx].id : 'z' + (zoneIdCounter++),
     zn_id: znId,
     name: name,
+    cityCode: cityCode,
+    isCentral: isCentral,
     ci: isNaN(ci) ? null : ci,
     ring: ring,
-    layer: drawLayer
-  });
+    layer: drawLayer,
+    synced: false
+  };
+  if(existingIdx>=0) zones[existingIdx] = zoneObj; else zones.push(zoneObj);
 
   // reset draw state
   currentPoints = [];
@@ -310,18 +383,20 @@ function renderZoneList(){
   if(!zones.length){
     zoneList.innerHTML = '<div class="empty">No zones drawn yet</div>';
     downloadBtn.disabled = true;
+    document.getElementById('syncBtn').disabled = true;
     return;
   }
   downloadBtn.disabled = false;
+  document.getElementById('syncBtn').disabled = false;
   zoneList.innerHTML = '';
   zones.forEach(z=>{
     const card = document.createElement('div');
     card.className = 'zone-card';
     card.innerHTML = `
       <div class="zc-top">
-        <div class="zc-name">${z.name}</div>
+        <div class="zc-name">${z.name}${z.isCentral?'<span class="badge-central">★ central</span>':''}${z.synced?'<span class="badge-prior">✓ synced</span>':''}</div>
       </div>
-      <div class="zc-id">${z.zn_id}</div>
+      <div class="zc-id">${z.zn_id} · ${z.cityCode||'—'}</div>
       <div class="zc-meta">${z.ring.length-1} vertices · CI_zone: ${z.ci!=null ? z.ci.toFixed(3) : '—'}</div>
       <div class="zc-actions">
         <button data-action="focus" data-id="${z.id}">Focus</button>
@@ -378,16 +453,20 @@ function onUploadFile(e){
       const znId = props.ZN_ID || props.zn_id || `ZN-ME-BJ-HN-${String(zones.length+1).padStart(3,'0')}`;
       const name = props.name || znId;
       const ci = (props.CI_zone != null) ? parseFloat(props.CI_zone) : null;
+      const cityCode = props.City_Code || props.city_code || 'HN';
+      const isCentral = !!(props.Is_Central || props.is_central);
 
       const layer = L.polygon(ring.map(c=>[c[1],c[0]]), {
         color:'#7B4F00', weight:1.5, fillOpacity:0.08
       }).addTo(map);
-      layer.bindPopup(`<b>${name}</b><br>${znId}`);
+      layer.bindPopup(`<b>${name}</b>${isCentral?' <span style="color:#e8791a">★ central</span>':''}<br>${znId}`);
 
       zones.push({
         id: 'z' + (zoneIdCounter++),
         zn_id: znId,
         name: name,
+        cityCode: cityCode,
+        isCentral: isCentral,
         ci: isNaN(ci) ? null : ci,
         ring: ring,
         layer: layer
@@ -437,7 +516,82 @@ function editZone(id){
   map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
 
   // store metadata so "Finish contour" pre-fills the form with the original values
-  pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci };
+  pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci, cityCode: zone.cityCode, isCentral: zone.isCentral };
+}
+
+function setStatus(elId, cls, html){
+  const el = document.getElementById(elId);
+  el.className = 'status-bar show ' + cls;
+  el.innerHTML = html;
+}
+
+async function syncZonesToSheet(){
+  if(!zones.length) return;
+  const syncBtn = document.getElementById('syncBtn');
+  syncBtn.disabled = true;
+  setStatus('syncStatus', 'busy', `Sending ${zones.length} zone(s) to the sheet…`);
+
+  const payload = {
+    secret: API_SECRET,
+    action: 'saveZones',
+    zones: zones.map(z => ({
+      zoneId: z.zn_id,
+      name: z.name,
+      cityCode: z.cityCode,
+      isCentral: z.isCentral,
+      ring: z.ring.slice(0, -1).map(p => [p[1], p[0]]) // [lng,lat]->[lat,lng], drop closing point
+    }))
+  };
+
+  try {
+    const res = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.ok){
+      zones.forEach(z => z.synced = true);
+      renderZoneList();
+      const priorLines = (data.results||[]).map(r => `${r.zoneId}: ${r.priorCI!=null ? 'Prior_CI '+r.priorCI : 'central / no prior'}`).join(' · ');
+      setStatus('syncStatus', 'ok', `✓ Saved ${data.saved} zone(s). ${priorLines}`);
+    } else {
+      setStatus('syncStatus', 'err', `✗ ${data.error}`);
+    }
+  } catch(err) {
+    setStatus('syncStatus', 'err', `✗ Network error: ${err.message}. Check WEBAPP_URL is deployed and reachable.`);
+  } finally {
+    syncBtn.disabled = false;
+  }
+}
+
+async function recalculateZoneAssignments(){
+  if(!confirm('Recalculate Zone_ID for every existing object in PASSPORT_REGISTRY against the zone boundaries currently saved in the sheet?\n\n(Draw/edit and "Save all zones to sheet" first if you just changed a boundary.)')) return;
+
+  const recalcBtn = document.getElementById('recalcBtn');
+  recalcBtn.disabled = true;
+  setStatus('recalcStatus', 'busy', 'Recalculating…');
+
+  try {
+    const res = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      body: JSON.stringify({ secret: API_SECRET, action: 'recalculateZones' })
+    });
+    const data = await res.json();
+    if(data.ok){
+      if(data.changed === 0){
+        setStatus('recalcStatus', 'ok', '✓ No changes needed — all objects already match current zone boundaries.');
+      } else {
+        const lines = data.changes.map(c => `${c.cpId}: ${c.from} → ${c.to}`).join('<br>');
+        setStatus('recalcStatus', 'ok', `✓ Updated ${data.changed} object(s):<br>${lines}`);
+      }
+    } else {
+      setStatus('recalcStatus', 'err', `✗ ${data.error}`);
+    }
+  } catch(err) {
+    setStatus('recalcStatus', 'err', `✗ Network error: ${err.message}`);
+  } finally {
+    recalcBtn.disabled = false;
+  }
 }
 
 function downloadGeojson(){
@@ -445,7 +599,7 @@ function downloadGeojson(){
     type: 'FeatureCollection',
     features: zones.map(z=>({
       type: 'Feature',
-      properties: { ZN_ID: z.zn_id, name: z.name, CI_zone: z.ci },
+      properties: { ZN_ID: z.zn_id, name: z.name, CI_zone: z.ci, City_Code: z.cityCode, Is_Central: z.isCentral },
       geometry: { type: 'Polygon', coordinates: [z.ring] }
     }))
   };
