@@ -272,7 +272,7 @@
   <button class="btn-sec" onclick="copyCoords()">⎘ Copy</button>
 </div>
 
-<a class="map-link" href="https://architecturatemporis.github.io/ATRC_CI_Map.html" target="_blank">↗ View CI Map</a>
+<a class="map-link" href="https://xstat-art.github.io/architecturatemporis/ATRC_CI_Map.html" target="_blank">↗ View CI Map</a>
 
 <div class="scale-title">CI Scale</div>
 
@@ -309,6 +309,9 @@
 <script>
 const FORM_BASE = 'https://docs.google.com/forms/d/e/1FAIpQLSe45pgFLqXMaagHHn7W34oeogulfu9Z_dF9iKYa12eX1qlK8w/viewform';
 const GPS_ENTRY = 'entry.1075279085';
+const DATE_ENTRY = 'entry.129520481';
+const TIME_ENTRY = 'entry.1974195465';
+const ACCURACY_ENTRY = 'entry.958104268';
 
 let savedLat = null;
 let savedLng = null;
@@ -345,8 +348,21 @@ function getLocation() {
       el.textContent = coords;
       document.getElementById('gpsAccuracy').textContent = 'Accuracy: ±' + acc + ' m';
 
-      // Build prefilled form URL
-      const url = FORM_BASE + '?usp=pp_url&' + GPS_ENTRY + '=' + encodeURIComponent(coords);
+      // Build prefilled form URL — GPS + текущие дата/время устройства.
+      // Дата/время берутся в момент, когда GPS зафиксировался (не в момент
+      // фактической отправки формы через минуту-другую) — небольшое
+      // расхождение возможно, но это всё равно неизмеримо точнее, чем
+      // отсутствие времени вообще или ручной ввод на бегу.
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+      const url = FORM_BASE + '?usp=pp_url'
+        + '&' + GPS_ENTRY + '=' + encodeURIComponent(coords)
+        + '&' + DATE_ENTRY + '=' + encodeURIComponent(dateStr)
+        + '&' + TIME_ENTRY + '=' + encodeURIComponent(timeStr)
+        + '&' + ACCURACY_ENTRY + '=' + encodeURIComponent(acc);
       const btn = document.getElementById('btnLaunch');
       btn.href = url;
       btn.className = 'btn-launch';
@@ -424,12 +440,23 @@ function showToast(msg) {
   setTimeout(function() { t.className = 'toast'; }, 3000);
 }
 
-// Auto-start if permission already granted
-if (navigator.permissions) {
-  navigator.permissions.query({name:'geolocation'}).then(function(r) {
-    if (r.state === 'granted') getLocation();
-  }).catch(function(){});
+// Стартуем определение GPS СРАЗУ при открытии страницы, без ожидания
+// клика — единственное, что реально требует тапа, это переход по кнопке
+// "Open Field Form" после того как локация уже готова. Раньше запуск был
+// условным (только если разрешение на геолокацию уже когда-то давалось) —
+// теперь запускаем безусловно: браузер сам покажет системный запрос
+// разрешения при первом использовании, а при повторных — определение
+// стартует мгновенно без единого лишнего тапа.
+getLocation();
+
+// Экран не должен гаснуть/блокироваться посреди замера в поле (особенно
+// на жаре, где телефон и так быстро уходит в сон) — лучшее, что можно
+// сделать без нативного приложения: Screen Wake Lock API. Не критично,
+// если браузер его не поддерживает — тогда просто ничего не происходит.
+if ('wakeLock' in navigator) {
+  navigator.wakeLock.request('screen').catch(function(){});
 }
+
 </script>
 </body>
 </html>
