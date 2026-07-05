@@ -849,7 +849,12 @@ function computeIDWGrid(points, bounds, gridSize, power) {
 // Render the IDW grid to a canvas, clipped to the zone's convex hull shape,
 // and return a data URL suitable for a Leaflet ImageOverlay.
 function renderGradientCanvas(grid, gridSize, hullGeoJSON, bounds) {
-  const size = 400;
+  // 400px раньше давал заметную мягкую кайму по краю после того, как canvas
+  // растягивался на реальный размер зоны — особенно на новых, более
+  // детальных (42-вершинных) контурах после доработки OSM-снаппинга.
+  // 900px + меньший отступ у bounds (см. renderZones) вместе делают эту
+  // кайму практически незаметной, без замены самого способа рендера.
+  const size = 900;
   const canvas = document.createElement('canvas');
   canvas.width = size; canvas.height = size;
   const ctx = canvas.getContext('2d');
@@ -1532,6 +1537,17 @@ function parseCSM(val) {
 //                  подпись всё ещё без числа CI — рано для честного среднего
 //   3+ замеров  -> полноценный IDW-градиент, подпись CI_zone + сигнатура
 // ═══════════════════════════════════════════════════════════════
+// Тёмная нейтральная "подложка" под цветной пунктирной границей зоны.
+// Раньше цвет границы = цвету заливки (по CI) — у двух соседних зон с
+// похожим CI и заливка, и граница выходили почти одного оттенка, линия
+// между ними визуально пропадала. Каземат ниже не зависит от CI вообще,
+// поэтому граница читается всегда, независимо от того, насколько похож
+// градиент соседней зоны. Цветная линия поверх остаётся — она даёт
+// тематическую привязку к CI, каземат просто гарантирует контраст.
+function addZoneCasing(hull) {
+  L.geoJSON(hull, { style: { fillOpacity: 0, color: '#1b1e24', weight: 3, opacity: 0.55 } }).addTo(hullLayer);
+}
+
 function renderZones(zonesMap, drawnZones) {
   markersLayer.clearLayers();
   hullLayer.clearLayers();
@@ -1577,7 +1593,7 @@ function renderZones(zonesMap, drawnZones) {
       // ── STAGE 3: real IDW gradient ──────────────────────────
       const avgCIWeighted = objects.reduce((s,o) => s + o.ciWeighted, 0) / objects.length;
       const color = ciToHex(avgCIWeighted);
-      const bounds = hullBounds.pad(0.35);
+      const bounds = hullBounds.pad(0.08);
       const gridSize = 48;
       const grid = computeIDWGrid(objects, bounds, gridSize, 2);
       const signature = computeGradientSignature(grid, gridSize);
@@ -1585,7 +1601,8 @@ function renderZones(zonesMap, drawnZones) {
 
       const dataURL = renderGradientCanvas(grid, gridSize, hull, bounds);
       L.imageOverlay(dataURL, bounds, { opacity: 0.55, interactive: false }).addTo(gradientLayer);
-      L.geoJSON(hull, { style: { fillOpacity: 0, color, weight: 1.5, opacity: 0.6, dashArray: '4 4' } }).addTo(hullLayer);
+      addZoneCasing(hull);
+      L.geoJSON(hull, { style: { fillOpacity: 0, color, weight: 1.4, opacity: 0.95, dashArray: '4 4' } }).addTo(hullLayer);
 
       L.marker([cLat, cLng], {
         icon: L.divIcon({
@@ -1603,7 +1620,8 @@ function renderZones(zonesMap, drawnZones) {
       // ── STAGE 2: real color, no number yet (too few points for an honest average label) ──
       const avgCIWeighted = objects.reduce((s,o) => s + o.ciWeighted, 0) / objects.length;
       const color = ciToHex(avgCIWeighted);
-      L.geoJSON(hull, { style: { fillColor: color, fillOpacity: 0.45, color, weight: 1.5, opacity: 0.6, dashArray: '4 4' } }).addTo(hullLayer);
+      addZoneCasing(hull);
+      L.geoJSON(hull, { style: { fillColor: color, fillOpacity: 0.45, color, weight: 1.4, opacity: 0.95, dashArray: '4 4' } }).addTo(hullLayer);
       L.marker([cLat, cLng], {
         icon: L.divIcon({
           className: 'zone-label-prior',
@@ -1617,7 +1635,8 @@ function renderZones(zonesMap, drawnZones) {
       const priorCI = (drawn && drawn.priorCI !== null && drawn.priorCI !== undefined) ? drawn.priorCI : null;
       const color = priorCI !== null ? ciToHex(priorCI) : '#bbbbbb';
       const isCentral = drawn && drawn.isCentral;
-      L.geoJSON(hull, { style: { fillColor: color, fillOpacity: isCentral ? 0.5 : 0.35, color, weight: 1.5, opacity: 0.5, dashArray: '2 6' } }).addTo(hullLayer);
+      addZoneCasing(hull);
+      L.geoJSON(hull, { style: { fillColor: color, fillOpacity: isCentral ? 0.5 : 0.35, color, weight: 1.4, opacity: 0.9, dashArray: '2 6' } }).addTo(hullLayer);
       L.marker([cLat, cLng], {
         icon: L.divIcon({
           className: 'zone-label-prior',
