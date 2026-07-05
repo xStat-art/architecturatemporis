@@ -999,37 +999,76 @@ async function fetchOsmLinesNear(points) {
 
 /**
  * points: [[lat,lng], ...] нарисованный вручную контур.
- * Возвращает { points: [[lat,lng],...] той же длины (снаппнутые вершины
- * заменены координатой на реальной линии OSM, остальные без изменений),
- * snappedCount }. Если OSM-линий рядом не нашлось вообще — возвращает
- * контур как есть, snappedCount: 0 (не ошибка, просто нечего подтягивать).
+ * Возвращает { points: [[lat,lng],...], snappedCount, addedCount }.
+ * Если OSM-линий рядом не нашлось вообще — возвращает контур как есть,
+ * snappedCount: 0, addedCount: 0 (не ошибка, просто нечего подтягивать).
  */
 async function snapContourToOSM(points) {
   const lines = await fetchOsmLinesNear(points);
-  if (!lines.length) return { points: points.slice(), snappedCount: 0 };
+  if (!lines.length) return { points: points.slice(), snappedCount: 0, addedCount: 0 };
 
   let snappedCount = 0;
-  const snapped = points.map(([lat, lng]) => {
+
+  // Проход 1 — для каждой вершины находим ближайшую линию OSM (как раньше),
+  // но теперь запоминаем ещё и НОМЕР этой линии (lineIndex), а не только
+  // новую координату — он понадобится на проходе 2.
+  const matches = points.map(([lat, lng]) => {
     const pt = turf.point([lng, lat]);
-    let best = null;
-    for (const line of lines) {
+    let best = null, bestIdx = -1;
+    lines.forEach((line, idx) => {
       let np;
       try { np = turf.nearestPointOnLine(line, pt, { units: 'meters' }); }
-      catch (e) { continue; } // вырожденная геометрия (0-длины и т.п.) — пропускаем эту линию
+      catch (e) { return; } // вырожденная геометрия (0-длины и т.п.) — пропускаем эту линию
       if (np && np.properties && np.properties.dist != null &&
           (!best || np.properties.dist < best.properties.dist)) {
-        best = np;
+        best = np; bestIdx = idx;
       }
-    }
+    });
     if (best && best.properties.dist <= OSM_SNAP_TOLERANCE_M) {
       snappedCount++;
       const [snLng, snLat] = best.geometry.coordinates;
-      return [snLat, snLng];
+      return { coord: [snLat, snLng], lineIndex: bestIdx };
     }
-    return [lat, lng];
+    return { coord: [lat, lng], lineIndex: null };
   });
 
-  return { points: snapped, snappedCount };
+  // Проход 2 — ДОРИСОВКА КРИВИЗНЫ (критично для рисования пальцем на
+  // мобильном, где вершин мало). Раньше между двумя соседними снаппнутыми
+  // точками контур шёл по прямой, даже если сама улица/стена между ними
+  // изгибается — на кривых участках это срезало угол и оставляло "дыры"
+  // между контуром зоны и реальной границей. Теперь: если ДВЕ СОСЕДНИЕ
+  // вершины прилипли к ОДНОЙ И ТОЙ ЖЕ линии OSM — вырезаем turf.lineSlice()
+  // кусок этой линии между ними и вставляем его точки в контур. Так контур
+  // повторяет реальный изгиб дороги независимо от того, сколько точек
+  // поставил исследователь вручную.
+  const densified = [];
+  const n = matches.length;
+  for (let i = 0; i < n; i++) {
+    const cur = matches[i];
+    densified.push(cur.coord);
+    const next = matches[(i + 1) % n]; // контур замкнут — учитываем и последнюю пару
+    if (cur.lineIndex != null && cur.lineIndex === next.lineIndex) {
+      const line = lines[cur.lineIndex];
+      const a = turf.point([cur.coord[1], cur.coord[0]]);
+      const b = turf.point([next.coord[1], next.coord[0]]);
+      let seg;
+      try { seg = turf.lineSlice(a, b, line); } catch (e) { seg = null; }
+      if (seg && seg.geometry && seg.geometry.coordinates.length > 2) {
+        let coords = seg.geometry.coordinates.slice(); // [[lng,lat], ...]
+        // turf.lineSlice всегда возвращает точки в направлении САМОЙ линии
+        // OSM, а не в направлении, в котором мы идём от cur к next — если
+        // направления противоположны, разворачиваем кусок.
+        const distToFirst = turf.distance(a, turf.point(coords[0]), { units: 'meters' });
+        const distToLast  = turf.distance(a, turf.point(coords[coords.length - 1]), { units: 'meters' });
+        if (distToLast < distToFirst) coords.reverse();
+        // Первую и последнюю точку куска отбрасываем — это те же cur/next,
+        // они уже добавлены в densified, дублировать не нужно.
+        for (const [lng, lat] of coords.slice(1, -1)) densified.push([lat, lng]);
+      }
+    }
+  }
+
+  return { points: densified, snappedCount, addedCount: densified.length - n };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1148,7 +1187,8 @@ async function finishDrawingEd(){
   setEdStatus('snapStatus', 'busy', 'Snapping contour to OSM streets/walls…');
 
   try {
-    const { points: snappedPoints, snappedCount } = await snapContourToOSM(currentPoints);
+    const originalCount = currentPoints.length;
+    const { points: snappedPoints, snappedCount, addedCount } = await snapContourToOSM(currentPoints);
     currentPoints = snappedPoints;
 
     // Перерисовываем контур и вершины уже по скорректированным координатам
@@ -1158,7 +1198,8 @@ async function finishDrawingEd(){
     drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
 
     if (snappedCount > 0) {
-      setEdStatus('snapStatus', 'ok', `✓ ${snappedCount} of ${currentPoints.length} vertices snapped to OSM lines (≤${OSM_SNAP_TOLERANCE_M}m).`);
+      const addedNote = addedCount > 0 ? ` +${addedCount} curve points added` : '';
+      setEdStatus('snapStatus', 'ok', `✓ ${snappedCount} of ${originalCount} vertices snapped to OSM lines (≤${OSM_SNAP_TOLERANCE_M}m).${addedNote}`);
     } else {
       setEdStatus('snapStatus', 'ok', `No OSM lines found within ${OSM_SNAP_TOLERANCE_M}m — contour kept exactly as drawn.`);
     }
