@@ -496,6 +496,14 @@
     <div class="status-bar" id="snapStatus"></div>
   </div>
 
+  <div class="es-section">
+    <h2>Edit existing saved zone</h2>
+    <div class="ehint">These are zones already stored in the ZONES sheet. Editing loads the real saved contour into the drawer above — fix it (e.g. re-run OSM snapping after this session's update) and save under the same Zone ID to overwrite.</div>
+    <div class="zone-list" id="savedZoneList">
+      <div class="empty">Loading…</div>
+    </div>
+  </div>
+
   <div class="es-section" id="metaSection" style="display:none">
     <h2>Zone details</h2>
     <label>City code (e.g. HN, KT)</label>
@@ -1094,6 +1102,7 @@ function toggleEditMode(){
   document.getElementById('editorSidebar').classList.toggle('open', editModeOn);
   document.getElementById('editToggleBtn').classList.toggle('active', editModeOn);
   setTimeout(() => map.invalidateSize(), 210); // after CSS transition
+  if (editModeOn) renderSavedZoneList();
   if (!editModeOn && drawing) cancelDrawingEd();
 }
 
@@ -1343,6 +1352,75 @@ function editZoneEd(id){
   map.on('click', onMapClickEd);
   map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
   pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci, cityCode: zone.cityCode, isCentral: zone.isCentral };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EDIT ALREADY-SAVED ZONES — раньше "Edit" в сайдбаре работал только
+// с editZones (нарисованное/отредактированное в ТЕКУЩЕЙ сессии), а
+// зоны, уже сохранённые в лист ZONES прошлыми сессиями, туда не
+// попадали вообще — их геометрию нельзя было загрузить обратно в
+// редактор, только перерисовать с нуля. Ниже — отдельный путь,
+// который читает реальную сохранённую геометрию из lastDrawnZones
+// (тот же объект, что заполняется из ZONES_CSV в loadZonesSheet) и
+// заводит её в тот же currentPoints/finishDrawingEd, что и обычное
+// рисование — так к уже сохранённому контуру можно повторно применить
+// OSM-снаппинг (например, после обновления самого алгоритма).
+//
+// ВАЖНО про формат координат: lastDrawnZones[id].ring уже хранится как
+// [lat,lng] и БЕЗ замыкающей точки (так его парсит loadZonesSheet) —
+// в отличие от editZones[].ring, который [lng,lat] и С замыканием.
+// Поэтому здесь координаты не нужно ни переворачивать, ни резать.
+// ═══════════════════════════════════════════════════════════════
+function renderSavedZoneList(){
+  const el = document.getElementById('savedZoneList');
+  if(!el) return;
+  const ids = Object.keys(lastDrawnZones);
+  if(!ids.length){
+    el.innerHTML = '<div class="empty">No saved zones loaded yet</div>';
+    return;
+  }
+  el.innerHTML = '';
+  ids.forEach(zid=>{
+    const z = lastDrawnZones[zid];
+    const hasGeometry = z.ring && z.ring.length >= 3;
+    const card = document.createElement('div');
+    card.className = 'zone-card';
+    card.innerHTML = `
+      <div class="zc-name">${z.name || zid}${z.isCentral?'<span class="badge-central">★ central</span>':''}</div>
+      <div class="zc-id">${zid} · ${z.cityCode||'—'}</div>
+      <div class="zc-meta">${hasGeometry ? (z.ring.length + ' vertices (saved)') : 'no saved geometry (Polygon_GeoJSON empty/unparseable)'}</div>
+      <div class="zc-actions">
+        <button data-zid="${zid}" ${hasGeometry ? '' : 'disabled'}>Edit saved contour</button>
+      </div>`;
+    el.appendChild(card);
+  });
+  el.querySelectorAll('button[data-zid]').forEach(btn=>{
+    btn.addEventListener('click', ()=> loadSavedZoneForEditing(btn.dataset.zid));
+  });
+}
+
+function loadSavedZoneForEditing(zoneId){
+  const zone = lastDrawnZones[zoneId];
+  if(!zone || !zone.ring || zone.ring.length < 3){
+    alert('No saved geometry found for this zone — it may predate geometry sync, or its Polygon_GeoJSON failed to parse.');
+    return;
+  }
+  if(drawing){ alert('Finish or cancel the current drawing first.'); return; }
+
+  currentPoints = zone.ring.map(p => [p[0], p[1]]); // уже [lat,lng], копия на всякий случай
+  drawing = true;
+  vertexMarkers.forEach(m=>map.removeLayer(m));
+  vertexMarkers = currentPoints.map(p=>L.circleMarker(p, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map));
+  redrawCurrentShapeEd();
+  document.getElementById('vcount').textContent = currentPoints.length;
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('cancelBtn').style.display = 'block';
+  document.getElementById('undoBtn').disabled = currentPoints.length === 0;
+  document.getElementById('finishBtn').disabled = currentPoints.length < 3;
+  document.getElementById('editModeBanner').classList.add('show');
+  map.on('click', onMapClickEd);
+  map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
+  pendingEditMeta = { znId: zoneId, name: zone.name, ci: null, cityCode: zone.cityCode, isCentral: zone.isCentral };
 }
 
 function setEdStatus(elId, cls, html){
@@ -1634,6 +1712,7 @@ function loadData() {
 
   loadZonesSheet(function(drawnZones) {
     lastDrawnZones = drawnZones;
+    renderSavedZoneList();
 
     Papa.parse(REGISTRY_CSV + '&t=' + Date.now(), {
       download: true,
