@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>ATRC · Field Launcher</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -265,12 +266,21 @@
   <div class="gps-accuracy" id="gpsAccuracy"></div>
 </div>
 
+<div class="gps-box" id="zoneBox">
+  <div class="gps-label">Zone</div>
+  <div class="gps-value dim" id="zoneValue">Loading zones…</div>
+  <select class="btn-sec" id="zoneFallback" style="display:none; width:100%; margin-top:10px; padding:12px; font-family:Arial, sans-serif;"></select>
+</div>
+
 <a class="btn-launch disabled" id="btnLaunch" href="#" target="_blank">→ Open Field Form</a>
 
 <div class="btn-row">
   <button class="btn-sec" onclick="getLocation()">↻ Get GPS</button>
   <button class="btn-sec" onclick="copyCoords()">⎘ Copy</button>
 </div>
+
+<button class="btn-launch" id="btnCheckStatus" style="background:#1a1a1a; border:1px solid #333; margin-top:0;" onclick="checkLatestStatus()">✓ Check my last submission</button>
+<div class="gps-accuracy" id="statusCheckResult" style="text-align:center; margin-bottom:22px; min-height:32px;"></div>
 
 <a class="map-link" href="https://xstat-art.github.io/architecturatemporis/ATRC_CI_Map.html" target="_blank">↗ View CI Map</a>
 
@@ -312,10 +322,174 @@ const GPS_ENTRY = 'entry.1075279085';
 const DATE_ENTRY = 'entry.129520481';
 const TIME_ENTRY = 'entry.1974195465';
 const ACCURACY_ENTRY = 'entry.958104268';
+const ZONE_ENTRY = 'entry.1099121252';
+
+// Тот же CSV, что читает ATRC_CI_Map.html для отрисовки зон — используем
+// его же геометрию для автоопределения "в какой зоне сейчас стоит
+// исследователь", без единого похода в WhatsApp за номером зоны.
+const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1462679093&single=true&output=csv';
+
+// Web App (тот же doPost/doGet, что уже обслуживает сохранение зон) —
+// нужен для кнопки "Check my last submission". Вставь сюда реальный
+// /exec URL из Apps Script → Deploy → Manage deployments → Web app → Copy.
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby2nHTeZAL8_hgbxYdZphPU76HZPKX68KgDyJX2n5RcnWn7UhPcVJ2CobkMeSnjBUh2/exec';
+const API_SECRET = 'hn-zones-secret-8k3f2m'; // должен совпадать с CONFIG.API_SECRET в .gs
 
 let savedLat = null;
 let savedLng = null;
+let savedAccuracy = null;
 let watchId  = null;
+let zones = {};          // { zoneId: [[lat,lng], ...] }
+let zonesLoaded = false;
+let detectedZoneId = null;
+let manualZoneId = null; // выбор из fallback-списка, если автоопределение не сработало
+
+// ═══════════════════════════════════════════════════════════════
+// АВТООПРЕДЕЛЕНИЕ ЗОНЫ ПО GPS — грузим геометрию зон в фоне сразу при
+// открытии страницы (параллельно с определением GPS), и как только есть
+// и то и другое — проверяем, в какой зоне физически стоит исследователь.
+// Раньше номер зоны приходилось копировать вручную через WhatsApp — сам
+// этот выход из вкладки и был причиной сегодняшних сбоев (Google Forms
+// теряла pre-fill параметры при "Start over" после возврата).
+// ═══════════════════════════════════════════════════════════════
+function loadZones() {
+  if (typeof Papa === 'undefined') { zonesLoaded = true; return; }
+  Papa.parse(ZONES_CSV + '&t=' + Date.now(), {
+    download: true, header: true, skipEmptyLines: true,
+    complete: function(results) {
+      results.data.forEach(function(row) {
+        const zoneId = row['Zone_ID'];
+        if (!zoneId) return;
+        try {
+          const geo = JSON.parse(row['Polygon_GeoJSON']);
+          zones[zoneId] = geo.coordinates[0].slice(0, -1).map(function(c) { return [c[1], c[0]]; }); // [lng,lat]->[lat,lng]
+        } catch (e) { /* геометрия не распарсилась — просто пропускаем эту зону */ }
+      });
+      zonesLoaded = true;
+      populateZoneFallback();
+      detectZone();
+    },
+    error: function() { zonesLoaded = true; updateZoneDisplay(); }
+  });
+}
+
+// Стандартный ray-casting point-in-polygon. Работает с [lat,lng] как с
+// плоскими координатами — на масштабе одного города погрешность от
+// кривизны Земли пренебрежимо мала, пересчитывать в проекцию не нужно.
+function pointInPolygon(lat, lng, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const yi = ring[i][0], xi = ring[i][1];
+    const yj = ring[j][0], xj = ring[j][1];
+    const intersect = ((yi > lat) !== (yj > lat)) &&
+      (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function detectZone() {
+  if (!zonesLoaded || savedLat === null) return;
+  const lat = parseFloat(savedLat), lng = parseFloat(savedLng);
+  detectedZoneId = null;
+  for (const zid in zones) {
+    if (pointInPolygon(lat, lng, zones[zid])) { detectedZoneId = zid; break; }
+  }
+  updateZoneDisplay();
+}
+
+function populateZoneFallback() {
+  const sel = document.getElementById('zoneFallback');
+  sel.innerHTML = '<option value="">— select zone manually —</option>';
+  Object.keys(zones).forEach(function(zid) {
+    const opt = document.createElement('option');
+    opt.value = zid; opt.textContent = zid;
+    sel.appendChild(opt);
+  });
+  sel.onchange = function() {
+    manualZoneId = sel.value || null;
+    updateZoneDisplay();
+  };
+}
+
+function updateZoneDisplay() {
+  const el = document.getElementById('zoneValue');
+  const sel = document.getElementById('zoneFallback');
+  const activeZone = detectedZoneId || manualZoneId;
+
+  if (!zonesLoaded) {
+    el.className = 'gps-value dim'; el.textContent = 'Loading zones…';
+    sel.style.display = 'none';
+  } else if (detectedZoneId) {
+    el.className = 'gps-value'; el.textContent = detectedZoneId + ' ✓';
+    sel.style.display = 'none';
+  } else if (savedLat === null) {
+    el.className = 'gps-value dim'; el.textContent = 'Waiting for GPS…';
+    sel.style.display = 'none';
+  } else if (manualZoneId) {
+    el.className = 'gps-value'; el.textContent = manualZoneId + ' (manual)';
+    sel.style.display = 'block';
+  } else {
+    el.className = 'gps-value error-state'; el.textContent = 'Outside known zones — pick manually below';
+    sel.style.display = 'block';
+  }
+  refreshLaunchButton();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ПРОВЕРКА ПОСЛЕДНЕГО ЗАМЕРА — после того как форма отправлена и
+// исследователь вернулся на эту страницу, один тап показывает: дошли ли
+// данные, с флагом или без, вместо того чтобы узнавать об этом только на
+// следующий день при разборе таблицы.
+// ═══════════════════════════════════════════════════════════════
+function checkLatestStatus() {
+  const el = document.getElementById('statusCheckResult');
+  if (!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_') === 0) {
+    el.textContent = 'Web App URL not configured yet';
+    return;
+  }
+  el.textContent = 'Checking…';
+  const url = WEBAPP_URL + '?action=latestStatus&secret=' + encodeURIComponent(API_SECRET) + '&sinceMinutes=5';
+  fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+    if (!data.ok) { el.textContent = '✗ ' + (data.error || 'Error'); return; }
+    if (!data.found) { el.textContent = 'No submission found in the last 5 min'; return; }
+    if (data.anomalyFlag) {
+      el.textContent = '⚠ ' + data.objectName + ' — ' + data.anomalyFlag;
+    } else {
+      el.textContent = '✓ ' + data.objectName + ' added, CI ' + data.ci;
+    }
+  }).catch(function() { el.textContent = 'Network error — try again'; });
+}
+
+// Кнопка "Open Field Form" активируется только когда есть GPS —
+// зона не обязательна для активации (если она вне известных зон,
+// пусть исследователь всё равно отправит форму, просто без Zone_ID —
+// это мягкий [ZONE_MISSING], а не блокировка), но если зона уже
+// определена/выбрана — подставляем и её тоже.
+function refreshLaunchButton() {
+  if (savedLat === null) return;
+  const coords = savedLat + ', ' + savedLng;
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  let url = FORM_BASE + '?usp=pp_url'
+    + '&' + GPS_ENTRY + '=' + encodeURIComponent(coords)
+    + '&' + DATE_ENTRY + '=' + encodeURIComponent(dateStr)
+    + '&' + TIME_ENTRY + '=' + encodeURIComponent(timeStr)
+    + '&' + ACCURACY_ENTRY + '=' + encodeURIComponent(savedAccuracy);
+
+  const activeZone = detectedZoneId || manualZoneId;
+  if (activeZone) {
+    url += '&' + ZONE_ENTRY + '=' + encodeURIComponent(activeZone);
+  }
+
+  const btn = document.getElementById('btnLaunch');
+  btn.href = url;
+  btn.className = 'btn-launch';
+}
 
 function getLocation() {
   if (!navigator.geolocation) {
@@ -341,6 +515,7 @@ function getLocation() {
 
       savedLat = lat;
       savedLng = lng;
+      savedAccuracy = acc;
 
       const coords = lat + ', ' + lng;
       const el = document.getElementById('gpsValue');
@@ -348,24 +523,8 @@ function getLocation() {
       el.textContent = coords;
       document.getElementById('gpsAccuracy').textContent = 'Accuracy: ±' + acc + ' m';
 
-      // Build prefilled form URL — GPS + текущие дата/время устройства.
-      // Дата/время берутся в момент, когда GPS зафиксировался (не в момент
-      // фактической отправки формы через минуту-другую) — небольшое
-      // расхождение возможно, но это всё равно неизмеримо точнее, чем
-      // отсутствие времени вообще или ручной ввод на бегу.
-      const now = new Date();
-      const pad = n => String(n).padStart(2, '0');
-      const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-      const url = FORM_BASE + '?usp=pp_url'
-        + '&' + GPS_ENTRY + '=' + encodeURIComponent(coords)
-        + '&' + DATE_ENTRY + '=' + encodeURIComponent(dateStr)
-        + '&' + TIME_ENTRY + '=' + encodeURIComponent(timeStr)
-        + '&' + ACCURACY_ENTRY + '=' + encodeURIComponent(acc);
-      const btn = document.getElementById('btnLaunch');
-      btn.href = url;
-      btn.className = 'btn-launch';
+      detectZone();       // теперь, когда есть координаты, пробуем определить зону
+      refreshLaunchButton();
 
       if (acc <= 20) {
         setStatus('green', 'Lock · ±' + acc + ' m');
@@ -448,6 +607,7 @@ function showToast(msg) {
 // разрешения при первом использовании, а при повторных — определение
 // стартует мгновенно без единого лишнего тапа.
 getLocation();
+loadZones();
 
 // Экран не должен гаснуть/блокироваться посреди замера в поле (особенно
 // на жаре, где телефон и так быстро уходит в сон) — лучшее, что можно
