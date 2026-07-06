@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>ATRC · Field Launcher</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -248,6 +250,22 @@
     display: none;
   }
   .toast.show { display: block; }
+
+  /* Тултип точки на мини-карте подтверждения — в фирменной гамме сайта
+     (чёрный/оранжевый/серый), а не дефолтный белый Leaflet-стиль. Сама
+     подложка карты (тайлы CARTO light_all) остаётся светлой — это её
+     собственный контент, не элемент интерфейса ATRC. */
+  .leaflet-tooltip {
+    background: #141414;
+    border: 1px solid #c55a11;
+    color: #f2f0ec;
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    border-radius: 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
+  .leaflet-tooltip-top:before { border-top-color: #c55a11; }
 </style>
 </head>
 <body>
@@ -272,7 +290,12 @@
   <select class="btn-sec" id="zoneFallback" style="display:none; width:100%; margin-top:10px; padding:12px; font-family:Arial, sans-serif;"></select>
 </div>
 
-<a class="btn-launch disabled" id="btnLaunch" href="#" target="_blank">→ Open Field Form</a>
+<button class="btn-launch disabled" id="btnLaunch" type="button" onclick="openEmbeddedForm()">→ Open Field Form</button>
+
+<div id="formEmbedBox" style="display:none; margin-bottom:12px;">
+  <iframe id="formFrame" style="width:100%; height:65vh; border:1px solid #2e2e2e; background:#fff; display:block;"></iframe>
+  <a id="formFallbackLink" href="#" target="_blank" class="map-link" style="margin-top:8px; margin-bottom:0;">↗ Trouble loading? Open form in new tab instead</a>
+</div>
 
 <div class="btn-row">
   <button class="btn-sec" onclick="getLocation()">↻ Get GPS</button>
@@ -280,7 +303,8 @@
 </div>
 
 <button class="btn-launch" id="btnCheckStatus" style="background:#1a1a1a; border:1px solid #333; margin-top:0;" onclick="checkLatestStatus()">✓ Check my last submission</button>
-<div class="gps-accuracy" id="statusCheckResult" style="text-align:center; margin-bottom:22px; min-height:32px;"></div>
+<div class="gps-accuracy" id="statusCheckResult" style="text-align:center; margin-bottom:10px; min-height:32px;"></div>
+<div id="confirmMap" style="height:220px; margin-bottom:22px; border:1px solid #2e2e2e; display:none;"></div>
 
 <a class="map-link" href="https://xstat-art.github.io/architecturatemporis/ATRC_CI_Map.html" target="_blank">↗ View CI Map</a>
 
@@ -437,11 +461,25 @@ function updateZoneDisplay() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ПРОВЕРКА ПОСЛЕДНЕГО ЗАМЕРА — после того как форма отправлена и
-// исследователь вернулся на эту страницу, один тап показывает: дошли ли
-// данные, с флагом или без, вместо того чтобы узнавать об этом только на
-// следующий день при разборе таблицы.
+// ПРОВЕРКА ПОСЛЕДНЕГО ЗАМЕРА (v7.15: восстановлена визуальная карта) —
+// после того как форма отправлена в отдельной вкладке и исследователь
+// вернулся на ЭТУ страницу (field.html), нужно увидеть не просто текст,
+// а карту зоны с точкой своего замера — наглядное подтверждение, что
+// система приняла и обработала данные, а не просто строку статуса.
+//
+// Google Forms открывается в отдельной вкладке (target="_blank") и не
+// умеет автоматически возвращать/перенаправлять сюда после отправки —
+// поэтому вместо "открывается само" реализовано так: возврат в ЭТУ вкладку
+// (переключение назад в Safari/Chrome) сам по себе запускает проверку
+// автоматически, без дополнительного тапа — см. visibilitychange/focus
+// в конце файла. Кнопка "Check my last submission" остаётся как ручной
+// дублирующий вариант (например, если автопроверка почему-то не сработала).
 // ═══════════════════════════════════════════════════════════════
+let confirmMapInstance = null;
+let confirmMarker = null;
+let confirmPolygon = null;
+let lastCheckedTimestamp = null; // не дёргаем карту повторно на тот же самый замер
+
 function checkLatestStatus() {
   const el = document.getElementById('statusCheckResult');
   if (!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_') === 0) {
@@ -453,12 +491,64 @@ function checkLatestStatus() {
   fetch(url).then(function(r) { return r.json(); }).then(function(data) {
     if (!data.ok) { el.textContent = '✗ ' + (data.error || 'Error'); return; }
     if (!data.found) { el.textContent = 'No submission found in the last 5 min'; return; }
+
     if (data.anomalyFlag) {
       el.textContent = '⚠ ' + data.objectName + ' — ' + data.anomalyFlag;
     } else {
       el.textContent = '✓ ' + data.objectName + ' added, CI ' + data.ci;
     }
+
+    renderConfirmMap(data);
   }).catch(function() { el.textContent = 'Network error — try again'; });
+}
+
+// Рисует/обновляет мини-карту: полигон зоны (если геометрия уже загружена
+// через loadZones()) + маркер в точке замера. Карта создаётся один раз и
+// переиспользуется — пересоздавать Leaflet-инстанс на каждую проверку не
+// нужно и вызывает утечки/мигание.
+function renderConfirmMap(data) {
+  if (data.lat === null || data.lon === null) return; // GPS_MISSING и т.п. — точку рисовать нечем
+
+  const box = document.getElementById('confirmMap');
+  box.style.display = 'block';
+
+  if (!confirmMapInstance) {
+    confirmMapInstance = L.map('confirmMap', { zoomControl: false, attributionControl: false });
+    // Design rule: карта — всегда светлая подложка (CARTO light_all), даже
+    // при тёмном UI вокруг — тёмные тайлы нечитаемы на солнце в поле.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd', maxZoom: 20
+    }).addTo(confirmMapInstance);
+  }
+
+  const zoneRing = zones[data.zoneId];
+  const point = [data.lat, data.lon];
+
+  if (confirmPolygon) { confirmMapInstance.removeLayer(confirmPolygon); confirmPolygon = null; }
+  if (zoneRing) {
+    confirmPolygon = L.polygon(zoneRing, { color: '#c55a11', weight: 1.5, fillOpacity: 0.05 }).addTo(confirmMapInstance);
+  }
+
+  if (confirmMarker) { confirmMapInstance.removeLayer(confirmMarker); }
+  const markerColor = data.anomalyFlag ? '#c55a11' : '#4CAF50';
+  confirmMarker = L.circleMarker(point, {
+    radius: 9, color: '#fff', weight: 2, fillColor: markerColor, fillOpacity: 1
+  }).addTo(confirmMapInstance);
+  confirmMarker.bindTooltip(
+    (data.objectName || 'Object') + (data.anomalyFlag ? ' — ' + data.anomalyFlag : ' — CI ' + data.ci),
+    { permanent: false }
+  );
+
+  // Кадрируем: полигон зоны целиком, если есть геометрия, иначе — просто
+  // приближаем к самой точке (лучше, чем ничего, для ZONE_MISSING случаев).
+  if (zoneRing) {
+    confirmMapInstance.fitBounds(confirmPolygon.getBounds(), { padding: [16, 16] });
+  } else {
+    confirmMapInstance.setView(point, 18);
+  }
+  // invalidateSize нужен, потому что контейнер был display:none в момент
+  // создания карты — без этого Leaflet иногда рисует только часть тайлов.
+  setTimeout(function() { confirmMapInstance.invalidateSize(); }, 50);
 }
 
 // Кнопка "Open Field Form" активируется только когда есть GPS —
@@ -466,6 +556,14 @@ function checkLatestStatus() {
 // пусть исследователь всё равно отправит форму, просто без Zone_ID —
 // это мягкий [ZONE_MISSING], а не блокировка), но если зона уже
 // определена/выбрана — подставляем и её тоже.
+//
+// v7.16: раньше это был <a href target="_blank"> — открывал форму в
+// отдельной вкладке, и вернуться после отправки нужно было вручную.
+// Теперь URL просто запоминается в pendingFormUrl, а сама навигация
+// происходит через openEmbeddedForm() — форма грузится ПРЯМО на этой
+// странице (iframe), без ухода на другую вкладку вообще.
+let pendingFormUrl = null;
+
 function refreshLaunchButton() {
   if (savedLat === null) return;
   const coords = savedLat + ', ' + savedLng;
@@ -486,9 +584,125 @@ function refreshLaunchButton() {
     url += '&' + ZONE_ENTRY + '=' + encodeURIComponent(activeZone);
   }
 
-  const btn = document.getElementById('btnLaunch');
-  btn.href = url;
-  btn.className = 'btn-launch';
+  pendingFormUrl = url;
+  document.getElementById('btnLaunch').className = 'btn-launch';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ВСТРОЕННАЯ ФОРМА (v7.16) — форма грузится в iframe прямо на этой
+// странице вместо отдельной вкладки. Google Forms не даёт напрямую
+// прочитать содержимое iframe (другой домен, cross-origin) — поэтому
+// момент отправки определяется косвенно, но надёжно: после нажатия
+// Submit ВНУТРИ формы Google сама делает внутреннюю навигацию iframe на
+// страницу "Спасибо", а это значит, что iframe перезагружается ВТОРОЙ
+// РАЗ. Первая загрузка — это появление самой формы (её игнорируем),
+// вторая — сигнал "отправлено". Тот же приём используется в стандартных
+// туториалах по встраиванию Google Forms.
+// ═══════════════════════════════════════════════════════════════
+let formFrameLoadCount = 0;
+
+function openEmbeddedForm() {
+  if (!pendingFormUrl) return;
+
+  // Слежение GPS больше не нужно, пока идёт заполнение формы — исследователь
+  // уже стоит на месте, замер зафиксирован (см. также комментарий в
+  // getLocation()).
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+
+  const embedUrl = pendingFormUrl + '&embedded=true';
+  const iframe = document.getElementById('formFrame');
+  formFrameLoadCount = 0;
+  iframe.onload = handleFormFrameLoad;
+  iframe.src = embedUrl;
+
+  document.getElementById('formFallbackLink').href = pendingFormUrl;
+  document.getElementById('formEmbedBox').style.display = 'block';
+  document.getElementById('formEmbedBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function handleFormFrameLoad() {
+  formFrameLoadCount++;
+  if (formFrameLoadCount < 2) return; // первая загрузка — просто появилась форма
+  onFormSubmitted();
+}
+
+// Форма отправлена — прячем iframe, сбрасываем страницу на "начало" для
+// следующего замера (новый GPS-фикс) и запускаем проверку последнего
+// замера с картой-подтверждением. Именно это восстанавливает нужный цикл:
+// замер -> отправка -> подтверждение с картой -> сразу готовы к следующему,
+// без перезагрузки страницы вручную.
+function onFormSubmitted() {
+  const iframe = document.getElementById('formFrame');
+  iframe.onload = null; // иначе следующая строка (src = about:blank) сама
+                         // вызовет ещё один onload и задвоит обработку
+  document.getElementById('formEmbedBox').style.display = 'none';
+  iframe.src = 'about:blank';
+
+  document.getElementById('statusCheckResult').textContent = 'Submitted — checking…';
+  document.getElementById('confirmMap').style.display = 'none';
+
+  resetForNextMeasurement();
+
+  // Небольшая задержка + несколько попыток: onFormSubmit-триггер в Apps
+  // Script должен успеть отработать и записать строку в INPUT — обычно
+  // доли секунды, но лучше дать запас и пару повторов, чем показать
+  // "не найдено" на данные, которые просто ещё не долетели.
+  checkLatestStatusWithRetry(0);
+}
+
+function checkLatestStatusWithRetry(attempt) {
+  const el = document.getElementById('statusCheckResult');
+  if (!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_') === 0) {
+    el.textContent = 'Web App URL not configured yet';
+    return;
+  }
+  const url = WEBAPP_URL + '?action=latestStatus&secret=' + encodeURIComponent(API_SECRET) + '&sinceMinutes=5';
+  fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.ok && data.found) {
+      if (data.anomalyFlag) {
+        el.textContent = '⚠ ' + data.objectName + ' — ' + data.anomalyFlag;
+      } else {
+        el.textContent = '✓ ' + data.objectName + ' added, CI ' + data.ci;
+      }
+      renderConfirmMap(data);
+      return;
+    }
+    if (attempt < 4) {
+      setTimeout(function() { checkLatestStatusWithRetry(attempt + 1); }, 1200);
+    } else {
+      el.textContent = 'Submitted, but not confirmed yet — tap "Check my last submission" in a moment';
+    }
+  }).catch(function() {
+    if (attempt < 4) {
+      setTimeout(function() { checkLatestStatusWithRetry(attempt + 1); }, 1200);
+    } else {
+      el.textContent = 'Network error — tap "Check my last submission" to retry';
+    }
+  });
+}
+
+// Возврат страницы "на начало" после отправки — готовимся к следующему
+// объекту: старые координаты сбрасываются, GPS определяется заново.
+// Карту зоны и вкладку целиком перезагружать не нужно — только то, что
+// относится к КОНКРЕТНОМУ замеру.
+function resetForNextMeasurement() {
+  savedLat = null;
+  savedLng = null;
+  savedAccuracy = null;
+  detectedZoneId = null;
+  manualZoneId = null;
+  pendingFormUrl = null;
+
+  document.getElementById('gpsValue').className = 'gps-value dim';
+  document.getElementById('gpsValue').textContent = '—';
+  document.getElementById('gpsAccuracy').textContent = '';
+  document.getElementById('zoneFallback').value = '';
+  updateZoneDisplay();
+
+  getLocation(); // сразу начинаем определять координаты для следующего объекта
 }
 
 function getLocation() {
@@ -620,17 +834,33 @@ function showToast(msg) {
 getLocation();
 loadZones();
 
-// v7.14: слежение GPS теперь останавливается не автоматически по точности
-// (см. комментарий в getLocation() выше), а осознанно — в момент, когда
-// исследователь реально нажал "Open Field Form", то есть уже стоит на
-// месте и замер закончен. До этого момента координата в рамке продолжает
-// вживую уточняться, даже если точность уже была хорошей раньше.
-document.getElementById('btnLaunch').addEventListener('click', function() {
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-  }
+// v7.16: слежение GPS теперь останавливается внутри openEmbeddedForm()
+// (тот же момент, когда исследователь реально открывает форму — уже стоит
+// на месте, замер закончен), а не через отдельный click-хендлер здесь —
+// см. openEmbeddedForm() выше.
+
+// v7.16: основной путь — форма встроена в страницу (см. openEmbeddedForm/
+// handleFormFrameLoad/onFormSubmitted выше), поэтому переключения вкладок
+// в норме больше не требуется вообще. Этот блок остаётся ТОЛЬКО как
+// резерв — на случай, если пришлось воспользоваться ссылкой "Open form in
+// new tab instead" (formFallbackLink), и тогда возврат в эту вкладку всё
+// ещё должен подтянуть карту, как раньше в v7.15.
+let formWasLaunched = false;
+let lastAutoCheckAt = 0;
+document.getElementById('formFallbackLink').addEventListener('click', function() {
+  formWasLaunched = true;
 });
+function maybeAutoCheck() {
+  if (document.visibilityState !== 'visible') return;
+  if (!formWasLaunched) return;
+  const now = Date.now();
+  if (now - lastAutoCheckAt < 1500) return; // visibilitychange и focus могут сработать оба разом
+  lastAutoCheckAt = now;
+  formWasLaunched = false; // разовая проверка на этот запасной путь
+  checkLatestStatus();
+}
+document.addEventListener('visibilitychange', maybeAutoCheck);
+window.addEventListener('focus', maybeAutoCheck);
 
 // Экран не должен гаснуть/блокироваться посреди замера в поле (особенно
 // на жаре, где телефон и так быстро уходит в сон) — лучшее, что можно

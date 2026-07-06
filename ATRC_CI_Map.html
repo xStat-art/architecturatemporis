@@ -243,21 +243,27 @@
   }
 
   /* ── POPUP ───────────────────────────────────────────────── */
+  /* Элементы интерфейса поверх карты (попапы, тултипы) — в фирменной
+     гамме сайта (чёрный/оранжевый/серый), как и весь остальной UI.
+     Сама подложка карты (тайлы) остаётся светлой — см. design rule. */
   .leaflet-popup-content-wrapper {
-    background: #ffffff;
-    border: 1px solid #ddd;
+    background: #141414;
+    border: 1px solid #2a2a2a;
     border-radius: 0;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   }
 
-  .leaflet-popup-tip { background: #ffffff; }
+  .leaflet-popup-tip { background: #141414; }
+  .leaflet-popup-content { color: #f2f0ec; } /* дефолтный светлый текст — на случай попапов без .popup-* классов (например, попап зоны в редакторе) */
+  .leaflet-popup-close-button { color: #9a958c !important; }
+  .leaflet-popup-close-button:hover { color: #e8791a !important; }
 
   .popup-content { padding: 4px; min-width: 180px; }
 
   .popup-name {
     font-size: 12px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: #f2f0ec;
     margin-bottom: 8px;
     letter-spacing: 0.3px;
   }
@@ -273,7 +279,7 @@
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #777;
+    color: #9a958c;
     margin-bottom: 10px;
   }
 
@@ -281,12 +287,12 @@
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: #777;
+    color: #9a958c;
     letter-spacing: 0.5px;
     margin-bottom: 3px;
   }
 
-  .popup-row span:last-child { color: #333; }
+  .popup-row span:last-child { color: #e8e6e0; }
 
   /* ── LOADING ─────────────────────────────────────────────── */
   .loading-overlay {
@@ -464,6 +470,7 @@
     <div class="title">Spectral CI Map</div>
   </div>
   <div class="header-right">
+    <a class="btn-edit-toggle" href="field.html" style="text-decoration:none; display:inline-block;">← Field</a>
     <div class="status-dot" id="statusDot"></div>
     <button class="btn-edit-toggle" id="editToggleBtn" onclick="toggleEditMode()">✎ Edit Zones</button>
     <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
