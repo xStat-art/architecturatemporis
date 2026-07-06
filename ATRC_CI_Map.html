@@ -855,21 +855,44 @@ function renderGradientCanvas(grid, gridSize, hullGeoJSON, bounds) {
   // 900px + меньший отступ у bounds (см. renderZones) вместе делают эту
   // кайму практически незаметной, без замены самого способа рендера.
   const size = 900;
-  const canvas = document.createElement('canvas');
-  canvas.width = size; canvas.height = size;
-  const ctx = canvas.getContext('2d');
+
+  // v7.14: раньше блоки IDW рисовались fillRect'ом сразу на финальный canvas —
+  // при gridSize=48 (ячейка ~19px) это давало заметные жёсткие квадраты
+  // ("пикселизацию"), особенно там, где значение резко менялось между
+  // соседними ячейками. Увеличение gridSize (см. вызов computeIDWGrid выше)
+  // уменьшает размер квадратов, но сама по себе более частая сетка не
+  // убирает жёсткие границы между ячейками — только делает их мельче.
+  // Исправление: блоки сначала рисуются на ОТДЕЛЬНОМ (offscreen) canvas как
+  // раньше, без изменений в самих значениях IDW/сигнатуре хэша — а затем
+  // переносятся на финальный canvas через drawImage() с ctx.filter='blur(...)',
+  // что физически смешивает соседние ячейки в плавный градиент. Обрезка по
+  // контуру зоны (destination-in) применяется ПОСЛЕ размытия — иначе
+  // размытие "смазало" бы сам край зоны наружу за пределы полигона.
+  const raw = document.createElement('canvas');
+  raw.width = size; raw.height = size;
+  const rawCtx = raw.getContext('2d');
   const cell = size / gridSize;
 
   for (let i = 0; i < gridSize; i++) {
     for (let j = 0; j < gridSize; j++) {
       const v = grid[i][j];
       if (v === null) continue;
-      ctx.fillStyle = ciToColor(v);
+      rawCtx.fillStyle = ciToColor(v);
       const x = j * cell;
       const y = size - (i + 1) * cell; // flip: grid row 0 = south, canvas y=0 = north
-      ctx.fillRect(x, y - 0.5, cell + 1, cell + 1);
+      rawCtx.fillRect(x, y - 0.5, cell + 1, cell + 1);
     }
   }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  // Радиус размытия подобран под текущий gridSize (128 на 900px, ячейка
+  // ~7px) — примерно в размер одной ячейки, чтобы смешать соседей, но не
+  // "съесть" реальные локальные пики/провалы CI между близкими объектами.
+  ctx.filter = 'blur(6px)';
+  ctx.drawImage(raw, 0, 0);
+  ctx.filter = 'none';
 
   if (hullGeoJSON) {
     ctx.globalCompositeOperation = 'destination-in';
@@ -1594,7 +1617,13 @@ function renderZones(zonesMap, drawnZones) {
       const avgCIWeighted = objects.reduce((s,o) => s + o.ciWeighted, 0) / objects.length;
       const color = ciToHex(avgCIWeighted);
       const bounds = hullBounds.pad(0.08);
-      const gridSize = 48;
+      // v7.14: сетка увеличена с 48 до 128 — вычисление IDW почти ничего не
+      // стоит (обычно 5-15 точек-объектов на зону), а видимая "пикселизация"
+      // прямоугольниками была в первую очередь следствием слишком редкой
+      // сетки на 900px canvas (48 => ячейка ~19px). Сглаживание см. в
+      // renderGradientCanvas() — сама по себе более частая сетка убирает
+      // только часть эффекта, доводит до конца лёгкое размытие между ячейками.
+      const gridSize = 128;
       const grid = computeIDWGrid(objects, bounds, gridSize, 2);
       const signature = computeGradientSignature(grid, gridSize);
       lastGridsByZone[zoneId] = { grid, gridSize, bounds, objects, signature };
