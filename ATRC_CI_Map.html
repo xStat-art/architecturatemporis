@@ -1830,6 +1830,12 @@ loadData();
 
 // Auto-refresh every 60 seconds
 setInterval(loadData, 60000);
+
+// Deep link: ATRC_CI_Map.html?edit=1 opens the Edit Zones panel directly
+// (used by the "Zone Editor" card on field-workspace.html).
+if (new URLSearchParams(location.search).get('edit') === '1') {
+  toggleEditMode();
+}
 </script>
 </body>
 </html>
