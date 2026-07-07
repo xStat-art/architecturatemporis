@@ -18,8 +18,8 @@
 
   body {
     font-family: 'Arial', sans-serif;
-    background: #f5f5f2;
-    color: #1a1a1a;
+    background: #0a0a0a;
+    color: #f2f0ec;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -27,8 +27,8 @@
 
   /* ── HEADER ─────────────────────────────────────────────── */
   .header {
-    background: #ffffff;
-    border-bottom: 1px solid #ddd;
+    background: #141414;
+    border-bottom: 1px solid #2a2a2a;
     padding: 12px 20px;
     display: flex;
     align-items: center;
@@ -46,7 +46,7 @@
   .logo {
     font-size: 11px;
     letter-spacing: 3px;
-    color: #888;
+    color: #9a958c;
     text-transform: uppercase;
   }
 
@@ -55,7 +55,7 @@
   .title {
     font-size: 13px;
     letter-spacing: 1px;
-    color: #333;
+    color: #f2f0ec;
     text-transform: uppercase;
   }
 
@@ -70,9 +70,9 @@
     letter-spacing: 2px;
     text-transform: uppercase;
     padding: 6px 16px;
-    border: 1px solid #ccc;
+    border: 1px solid #2a2a2a;
     background: transparent;
-    color: #666;
+    color: #9a958c;
     cursor: pointer;
     transition: all 0.2s;
   }
@@ -113,9 +113,9 @@
     bottom: 32px;
     left: 16px;
     z-index: 1000;
-    background: rgba(255,255,255,0.95);
-    border: 1px solid #ddd;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    background: rgba(20,20,20,0.95);
+    border: 1px solid #2a2a2a;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     padding: 16px 20px;
     min-width: 200px;
   }
@@ -123,7 +123,7 @@
   .legend-title {
     font-size: 9px;
     letter-spacing: 3px;
-    color: #666;
+    color: #9a958c;
     text-transform: uppercase;
     margin-bottom: 12px;
   }
@@ -147,15 +147,15 @@
     top: -2px;
     width: 2px;
     height: 16px;
-    background: #1a1a1a;
-    opacity: 0.55;
+    background: #f2f0ec;
+    opacity: 0.7;
   }
 
   .legend-labels {
     position: relative;
     height: 12px;
     font-size: 9px;
-    color: #666;
+    color: #9a958c;
     letter-spacing: 1px;
     margin-bottom: 4px;
   }
@@ -168,7 +168,7 @@
 
   .legend-split-note {
     font-size: 8px;
-    color: #999;
+    color: #6a6560;
     letter-spacing: 0.5px;
     margin-bottom: 12px;
     text-align: right;
@@ -185,7 +185,7 @@
     align-items: center;
     gap: 8px;
     font-size: 10px;
-    color: #888;
+    color: #9a958c;
     letter-spacing: 1px;
   }
 
@@ -201,9 +201,9 @@
     top: 70px;
     right: 16px;
     z-index: 1000;
-    background: rgba(255,255,255,0.95);
-    border: 1px solid #ddd;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    background: rgba(20,20,20,0.95);
+    border: 1px solid #2a2a2a;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     padding: 16px 20px;
     min-width: 180px;
   }
@@ -211,7 +211,7 @@
   .stats-title {
     font-size: 9px;
     letter-spacing: 3px;
-    color: #666;
+    color: #9a958c;
     text-transform: uppercase;
     margin-bottom: 12px;
   }
@@ -226,7 +226,7 @@
 
   .stats-label {
     font-size: 10px;
-    color: #666;
+    color: #9a958c;
     letter-spacing: 1px;
   }
 
@@ -234,11 +234,12 @@
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.5px;
+    color: #f2f0ec;
   }
 
   .stats-divider {
     border: none;
-    border-top: 1px solid #ddd;
+    border-top: 1px solid #2a2a2a;
     margin: 10px 0;
   }
 
@@ -298,7 +299,7 @@
   .loading-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(245,245,242,0.95);
+    background: rgba(10,10,10,0.95);
     z-index: 2000;
     display: flex;
     flex-direction: column;
@@ -310,14 +311,14 @@
   .loading-text {
     font-size: 10px;
     letter-spacing: 3px;
-    color: #666;
+    color: #9a958c;
     text-transform: uppercase;
   }
 
   .loading-bar {
     width: 120px;
     height: 2px;
-    background: #ddd;
+    background: #2a2a2a;
     position: relative;
     overflow: hidden;
   }
@@ -349,14 +350,14 @@
   .no-data-title {
     font-size: 13px;
     letter-spacing: 2px;
-    color: #999;
+    color: #9a958c;
     text-transform: uppercase;
     margin-bottom: 8px;
   }
 
   .no-data-sub {
     font-size: 10px;
-    color: #aaa;
+    color: #6a6560;
     letter-spacing: 1px;
   }
 
@@ -1646,7 +1647,7 @@ function renderZones(zonesMap, drawnZones) {
           html: `<div style="text-align:center;">
                    <div style="color:${color};font-size:10px;letter-spacing:2px;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff;margin-bottom:2px;font-weight:600;">CI_zone (w) ${avgCIWeighted.toFixed(3)} · ${objects.length} pts</div>
                    <div style="color:rgba(30,30,30,0.8);font-size:8px;letter-spacing:1px;font-family:monospace;text-shadow:0 0 4px #fff,0 0 4px #fff;margin-bottom:4px;">σ ${signature.stddev} · ∇ ${signature.gradient_magnitude} · #${signature.hash}</div>
-                   <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.92);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.15);">⬇ Export gradient</button>
+                   <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(20,20,20,0.92);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.4);">⬇ Export gradient</button>
                  </div>`,
           iconAnchor: [60, -6], iconSize: [120, 50],
         }), interactive: true,
