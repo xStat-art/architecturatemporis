@@ -226,6 +226,10 @@
 <script>
 /* ── CONFIG ── */
 const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
+// AI Report Interpreter — вызывает WEBAPP_URL, который на сервере обращается
+// к Anthropic API (ключ хранится в Script Properties, не в этом файле).
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby2nHTeZAL8_hgbxYdZphPU76HZPKX68KgDyJX2n5RcnWn7UhPcVJ2CobkMeSnjBUh2/exec';
+const API_SECRET = 'hn-zones-secret-8k3f2m';
 
 /* ── GET ID FROM URL ── */
 function getPassportId() {
@@ -522,6 +526,24 @@ function renderPassport(d) {
       </div>
     </div>
 
+    <!-- 6: AI REPORT -->
+    <div class="cp-section">
+      <div class="cp-num">6</div>
+      <div class="cp-body">
+        <div class="cp-label">Interpreter Report · AI-generated summary, v1 draft</div>
+        <div class="cp-card" style="border-left-color:#c55a11;cursor:default;" id="ai-report-card">
+          <div id="ai-report-idle">
+            <div class="cp-card-title">Generate an academic-style summary of this record</div>
+            <div class="cp-card-sub">Uses Claude to interpret PI/AD/II/CI/CSM into a short report for researchers. Takes a few seconds.</div>
+            <button onclick="generateAiReport('${cpId}')" style="margin-top:10px;background:#c55a11;color:#fff;border:none;padding:8px 16px;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Generate Report</button>
+          </div>
+          <div id="ai-report-loading" style="display:none;font-size:11px;color:#999;">Generating report…</div>
+          <div id="ai-report-error" style="display:none;font-size:11px;color:#b33;"></div>
+          <div id="ai-report-text" style="display:none;font-size:11.5px;color:#333;line-height:1.7;white-space:pre-wrap;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- CI -->
     <div class="cp-section">
       <div class="cp-num ci">CI</div>
@@ -577,6 +599,43 @@ function renderPassport(d) {
 
   // Сохраняем данные для модальных окон
   window._passportData = d;
+}
+
+/* ── AI REPORT ── */
+async function generateAiReport(cpId) {
+  const idleEl  = document.getElementById('ai-report-idle');
+  const loadEl  = document.getElementById('ai-report-loading');
+  const errEl   = document.getElementById('ai-report-error');
+  const textEl  = document.getElementById('ai-report-text');
+
+  idleEl.style.display = 'none';
+  errEl.style.display = 'none';
+  textEl.style.display = 'none';
+  loadEl.style.display = 'block';
+
+  try {
+    const res = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      body: JSON.stringify({ secret: API_SECRET, action: 'generateReport', cpId: cpId })
+    });
+    const json = await res.json();
+    loadEl.style.display = 'none';
+
+    if (!json.ok) {
+      errEl.textContent = '✗ ' + (json.error || 'Unknown error generating report.');
+      errEl.style.display = 'block';
+      idleEl.style.display = 'block';
+      return;
+    }
+
+    textEl.textContent = json.report || '(empty report)';
+    textEl.style.display = 'block';
+  } catch (err) {
+    loadEl.style.display = 'none';
+    errEl.textContent = '✗ Network error: ' + err.message;
+    errEl.style.display = 'block';
+    idleEl.style.display = 'block';
+  }
 }
 
 /* ── MODAL ── */
