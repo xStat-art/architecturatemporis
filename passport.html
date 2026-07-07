@@ -183,6 +183,7 @@
     .cp-ci-grid { grid-template-columns: 1fr 1fr; }
   }
   @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
     body { background: #fff; }
     .top-bar, .download-row, .modal-bg { display: none !important; }
     .passport-wrap { padding: 0; }
