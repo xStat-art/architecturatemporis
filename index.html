@@ -1031,7 +1031,10 @@
 </style>
 <script>
 (function(){
-  const REGISTRY_CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vSEvYYY_XY88tuVBOXk2FYHabWAOLXZwSsvil5VD6_oZRdP1lm2YNSUt8eTQhn0kwq-61_c5BnOzqv9/pub?gid=1404791980&single=true&output=csv';
+  // Исправлено 07.07.2026: раньше указывало на отдельную, не связанную с
+  // формой таблицу (устаревший снэпшот без новых замеров). Теперь смотрит
+  // в ту же живую таблицу PASSPORT_REGISTRY, что и registry.html/passport.html.
+  const REGISTRY_CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
   function ciToHex(ci){
     const wl=400+ci*300;
     let r=0,g=0,b=0;
@@ -1047,15 +1050,22 @@
     return'#'+[r,g,b].map(x=>Math.round(255*Math.pow(x*f,0.8)).toString(16).padStart(2,'0')).join('');
   }
   function parseCI(v){if(!v)return null;const n=parseFloat(String(v).replace(',','.'));return(isNaN(n)||n<0||n>1)?null:Math.round(n*1000)/1000;}
+  // CP_ID формата CP · СТРАНА · РЕГИОН · ГОРОД · ЗОНА · ОБЪЕКТ — в живой
+  // таблице нет отдельного поля "Location", страна/город достаются отсюда
+  // (та же логика, что уже работает в registry.html).
+  function countryCityFromCpId(id){
+    const parts=(id||'').replace(/\s*·\s*/g,'-').split('-').filter(Boolean);
+    return{country:parts[1]||'',city:parts[3]||''};
+  }
   function loadPreview(){
     Papa.parse(REGISTRY_CSV,{
       download:true,header:true,skipEmptyLines:true,
       complete(res){
-        const rows=res.data.filter(r=>parseCI(r['CI']||r['ci'])!==null);
+        const rows=res.data.filter(r=>parseCI(r['CI_current']||r['CI']||r['ci'])!==null);
         if(!rows.length){setDemo();return;}
-        const cis=rows.map(r=>parseCI(r['CI']||r['ci']));
-        const countries=new Set(rows.map(r=>(r['Location']||'').split(',').slice(-1)[0].trim()).filter(Boolean));
-        const cities=new Set(rows.map(r=>(r['Location']||'').split(',')[0].trim()).filter(Boolean));
+        const cis=rows.map(r=>parseCI(r['CI_current']||r['CI']||r['ci']));
+        const countries=new Set(rows.map(r=>countryCityFromCpId(r['CP_ID']).country).filter(Boolean));
+        const cities=new Set(rows.map(r=>countryCityFromCpId(r['CP_ID']).city).filter(Boolean));
         const avg=cis.reduce((a,b)=>a+b,0)/cis.length;
         document.getElementById('ep-objects').textContent=rows.length;
         document.getElementById('ep-countries').textContent=countries.size||'—';

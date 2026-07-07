@@ -308,8 +308,11 @@ footer {
 const PASSPORT_BASE = 'https://architecturatemporis.com/passport.html?id=';
 const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe45pgFLqXMaagHHn7W34oeogulfu9Z_dF9iKYa12eX1qlK8w/viewform';
 
-// PASSPORT_REGISTRY CSV (registry data — richer metadata)
-const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSEvYYY_XY88tuVBOXk2FYHabWAOLXZwSsvil5VD6_oZRdP1lm2YNSUt8eTQhn0kwq-61_c5BnOzqv9/pub?gid=1404791980&single=true&output=csv';
+// PASSPORT_REGISTRY CSV — исправлено 07.07.2026: раньше указывало на
+// отдельную, не связанную с формой таблицу (устаревший снэпшот без новых
+// замеров). Теперь смотрит в ту же живую таблицу PASSPORT_REGISTRY, что и
+// registry.html/passport.html/ATRC_CI_Map.html.
+const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
 
 // CI Map CSV (field measurements — has GPS)
 const MAP_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=67053185&single=true&output=csv';
@@ -546,25 +549,40 @@ function updateStats(objects) {
 
 // ── Data loading ──────────────────────────────────────────────────────────────
 
+// Извлекает страну/город из CP_ID (формат CP · СТРАНА · РЕГИОН · ГОРОД ·
+// ЗОНА · ОБЪЕКТ) — так же, как это уже делает работающий registry.html,
+// потому что в живой таблице PASSPORT_REGISTRY нет отдельного поля
+// "Location" — только сам CP_ID.
+function extractCountryCityFromCpId(id) {
+  const parts = (id||'').replace(/\s*·\s*/g,'-').split('-').filter(Boolean);
+  return { country: parts[1]||'', city: parts[3]||'' };
+}
+
 function parseRegistryCSV(rows) {
   return rows.map(r=>{
-    const ci = parseCI(r['CI']||r['ci']||'');
+    const ci = parseCI(r['CI_current']||r['CI']||r['ci']||'');
     if(ci===null) return null;
-    const gps = parseGPS(r['GPS']||'');
+    const cpId = normaliseCpId(r['CP_ID']||'');
+    const loc = extractCountryCityFromCpId(cpId);
+    const lat = parseFloat(r['GPS_Lat_anchor']);
+    const lng = parseFloat(r['GPS_Lon_anchor']);
     return {
-      cp_id:    normaliseCpId(r['CP_ID']||''),
-      zn_id:    r['ZN_ID']||'',
-      name:     r['Object_name']||r['name']||'',
+      cp_id:    cpId,
+      zn_id:    r['Zone_ID']||'',
+      name:     r['Object_Name']||r['Object_name']||r['name']||'',
+      // Архитектор/год постройки/охранный статус/наследие не собираются
+      // формой на местности — этих колонок в живой таблице нет. Оставляем
+      // пустыми: вёрстка ниже уже умеет скрывать пустые поля.
       architect:r['Architect']||'',
       year:     r['Year_built']||'',
-      location: r['Location']||'',
-      country:  (r['Location']||'').split(',').slice(-1)[0].trim(),
-      city:     (r['Location']||'').split(',')[0].trim(),
+      location: loc.city && loc.country ? `${loc.city}, ${loc.country}` : (loc.city||loc.country||''),
+      country:  loc.country,
+      city:     loc.city,
       heritage: r['Heritage']||'',
       status:   r['Status']||'',
       CI: ci,
-      lat: gps?gps.lat:null,
-      lng: gps?gps.lng:null,
+      lat: isNaN(lat)?null:lat,
+      lng: isNaN(lng)?null:lng,
     };
   }).filter(Boolean);
 }
