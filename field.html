@@ -392,6 +392,7 @@ function loadZones() {
       zonesLoaded = true;
       populateZoneFallback();
       detectZone();
+      updateZoneDisplay(); // всегда обновляем экран, даже если GPS ещё не готов/в доступе отказано
     },
     error: function() { zonesLoaded = true; updateZoneDisplay(); }
   });
