@@ -1177,10 +1177,7 @@ function startDrawingEd(){
   map.on('click', onMapClickEd);
   // Mobile: the full sidebar leaves almost no tappable map area — collapse
   // it to just the draw controls so there's room to actually place vertices.
-  if (window.matchMedia('(max-width: 760px)').matches) {
-    document.getElementById('editorSidebar').classList.add('drawing-active');
-    document.body.classList.add('drawing-active-mode');
-  }
+  collapseSidebarMobile();
 }
 
 function onMapClickEd(e){
@@ -1211,9 +1208,18 @@ function undoPointEd(){
   document.getElementById('finishBtn').disabled = currentPoints.length < 3;
 }
 
+function collapseSidebarMobile(){
+  if (window.matchMedia('(max-width: 760px)').matches) {
+    document.getElementById('editorSidebar').classList.add('drawing-active');
+    document.body.classList.add('drawing-active-mode');
+    setTimeout(() => map.invalidateSize(), 120);
+  }
+}
+
 function restoreSidebarMobile(){
   document.getElementById('editorSidebar').classList.remove('drawing-active');
   document.body.classList.remove('drawing-active-mode');
+  setTimeout(() => map.invalidateSize(), 120);
 }
 
 function cancelDrawingEd(){
@@ -1412,10 +1418,7 @@ function editZoneEd(id){
   map.on('click', onMapClickEd);
   map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
   pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci, cityCode: zone.cityCode, isCentral: zone.isCentral };
-  if (window.matchMedia('(max-width: 760px)').matches) {
-    document.getElementById('editorSidebar').classList.add('drawing-active');
-    document.body.classList.add('drawing-active-mode');
-  }
+  collapseSidebarMobile();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1485,10 +1488,7 @@ function loadSavedZoneForEditing(zoneId){
   map.on('click', onMapClickEd);
   map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
   pendingEditMeta = { znId: zoneId, name: zone.name, ci: null, cityCode: zone.cityCode, isCentral: zone.isCentral };
-  if (window.matchMedia('(max-width: 760px)').matches) {
-    document.getElementById('editorSidebar').classList.add('drawing-active');
-    document.body.classList.add('drawing-active-mode');
-  }
+  collapseSidebarMobile();
 }
 
 function setEdStatus(elId, cls, html){
