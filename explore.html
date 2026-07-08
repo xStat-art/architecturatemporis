@@ -86,7 +86,7 @@ html, body {
 .legend-title { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
 .legend-spectrum {
   height: 10px;
-  background: linear-gradient(to right, #7B00D4, #0000FF, #00BFFF, #00FF00, #FFFF00, #FF8C00, #FF0000);
+  background: linear-gradient(to right, #FF0000, #FF8C00, #FFFF00, #00FF00, #00BFFF, #0000FF, #7B00D4);
   margin-bottom: 5px;
 }
 .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
@@ -341,7 +341,10 @@ function wavelengthToRGB(wl) {
 }
 
 function ciToHex(ci) {
-  const [r,g,b] = wavelengthToRGB(400 + ci*300);
+  // Низкий CI = красный (тревога) / высокий CI = фиолетовый (зрелость) —
+  // тот же порядок, что в ATRC_CI_Map.html. Раньше было 400+ci*300, что
+  // давало обратную раскраску (фиолетовый на CI=0, красный на CI=1).
+  const [r,g,b] = wavelengthToRGB(700 - ci*300);
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
