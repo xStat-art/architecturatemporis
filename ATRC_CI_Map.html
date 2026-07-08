@@ -105,6 +105,17 @@
     #editorSidebar{ width:100%; top:auto; height:60%; border-left:none; border-top:1px solid var(--ed-line); }
     body.edit-mode #map { margin-right: 0; margin-bottom: 60%; }
     body.edit-mode .stats { right: 16px; }
+
+    /* While actively placing vertices, the full sidebar (saved-zone list,
+       sync section, etc.) leaves almost no tappable map area — the exact
+       "impossible to draw" complaint. Collapse to just the draw controls
+       and shrink height so most of the screen is real map again. */
+    #editorSidebar.drawing-active{ height:auto; max-height:44vh; overflow-y:auto; }
+    #editorSidebar.drawing-active .es-section:not(.es-draw-controls){ display:none; }
+    #editorSidebar.drawing-active #zoneList{ display:none; }
+    #editorSidebar.drawing-active .es-draw-controls .ehint{ display:none; }
+    body.edit-mode.drawing-active-mode #map{ margin-bottom: 44vh; }
+    body.edit-mode.drawing-active-mode .legend{ display:none; }
   }
 
   /* ── LEGEND ──────────────────────────────────────────────── */
@@ -491,7 +502,7 @@
     <button class="es-close" onclick="toggleEditMode()">✕</button>
   </div>
 
-  <div class="es-section">
+  <div class="es-section es-draw-controls">
     <h2>Draw contour</h2>
     <div class="ehint">Trace the zone by physical boundaries (fortress wall, road, terrain, coastline) — not administrative borders. Existing measured objects (colored dots) are shown on the map — draw around them. After "Finish contour", vertices within a few meters of a real OSM street/wall line snap to it automatically.</div>
     <div class="evcount">Vertices: <b id="vcount">0</b></div>
@@ -1164,6 +1175,12 @@ function startDrawingEd(){
   document.getElementById('editModeBanner').classList.add('show');
   document.getElementById('metaSection').style.display = 'none';
   map.on('click', onMapClickEd);
+  // Mobile: the full sidebar leaves almost no tappable map area — collapse
+  // it to just the draw controls so there's room to actually place vertices.
+  if (window.matchMedia('(max-width: 760px)').matches) {
+    document.getElementById('editorSidebar').classList.add('drawing-active');
+    document.body.classList.add('drawing-active-mode');
+  }
 }
 
 function onMapClickEd(e){
@@ -1194,6 +1211,11 @@ function undoPointEd(){
   document.getElementById('finishBtn').disabled = currentPoints.length < 3;
 }
 
+function restoreSidebarMobile(){
+  document.getElementById('editorSidebar').classList.remove('drawing-active');
+  document.body.classList.remove('drawing-active-mode');
+}
+
 function cancelDrawingEd(){
   drawing = false;
   pendingEditMeta = null;
@@ -1206,6 +1228,7 @@ function cancelDrawingEd(){
   document.getElementById('cancelBtn').style.display = 'none';
   document.getElementById('editModeBanner').classList.remove('show');
   document.getElementById('vcount').textContent = 0;
+  restoreSidebarMobile();
 }
 
 function suggestZoneIdEd(cityCode){
@@ -1270,6 +1293,7 @@ async function finishDrawingEd(){
     document.getElementById('znCi').value = '';
     document.getElementById('znCentral').checked = false;
   }
+  restoreSidebarMobile();
   document.getElementById('metaSection').style.display = 'block';
 }
 
@@ -1388,6 +1412,10 @@ function editZoneEd(id){
   map.on('click', onMapClickEd);
   map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
   pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci, cityCode: zone.cityCode, isCentral: zone.isCentral };
+  if (window.matchMedia('(max-width: 760px)').matches) {
+    document.getElementById('editorSidebar').classList.add('drawing-active');
+    document.body.classList.add('drawing-active-mode');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1457,6 +1485,10 @@ function loadSavedZoneForEditing(zoneId){
   map.on('click', onMapClickEd);
   map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
   pendingEditMeta = { znId: zoneId, name: zone.name, ci: null, cityCode: zone.cityCode, isCentral: zone.isCentral };
+  if (window.matchMedia('(max-width: 760px)').matches) {
+    document.getElementById('editorSidebar').classList.add('drawing-active');
+    document.body.classList.add('drawing-active-mode');
+  }
 }
 
 function setEdStatus(elId, cls, html){
