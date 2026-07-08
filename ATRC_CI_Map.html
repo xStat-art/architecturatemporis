@@ -1645,11 +1645,12 @@ function renderZones(zonesMap, drawnZones) {
         icon: L.divIcon({
           className: 'zone-label',
           html: `<div style="text-align:center;">
+                   <div style="color:rgba(30,30,30,0.85);font-size:9px;letter-spacing:1.5px;text-shadow:0 0 4px #fff,0 0 4px #fff;font-weight:700;">${zoneId}</div>
                    <div style="color:${color};font-size:10px;letter-spacing:2px;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 8px #fff;margin-bottom:2px;font-weight:600;">CI_zone (w) ${avgCIWeighted.toFixed(3)} · ${objects.length} pts</div>
                    <div style="color:rgba(30,30,30,0.8);font-size:8px;letter-spacing:1px;font-family:monospace;text-shadow:0 0 4px #fff,0 0 4px #fff;margin-bottom:4px;">σ ${signature.stddev} · ∇ ${signature.gradient_magnitude} · #${signature.hash}</div>
                    <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(20,20,20,0.92);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.4);">⬇ Export gradient</button>
                  </div>`,
-          iconAnchor: [60, -6], iconSize: [120, 50],
+          iconAnchor: [60, -16], iconSize: [120, 60],
         }), interactive: true,
       }).addTo(hullLayer);
 
@@ -1743,7 +1744,7 @@ function loadZonesSheet(callback) {
     complete(results) {
       const zones = {};
       results.data.forEach(row => {
-        const zoneId = row['Zone_ID'];
+        const zoneId = (row['Zone_ID'] || '').trim();
         if (!zoneId) return;
         let ring = null;
         try {
@@ -1793,7 +1794,7 @@ function loadData() {
 
           objects.push({
             cpId:       row['CP_ID'] || '',
-            zoneId:     row['Zone_ID'] || 'UNZONED',
+            zoneId:     (row['Zone_ID'] || '').trim() || 'UNZONED',
             name:       row['Object_Name'] || 'Unnamed object',
             lat, lng,
             CI:         ci,
