@@ -317,6 +317,13 @@ const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNv
 // CI Map CSV (field measurements — has GPS)
 const MAP_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=67053185&single=true&output=csv';
 
+// ZONES CSV (real hand-drawn zone contours from Zone Editor — same source
+// ATRC_CI_Map.html uses. Without this, explore.html fell back to drawing a
+// convex hull around whatever points happened to exist, which silently
+// merges unrelated points from different areas into one fake "zone" the
+// moment there are 3+ of them nearby. Real Zone_ID-based geometry fixes that.
+const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1462679093&single=true&output=csv';
+
 // Demo fallback
 const DEMO_REGISTRY = [
   { cp_id:'CP-IT-VE-MB-002-0001', name:'Casa Zamprogno', architect:'Carlo Scarpa', year:'1971',
@@ -418,25 +425,68 @@ function buildGradient(objects) {
   return id;
 }
 
-function renderHull(objects) {
-  if(objects.length<3) return;
-  const pts = turf.featureCollection(objects.map(o=>turf.point([o.lng,o.lat])));
-  const hull = turf.convex(pts);
-  if(!hull) return;
-  const gradId = buildGradient(objects);
-  const coords = hull.geometry.coordinates[0];
-  const latLngs = coords.map(([ln,la])=>[la,ln]);
+let drawnZones = {}; // Zone_ID -> {ring: [[lat,lng],...] | null, ...} from ZONES_CSV
+
+function loadZonesSheet(callback) {
+  Papa.parse(ZONES_CSV, {
+    download: true, header: true, skipEmptyLines: true,
+    complete(results) {
+      const zones = {};
+      results.data.forEach(row => {
+        const zoneId = (row['Zone_ID'] || '').trim();
+        if (!zoneId) return;
+        let ring = null;
+        try {
+          const geo = JSON.parse(row['Polygon_GeoJSON']);
+          ring = geo.coordinates[0].slice(0, -1).map(c => [c[1], c[0]]); // [lng,lat]->[lat,lng]
+        } catch(e) { ring = null; }
+        zones[zoneId] = { ring };
+      });
+      callback(zones);
+    },
+    error() { callback({}); }
+  });
+}
+
+function renderZoneShape(zoneId, objects) {
+  if(!objects.length) return;
+  const drawn = drawnZones[zoneId];
   const avgCI = objects.reduce((s,o)=>s+o.CI,0)/objects.length;
   const avgHex = ciToHex(avgCI);
+
+  let latLngs, centerLat, centerLng;
+  if(drawn && drawn.ring) {
+    // Real hand-drawn contour — the authoritative zone shape.
+    latLngs = drawn.ring;
+    const lats = latLngs.map(p=>p[0]), lngs = latLngs.map(p=>p[1]);
+    centerLat = (Math.min(...lats)+Math.max(...lats))/2;
+    centerLng = (Math.min(...lngs)+Math.max(...lngs))/2;
+  } else if(objects.length>=3) {
+    // Zone not drawn yet — temporary convex hull around its own points only
+    // (objects are already grouped by Zone_ID before this is called, so this
+    // never mixes points from unrelated areas).
+    const pts = turf.featureCollection(objects.map(o=>turf.point([o.lng,o.lat])));
+    const hull = turf.convex(pts);
+    if(!hull) return;
+    const coords = hull.geometry.coordinates[0];
+    latLngs = coords.map(([ln,la])=>[la,ln]);
+    const center = turf.centroid(hull);
+    [centerLng, centerLat] = center.geometry.coordinates;
+  } else {
+    return; // no real contour yet and too few points for an honest hull
+  }
+
+  const gradId = buildGradient(objects);
   const poly = L.polygon(latLngs,{fillOpacity:0,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
   const patch=()=>{const el=poly.getElement();if(el){el.setAttribute('fill',`url(#${gradId})`);el.setAttribute('fill-opacity','0.45');}};
   poly.on('add',patch); requestAnimationFrame(patch);
-  const center=turf.centroid(hull);
-  const [cLn,cLa]=center.geometry.coordinates;
-  L.marker([cLa,cLn],{
+  L.marker([centerLat,centerLng],{
     icon:L.divIcon({className:'zone-label',
-      html:`<div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;text-shadow:0 0 6px rgba(0,0,0,0.8);">CI_zone ${avgCI.toFixed(3)}</div>`,
-      iconAnchor:[40,8]}),interactive:false}).addTo(hullLayer);
+      html:`<div style="text-align:center;">
+              <div style="color:rgba(255,255,255,0.85);font-weight:700;font-size:9px;letter-spacing:1.5px;text-shadow:0 0 6px rgba(0,0,0,0.8);">${zoneId}</div>
+              <div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;text-shadow:0 0 6px rgba(0,0,0,0.8);">CI_zone ${avgCI.toFixed(3)}</div>
+            </div>`,
+      iconAnchor:[40,16]}),interactive:false}).addTo(hullLayer);
 }
 
 function renderMap(objects) {
@@ -446,14 +496,14 @@ function renderMap(objects) {
   gradCounter=0;
   if(!objects.length) return;
 
-  // Group by zone for hull
+  // Group by zone — each zone drawn once, using its real contour if available
   const zones={};
   objects.forEach(o=>{
     const z=o.zn_id||'default';
     if(!zones[z]) zones[z]=[];
     zones[z].push(o);
   });
-  Object.values(zones).forEach(grp=>{ if(grp.length>=3) renderHull(grp); });
+  Object.entries(zones).forEach(([zoneId,grp])=>{ renderZoneShape(zoneId, grp); });
 
   objects.forEach(obj=>{
     if(!obj.lat||!obj.lng) return;
@@ -571,7 +621,7 @@ function parseRegistryCSV(rows) {
     const lng = parseFloat(r['GPS_Lon_anchor']);
     return {
       cp_id:    cpId,
-      zn_id:    r['Zone_ID']||'',
+      zn_id:    (r['Zone_ID']||'').trim(),
       name:     r['Object_Name']||r['Object_name']||r['name']||'',
       // Архитектор/год постройки/охранный статус/наследие не собираются
       // формой на местности — этих колонок в живой таблице нет. Оставляем
@@ -636,10 +686,11 @@ function mergeData(registry, mapObjects) {
 let loadedCount = 0;
 let registryData = null;
 let mapData = null;
+let zonesReady = false;
 
 function tryRender() {
   loadedCount++;
-  if(loadedCount < 2) return; // wait for both
+  if(loadedCount < 2 || !zonesReady) return; // wait for both CSVs + zones
 
   document.getElementById('loadingOverlay').style.display='none';
   document.getElementById('statusDot').style.background='#4CAF50';
@@ -670,6 +721,7 @@ function loadAll() {
   loadedCount = 0;
   registryData = null;
   mapData = null;
+  zonesReady = false;
   document.getElementById('loadingOverlay').style.display='flex';
   document.getElementById('statusDot').style.background='var(--accent)';
   document.getElementById('statusText').textContent='Loading…';
@@ -685,6 +737,8 @@ function loadAll() {
     complete(res){ mapData = parseMapCSV(res.data); tryRender(); },
     error(){       mapData = [];                    tryRender(); }
   });
+
+  loadZonesSheet(function(zones){ drawnZones = zones; zonesReady = true; tryRender(); });
 }
 
 loadAll();
