@@ -645,8 +645,8 @@ function tryRender() {
   document.getElementById('statusDot').style.background='#4CAF50';
   document.getElementById('statusText').textContent='Live';
 
-  const useRegistry = registryData && registryData.length;
-  const useMap      = mapData && mapData.length;
+  const useRegistry = (registryData && registryData.length) ? registryData : null;
+  const useMap      = (mapData && mapData.length) ? mapData : null;
 
   let objects;
   if(useRegistry || useMap) {
