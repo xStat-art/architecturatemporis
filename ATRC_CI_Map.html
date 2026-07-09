@@ -319,6 +319,32 @@
     text-transform: uppercase;
     color: #9a958c;
     margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .csm-badge {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    text-transform: none;
+    padding: 1px 6px;
+    border-radius: 9px;
+    background: rgba(200,101,10,0.18);
+    color: #e8791a;
+    border: 1px solid rgba(200,101,10,0.4);
+  }
+
+  /* No CSM_Basis on file — institutional status asserted but not
+     documented within ACAP itself. Visually distinct (dashed, muted)
+     so it never reads as equivalent to a sourced/verified status. */
+  .csm-badge.unverified {
+    background: transparent;
+    color: #6a6560;
+    border: 1px dashed #6a6560;
   }
 
   .popup-row {
@@ -868,12 +894,31 @@ function computeGradientSignature(grid, gridSize) {
   };
 }
 
+// Категория — строго по CI_raw (физическая сохранность объекта, независимо
+// от институционального статуса охраны). CSM больше не подмешивается сюда —
+// см. методологическое решение по CSM (Appendix J): категория не должна
+// "пересказывать" внешний охранный реестр, только собственное измерение.
 function ciCategory(ci) {
   if (ci >= 0.85) return '⬛ Deep Chronity';
   if (ci >= 0.70) return '🟫 High Chronity';
   if (ci >= 0.50) return '🟨 Moderate';
   if (ci >= 0.30) return '🟧 Low Chronity';
   return '🟥 No Chronity';
+}
+
+// Бейдж CSM рядом с категорией — показывается только когда статус реально
+// поднимает объект (csm != 1.0). Если есть CSM_Basis (ссылка/номер решения
+// о постановке на охрану) — бейдж "подтверждённый" (сплошная рамка); если
+// поле пустое — бейдж явно помечен как неподтверждённый (пунктир + "?"),
+// чтобы не выглядеть равноценным документально обоснованному статусу.
+function csmBadgeHTML(csm, basis) {
+  if (!csm || Math.abs(csm - 1.0) < 1e-6) return '';
+  const hasBasis = basis && basis.trim().length > 0;
+  const cls = hasBasis ? 'csm-badge' : 'csm-badge unverified';
+  const title = hasBasis
+    ? basis.replace(/"/g, '&quot;')
+    : 'Статус охраны заявлен, но не подтверждён документом (CSM_Basis не заполнено)';
+  return `<span class="${cls}" title="${title}">CSM ×${csm.toFixed(2)}${hasBasis ? '' : ' ?'}</span>`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1791,10 +1836,11 @@ function renderZones(zonesMap, drawnZones) {
       <div class="popup-content">
         <div class="popup-name">${obj.name || 'Unknown object'}</div>
         <div class="popup-ci" style="color:${hex}">${obj.ciWeighted.toFixed(3)}</div>
-        <div class="popup-cat">${ciCategory(obj.ciWeighted)}</div>
+        <div class="popup-cat">${ciCategory(obj.CI)} ${csmBadgeHTML(obj.csm, obj.csmBasis)}</div>
         ${obj.cpId ? `<div class="popup-row"><span>ID</span><span>${obj.cpId}</span></div>` : ''}
         <div class="popup-row"><span>CI (raw)</span><span>${obj.CI.toFixed(3)}</span></div>
         <div class="popup-row"><span>CSM</span><span>×${obj.csm.toFixed(2)}</span></div>
+        ${obj.csmBasis ? `<div class="popup-row"><span>Basis</span><span>${obj.csmBasis}</span></div>` : ''}
         ${obj.ad ? `<div class="popup-row"><span>AD</span><span>${obj.ad}</span></div>` : ''}
         ${obj.ii ? `<div class="popup-row"><span>II</span><span>${obj.ii}</span></div>` : ''}
         ${obj.date ? `<div class="popup-row"><span>Measured</span><span>${obj.date}</span></div>` : ''}
@@ -1807,11 +1853,12 @@ function renderZones(zonesMap, drawnZones) {
   // ── Update stats (across all loaded objects) ────────────────
   if (allObjects.length > 0) {
     const avgCIWeighted = allObjects.reduce((s,o) => s + o.ciWeighted, 0) / allObjects.length;
+    const avgCIRaw      = allObjects.reduce((s,o) => s + o.CI, 0) / allObjects.length;
     const minCIWeighted = Math.min(...allObjects.map(o => o.ciWeighted));
     const maxCIWeighted = Math.max(...allObjects.map(o => o.ciWeighted));
     document.getElementById('statCI').textContent    = avgCIWeighted.toFixed(3);
     document.getElementById('statCI').style.color    = ciToHex(avgCIWeighted);
-    document.getElementById('statCat').textContent   = ciCategory(avgCIWeighted);
+    document.getElementById('statCat').textContent   = ciCategory(avgCIRaw);
     document.getElementById('statCount').textContent = allObjects.length;
     document.getElementById('statMin').textContent   = minCIWeighted.toFixed(3);
     document.getElementById('statMax').textContent   = maxCIWeighted.toFixed(3);
@@ -1889,6 +1936,7 @@ function loadData() {
           if (ci === null) return;
 
           const csm = parseCSM(row['CSM_current']); // отсутствует/некорректно -> 1.0 (честный дефолт)
+          const csmBasis = (row['CSM_Basis'] || '').toString().trim(); // необязательное поле, может отсутствовать в старых записях
 
           objects.push({
             cpId:       row['CP_ID'] || '',
@@ -1897,6 +1945,7 @@ function loadData() {
             lat, lng,
             CI:         ci,
             csm:        csm,
+            csmBasis:   csmBasis,
             ciWeighted: computeCIWeighted(ci, csm),
             ad:         row['AD_current'] || '',
             ii:         row['II_current'] || '',
