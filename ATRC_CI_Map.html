@@ -504,7 +504,7 @@
     #editorSidebar.drawing-active .es-section:not(.es-draw-controls){ display:none; }
     #editorSidebar.drawing-active #zoneList{ display:none; }
     #editorSidebar.drawing-active .es-draw-controls .ehint{ display:none; }
-    body.edit-mode.drawing-active-mode #map{ margin-bottom: 44vh; }
+    body.edit-mode.drawing-active-mode #map{ margin-bottom: var(--drawing-panel-h, 44vh); }
     body.edit-mode.drawing-active-mode .legend{ display:none; }
   }
 </style>
@@ -1252,7 +1252,11 @@ function collapseSidebarMobile(){
   if (window.matchMedia('(max-width: 760px)').matches) {
     document.getElementById('editorSidebar').classList.add('drawing-active');
     document.body.classList.add('drawing-active-mode');
-    setTimeout(() => map.invalidateSize(), 120);
+    requestAnimationFrame(() => {
+      const h = document.getElementById('editorSidebar').offsetHeight;
+      document.documentElement.style.setProperty('--drawing-panel-h', (h > 0 ? h + 'px' : '44vh'));
+      map.invalidateSize();
+    });
   }
 }
 
