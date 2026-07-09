@@ -496,6 +496,11 @@
        "impossible to draw" complaint. Collapse to just the draw controls
        and shrink height so most of the screen is real map again. */
     #editorSidebar.drawing-active{ height:fit-content; max-height:44vh; overflow-y:auto; }
+    #editorSidebar.drawing-active .es-head{ display:none; }
+    #editorSidebar.drawing-active .es-draw-controls{ padding:10px 16px 12px; }
+    #editorSidebar.drawing-active .es-draw-controls h2{ display:none; }
+    #editorSidebar.drawing-active .evcount{ margin-top:0; margin-bottom:2px; }
+    #editorSidebar.drawing-active .ebtn{ padding:8px; margin-top:6px; font-size:11px; }
     #editorSidebar.drawing-active .es-section:not(.es-draw-controls){ display:none; }
     #editorSidebar.drawing-active #zoneList{ display:none; }
     #editorSidebar.drawing-active .es-draw-controls .ehint{ display:none; }
