@@ -200,6 +200,7 @@
     box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     padding: 16px 20px;
     min-width: 180px;
+    cursor: pointer;
   }
 
   .stats-title {
@@ -208,6 +209,30 @@
     color: #9a958c;
     text-transform: uppercase;
     margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stats-chevron {
+    font-size: 9px;
+    color: #9a958c;
+    transition: transform 0.2s;
+  }
+
+  /* Mobile only: compact pill by default (title + primary CI row),
+     full breakdown (category, objects, min/max) hides until tapped
+     to add .expanded. Desktop keeps full detail always — plenty of
+     room there, no complaint from that side. */
+  @media (max-width: 760px){
+    .stats { top: 70px; }
+    .stats:not(.expanded) { padding: 10px 16px; min-width: 0; }
+    .stats:not(.expanded) .stats-title { margin-bottom: 0; }
+    .stats:not(.expanded) .stats-row:not(.stats-row-primary),
+    .stats:not(.expanded) .stats-divider { display: none; }
+    .stats:not(.expanded) .stats-row-primary { margin-bottom: 0; }
+    .stats:not(.expanded) .stats-chevron { transform: rotate(-90deg); }
   }
 
   .stats-row {
@@ -470,7 +495,7 @@
        sync section, etc.) leaves almost no tappable map area — the exact
        "impossible to draw" complaint. Collapse to just the draw controls
        and shrink height so most of the screen is real map again. */
-    #editorSidebar.drawing-active{ height:auto; max-height:44vh; overflow-y:auto; }
+    #editorSidebar.drawing-active{ height:fit-content; max-height:44vh; overflow-y:auto; }
     #editorSidebar.drawing-active .es-section:not(.es-draw-controls){ display:none; }
     #editorSidebar.drawing-active #zoneList{ display:none; }
     #editorSidebar.drawing-active .es-draw-controls .ehint{ display:none; }
@@ -577,8 +602,8 @@
 
 <!-- STATS PANEL -->
 <div class="stats" id="statsPanel" style="display:none;">
-  <div class="stats-title">Zone Summary</div>
-  <div class="stats-row">
+  <div class="stats-title">Zone Summary <span class="stats-chevron">▾</span></div>
+  <div class="stats-row stats-row-primary">
     <div class="stats-label">CI_zone (w)</div>
     <div class="stats-value" id="statCI">—</div>
   </div>
@@ -1158,6 +1183,10 @@ function toggleEditMode(){
   if (editModeOn) renderSavedZoneList();
   if (!editModeOn && drawing) cancelDrawingEd();
 }
+
+document.getElementById('statsPanel').addEventListener('click', () => {
+  document.getElementById('statsPanel').classList.toggle('expanded');
+});
 
 document.getElementById('startBtn').addEventListener('click', startDrawingEd);
 document.getElementById('cancelBtn').addEventListener('click', cancelDrawingEd);
