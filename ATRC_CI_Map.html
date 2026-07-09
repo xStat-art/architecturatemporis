@@ -112,6 +112,7 @@
     box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     padding: 16px 20px;
     min-width: 200px;
+    cursor: pointer;
   }
 
   .legend-title {
@@ -120,7 +121,27 @@
     color: #9a958c;
     text-transform: uppercase;
     margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
   }
+
+  .legend-chevron {
+    font-size: 9px;
+    color: #9a958c;
+    transition: transform 0.2s;
+  }
+
+  /* Collapsed by default (title + spectral bar + numeric labels only) —
+     the split-note and the 5-row category breakdown hide until tapped
+     to add .expanded. */
+  .legend:not(.expanded) { padding: 12px 16px; min-width: 0; }
+  .legend:not(.expanded) .legend-title { margin-bottom: 8px; }
+  .legend:not(.expanded) .legend-labels { margin-bottom: 0; }
+  .legend:not(.expanded) .legend-split-note,
+  .legend:not(.expanded) .legend-items { display: none; }
+  .legend:not(.expanded) .legend-chevron { transform: rotate(-90deg); }
 
   .legend-spectrum-wrap {
     position: relative;
@@ -221,19 +242,16 @@
     transition: transform 0.2s;
   }
 
-  /* Mobile only: compact pill by default (title + primary CI row),
-     full breakdown (category, objects, min/max) hides until tapped
-     to add .expanded. Desktop keeps full detail always — plenty of
-     room there, no complaint from that side. */
-  @media (max-width: 760px){
-    .stats { top: 70px; }
-    .stats:not(.expanded) { padding: 10px 16px; min-width: 0; }
-    .stats:not(.expanded) .stats-title { margin-bottom: 0; }
-    .stats:not(.expanded) .stats-row:not(.stats-row-primary),
-    .stats:not(.expanded) .stats-divider { display: none; }
-    .stats:not(.expanded) .stats-row-primary { margin-bottom: 0; }
-    .stats:not(.expanded) .stats-chevron { transform: rotate(-90deg); }
-  }
+  /* Compact pill by default (title + primary CI row) on all screen
+     sizes — full breakdown (category, objects, min/max) hides until
+     tapped to add .expanded. */
+  .stats { top: 70px; }
+  .stats:not(.expanded) { padding: 10px 16px; min-width: 0; }
+  .stats:not(.expanded) .stats-title { margin-bottom: 0; }
+  .stats:not(.expanded) .stats-row:not(.stats-row-primary),
+  .stats:not(.expanded) .stats-divider { display: none; }
+  .stats:not(.expanded) .stats-row-primary { margin-bottom: 0; }
+  .stats:not(.expanded) .stats-chevron { transform: rotate(-90deg); }
 
   .stats-row {
     display: flex;
@@ -486,7 +504,7 @@
      mobile the later, unconditional desktop rule silently overrode
      top/right/width here, leaving the sidebar pinned top-right at
      340px instead of becoming a full-width bottom sheet. */
-  @media (max-width: 760px){
+  @media (max-width: 1024px){
     #editorSidebar{ width:100%; top:auto; height:60%; border-left:none; border-top:1px solid var(--ed-line); }
     body.edit-mode #map { margin-right: 0; margin-bottom: 60vh; }
     body.edit-mode .stats { right: 16px; }
@@ -636,7 +654,7 @@
 
 <!-- LEGEND -->
 <div class="legend">
-  <div class="legend-title">Chronity Index (weighted) · Spectral Scale</div>
+  <div class="legend-title">Chronity Index (weighted) · Spectral Scale <span class="legend-chevron">▾</span></div>
   <div class="legend-spectrum-wrap">
     <div class="legend-spectrum" id="legendSpectrum"></div>
     <div class="legend-split-marker" id="legendSplitMarker"></div>
@@ -1189,6 +1207,10 @@ function toggleEditMode(){
   if (!editModeOn && drawing) cancelDrawingEd();
 }
 
+document.querySelector('.legend').addEventListener('click', () => {
+  document.querySelector('.legend').classList.toggle('expanded');
+});
+
 document.getElementById('statsPanel').addEventListener('click', () => {
   document.getElementById('statsPanel').classList.toggle('expanded');
 });
@@ -1249,7 +1271,7 @@ function undoPointEd(){
 }
 
 function collapseSidebarMobile(){
-  if (window.matchMedia('(max-width: 760px)').matches) {
+  if (window.matchMedia('(max-width: 1024px)').matches) {
     document.getElementById('editorSidebar').classList.add('drawing-active');
     document.body.classList.add('drawing-active-mode');
     requestAnimationFrame(() => {
