@@ -155,7 +155,7 @@
     background: linear-gradient(to right, #FF0000, #FF8C00, #FFFF00, #00FF00, #00BFFF, #0000FF, #7B00D4);
   }
 
-  /* Разделитель между "обычным" диапазоном CI (0–1.0) и надбавкой CSM (1.0–1.5).
+  /* Разделитель между "обычным" диапазоном CI (0–1.0) и надбавкой PSM (1.0–1.5).
      Позиция всегда ровно SPECTRUM_SPLIT (80%) — задаётся из JS. */
   .legend-split-marker {
     position: absolute;
@@ -325,7 +325,7 @@
     flex-wrap: wrap;
   }
 
-  .csm-badge {
+  .psm-badge {
     display: inline-block;
     font-size: 9px;
     letter-spacing: 0.5px;
@@ -338,10 +338,10 @@
     border: 1px solid rgba(200,101,10,0.4);
   }
 
-  /* No CSM_Basis on file — institutional status asserted but not
+  /* No PSM_Basis on file — institutional status asserted but not
      documented within ACAP itself. Visually distinct (dashed, muted)
      so it never reads as equivalent to a sourced/verified status. */
-  .csm-badge.unverified {
+  .psm-badge.unverified {
     background: transparent;
     color: #6a6560;
     border: 1px dashed #6a6560;
@@ -661,7 +661,7 @@
     <div class="stats-value" style="font-size:11px;color:#888;" id="statCat">—</div>
   </div>
   <div class="stats-row">
-    <div class="stats-label" style="font-size:9px;color:#aaa;">weighted by CSM</div>
+    <div class="stats-label" style="font-size:9px;color:#aaa;">weighted by PSM</div>
   </div>
   <hr class="stats-divider">
   <div class="stats-row">
@@ -686,11 +686,11 @@
     <div class="legend-split-marker" id="legendSplitMarker"></div>
   </div>
   <div class="legend-labels" id="legendLabels"></div>
-  <div class="legend-split-note">← CI × CSM=1.0 · 1.0–1.5 = CSM &gt; 1.0 (national/UNESCO) →</div>
+  <div class="legend-split-note">← CI × PSM=1.0 · 1.0–1.5 = PSM &gt; 1.0 (national/UNESCO) →</div>
   <div class="legend-items">
     <div class="legend-item">
       <div class="legend-dot" style="background:#5f00ff;"></div>
-      <span>0.85–1.50 · Deep Chronity (1.0+ = CSM-weighted)</span>
+      <span>0.85–1.50 · Deep Chronity (1.0+ = PSM-weighted)</span>
     </div>
     <div class="legend-item">
       <div class="legend-dot" style="background:#009eff;"></div>
@@ -727,31 +727,37 @@ const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNv
 const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1462679093&single=true&output=csv';
 
 // ═══════════════════════════════════════════════════════════════
-// CSM (Coefficient of Site Multiplier) — вес охранного статуса:
-// 1.0 локальный · 1.2 национальный реестр · 1.5 ЮНЕСКО.
-// CI_weighted = CI × CSM. Максимум шкалы = 1.0 × CSM_MAX = 1.5.
+// PSM (Protection Status Multiplier, до переименования — CSM) — вес
+// охранного статуса: 1.0 локальный · 1.2 национальный реестр · 1.5 ЮНЕСКО.
+// CI_weighted = CI × PSM. Максимум шкалы = 1.0 × PSM_MAX = 1.5.
+//
+// Это первый, узкий слой веса — только юридический статус объекта.
+// Отдельное, более широкое понятие "Cultural Sensitivity Field" (CSF) —
+// многопараметрическое поле культурной чувствительности ТЕРРИТОРИИ (а не
+// отдельного объекта) — обсуждается как будущее направление (Zone Module),
+// пока не реализовано. См. Appendix J.7.
 //
 // ВАЖНО: эти константы и computeCIWeighted() должны стоять здесь,
 // ВЫШЕ DEMO_DATA — сам DEMO_DATA ниже вызывает computeCIWeighted()
 // сразу при выполнении скрипта (при построении массива), и если
-// const CSM_MAX/SPECTRUM_SPLIT объявлены НИЖЕ по файлу, это падает
+// const PSM_MAX/SPECTRUM_SPLIT объявлены НИЖЕ по файлу, это падает
 // с ReferenceError (temporal dead zone). Не переносить их вниз.
 // ═══════════════════════════════════════════════════════════════
-const CSM_MAX = 1.5;
+const PSM_MAX = 1.5;
 const SPECTRUM_SPLIT = 0.8; // доля цветовой шкалы, отданная диапазону CI_weighted 0–1.0
 
-function computeCIWeighted(ci, csm) {
-  const c = (csm === null || csm === undefined || isNaN(csm)) ? 1.0 : csm;
-  return Math.min(ci * c, CSM_MAX);
+function computeCIWeighted(ci, psm) {
+  const c = (psm === null || psm === undefined || isNaN(psm)) ? 1.0 : psm;
+  return Math.min(ci * c, PSM_MAX);
 }
 
 // Резервные тестовые данные (если таблица недоступна)
 const DEMO_DATA = [
-  { cpId: 'CP·DEMO·0001', zoneId: 'ZN·DEMO', name: 'Crkva Sv. Mihaila — north', lat: 42.4534, lng: 18.5312, CI: 0.808, csm: 1.0, ciWeighted: computeCIWeighted(0.808, 1.0), ad: 0.80, ii: 75 },
-  { cpId: 'CP·DEMO·0002', zoneId: 'ZN·DEMO', name: 'Stara zgrada — east', lat: 42.4528, lng: 18.5320, CI: 0.743, csm: 1.0, ciWeighted: computeCIWeighted(0.743, 1.0), ad: 0.65, ii: 70 },
-  { cpId: 'CP·DEMO·0003', zoneId: 'ZN·DEMO', name: 'Kula Tvrdjava', lat: 42.4540, lng: 18.5305, CI: 0.821, csm: 1.2, ciWeighted: computeCIWeighted(0.821, 1.2), ad: 0.84, ii: 82 },
-  { cpId: 'CP·DEMO·0004', zoneId: 'ZN·DEMO', name: 'Ulica Njegoseva 12', lat: 42.4522, lng: 18.5330, CI: 0.511, csm: 1.0, ciWeighted: computeCIWeighted(0.511, 1.0), ad: 0.50, ii: 50 },
-  { cpId: 'CP·DEMO·0005', zoneId: 'ZN·DEMO', name: 'Nova zgrada — south', lat: 42.4515, lng: 18.5340, CI: 0.426, csm: 1.0, ciWeighted: computeCIWeighted(0.426, 1.0), ad: 0.40, ii: 35 },
+  { cpId: 'CP·DEMO·0001', zoneId: 'ZN·DEMO', name: 'Crkva Sv. Mihaila — north', lat: 42.4534, lng: 18.5312, CI: 0.808, psm: 1.0, ciWeighted: computeCIWeighted(0.808, 1.0), ad: 0.80, ii: 75 },
+  { cpId: 'CP·DEMO·0002', zoneId: 'ZN·DEMO', name: 'Stara zgrada — east', lat: 42.4528, lng: 18.5320, CI: 0.743, psm: 1.0, ciWeighted: computeCIWeighted(0.743, 1.0), ad: 0.65, ii: 70 },
+  { cpId: 'CP·DEMO·0003', zoneId: 'ZN·DEMO', name: 'Kula Tvrdjava', lat: 42.4540, lng: 18.5305, CI: 0.821, psm: 1.2, ciWeighted: computeCIWeighted(0.821, 1.2), ad: 0.84, ii: 82 },
+  { cpId: 'CP·DEMO·0004', zoneId: 'ZN·DEMO', name: 'Ulica Njegoseva 12', lat: 42.4522, lng: 18.5330, CI: 0.511, psm: 1.0, ciWeighted: computeCIWeighted(0.511, 1.0), ad: 0.50, ii: 50 },
+  { cpId: 'CP·DEMO·0005', zoneId: 'ZN·DEMO', name: 'Nova zgrada — south', lat: 42.4515, lng: 18.5340, CI: 0.426, psm: 1.0, ciWeighted: computeCIWeighted(0.426, 1.0), ad: 0.40, ii: 35 },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -778,17 +784,17 @@ function wavelengthToRGB(wl) {
   ];
 }
 
-// Кусочно-линейное отображение CI_weighted (0..CSM_MAX) в позицию t (0..1)
-// вдоль цветовой шкалы. Диапазон 0–1.0 (обычный CI без надбавки/CSM=1.0)
-// занимает первые SPECTRUM_SPLIT (80%) шкалы; диапазон 1.0–CSM_MAX
+// Кусочно-линейное отображение CI_weighted (0..PSM_MAX) в позицию t (0..1)
+// вдоль цветовой шкалы. Диапазон 0–1.0 (обычный CI без надбавки/PSM=1.0)
+// занимает первые SPECTRUM_SPLIT (80%) шкалы; диапазон 1.0–PSM_MAX
 // (объекты с охранным статусом выше локального) — оставшиеся 20%.
-// Так объект с CSM=1.0 и CI=1.0 не "съедает" весь фиолетовый конец
+// Так объект с PSM=1.0 и CI=1.0 не "съедает" весь фиолетовый конец
 // спектра — тот зарезервирован под объекты с реальной весовой надбавкой.
 function weightedToT(ciWeighted) {
   const v = Math.max(0, ciWeighted);
   if (v <= 1.0) return (v / 1.0) * SPECTRUM_SPLIT;
-  const span = CSM_MAX - 1.0;
-  const extra = Math.min(v, CSM_MAX) - 1.0;
+  const span = PSM_MAX - 1.0;
+  const extra = Math.min(v, PSM_MAX) - 1.0;
   return SPECTRUM_SPLIT + (span > 0 ? (extra / span) : 0) * (1 - SPECTRUM_SPLIT);
 }
 
@@ -815,7 +821,7 @@ function buildLegend() {
   const steps = 40;
   const stops = [];
   for (let i = 0; i <= steps; i++) {
-    const v = (i / steps) * CSM_MAX;
+    const v = (i / steps) * PSM_MAX;
     stops.push(`${ciToHex(v)} ${(weightedToT(v) * 100).toFixed(2)}%`);
   }
   const spectrumEl = document.getElementById('legendSpectrum');
@@ -895,8 +901,8 @@ function computeGradientSignature(grid, gridSize) {
 }
 
 // Категория — строго по CI_raw (физическая сохранность объекта, независимо
-// от институционального статуса охраны). CSM больше не подмешивается сюда —
-// см. методологическое решение по CSM (Appendix J): категория не должна
+// от институционального статуса охраны). PSM больше не подмешивается сюда —
+// см. методологическое решение по PSM (Appendix J): категория не должна
 // "пересказывать" внешний охранный реестр, только собственное измерение.
 function ciCategory(ci) {
   if (ci >= 0.85) return '⬛ Deep Chronity';
@@ -906,19 +912,19 @@ function ciCategory(ci) {
   return '🟥 No Chronity';
 }
 
-// Бейдж CSM рядом с категорией — показывается только когда статус реально
-// поднимает объект (csm != 1.0). Если есть CSM_Basis (ссылка/номер решения
+// Бейдж PSM рядом с категорией — показывается только когда статус реально
+// поднимает объект (psm != 1.0). Если есть PSM_Basis (ссылка/номер решения
 // о постановке на охрану) — бейдж "подтверждённый" (сплошная рамка); если
 // поле пустое — бейдж явно помечен как неподтверждённый (пунктир + "?"),
 // чтобы не выглядеть равноценным документально обоснованному статусу.
-function csmBadgeHTML(csm, basis) {
-  if (!csm || Math.abs(csm - 1.0) < 1e-6) return '';
+function psmBadgeHTML(psm, basis) {
+  if (!psm || Math.abs(psm - 1.0) < 1e-6) return '';
   const hasBasis = basis && basis.trim().length > 0;
-  const cls = hasBasis ? 'csm-badge' : 'csm-badge unverified';
+  const cls = hasBasis ? 'psm-badge' : 'psm-badge unverified';
   const title = hasBasis
     ? basis.replace(/"/g, '&quot;')
-    : 'Статус охраны заявлен, но не подтверждён документом (CSM_Basis не заполнено)';
-  return `<span class="${cls}" title="${title}">CSM ×${csm.toFixed(2)}${hasBasis ? '' : ' ?'}</span>`;
+    : 'Статус охраны заявлен, но не подтверждён документом (PSM_Basis не заполнено)';
+  return `<span class="${cls}" title="${title}">PSM ×${psm.toFixed(2)}${hasBasis ? '' : ' ?'}</span>`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1060,7 +1066,7 @@ function exportGradientSnapshot(zoneId) {
     signature: signature,
     source_objects: rec.objects.map(o => ({
       cp_id: o.cpId, name: o.name, lat: o.lat, lng: o.lng,
-      CI: o.CI, CSM: o.csm, CI_weighted: Math.round(o.ciWeighted*1000)/1000,
+      CI: o.CI, PSM: o.psm, CI_weighted: Math.round(o.ciWeighted*1000)/1000,
       AD: o.ad, II: o.ii, last_audit: o.date || null
     })),
     grid: {
@@ -1689,12 +1695,12 @@ function parseCI(val) {
   return Math.round(n * 1000) / 1000;
 }
 
-// CSM_current может отсутствовать (старые записи до появления колонки) —
+// PSM_current может отсутствовать (старые записи до появления колонки) —
 // в этом случае честный дефолт — 1.0 (локальный уровень охраны), а не null.
-function parseCSM(val) {
+function parsePSM(val) {
   if (val === undefined || val === null || String(val).trim() === '') return 1.0;
   const n = parseFloat(String(val).replace(',','.'));
-  if (isNaN(n) || n < 1.0 || n > CSM_MAX) return 1.0;
+  if (isNaN(n) || n < 1.0 || n > PSM_MAX) return 1.0;
   return Math.round(n * 100) / 100;
 }
 
@@ -1836,11 +1842,11 @@ function renderZones(zonesMap, drawnZones) {
       <div class="popup-content">
         <div class="popup-name">${obj.name || 'Unknown object'}</div>
         <div class="popup-ci" style="color:${hex}">${obj.ciWeighted.toFixed(3)}</div>
-        <div class="popup-cat">${ciCategory(obj.CI)} ${csmBadgeHTML(obj.csm, obj.csmBasis)}</div>
+        <div class="popup-cat">${ciCategory(obj.CI)} ${psmBadgeHTML(obj.psm, obj.psmBasis)}</div>
         ${obj.cpId ? `<div class="popup-row"><span>ID</span><span>${obj.cpId}</span></div>` : ''}
         <div class="popup-row"><span>CI (raw)</span><span>${obj.CI.toFixed(3)}</span></div>
-        <div class="popup-row"><span>CSM</span><span>×${obj.csm.toFixed(2)}</span></div>
-        ${obj.csmBasis ? `<div class="popup-row"><span>Basis</span><span>${obj.csmBasis}</span></div>` : ''}
+        <div class="popup-row"><span>PSM</span><span>×${obj.psm.toFixed(2)}</span></div>
+        ${obj.psmBasis ? `<div class="popup-row"><span>Basis</span><span>${obj.psmBasis}</span></div>` : ''}
         ${obj.ad ? `<div class="popup-row"><span>AD</span><span>${obj.ad}</span></div>` : ''}
         ${obj.ii ? `<div class="popup-row"><span>II</span><span>${obj.ii}</span></div>` : ''}
         ${obj.date ? `<div class="popup-row"><span>Measured</span><span>${obj.date}</span></div>` : ''}
@@ -1935,8 +1941,8 @@ function loadData() {
           const ci = parseCI(row['CI_current']);
           if (ci === null) return;
 
-          const csm = parseCSM(row['CSM_current']); // отсутствует/некорректно -> 1.0 (честный дефолт)
-          const csmBasis = (row['CSM_Basis'] || '').toString().trim(); // необязательное поле, может отсутствовать в старых записях
+          const psm = parsePSM(row['PSM_current']); // отсутствует/некорректно -> 1.0 (честный дефолт)
+          const psmBasis = (row['PSM_Basis'] || '').toString().trim(); // необязательное поле, может отсутствовать в старых записях
 
           objects.push({
             cpId:       row['CP_ID'] || '',
@@ -1944,9 +1950,9 @@ function loadData() {
             name:       row['Object_Name'] || 'Unnamed object',
             lat, lng,
             CI:         ci,
-            csm:        csm,
-            csmBasis:   csmBasis,
-            ciWeighted: computeCIWeighted(ci, csm),
+            psm:        psm,
+            psmBasis:   psmBasis,
+            ciWeighted: computeCIWeighted(ci, psm),
             ad:         row['AD_current'] || '',
             ii:         row['II_current'] || '',
             date:       row['Last_Audit_Date'] ? row['Last_Audit_Date'].split(' ')[0] : '',
