@@ -288,6 +288,8 @@
   <div class="gps-label">Zone</div>
   <div class="gps-value dim" id="zoneValue">Loading zones…</div>
   <select class="btn-sec" id="zoneFallback" style="display:none; width:100%; margin-top:10px; padding:12px; font-family:Arial, sans-serif;"></select>
+  <button class="btn-sec" id="btnCreateZone" style="display:none; width:100%; margin-top:10px; padding:12px;" onclick="offerCreateZone()">+ Create new zone here</button>
+  <div class="gps-accuracy" id="createZoneStatus" style="text-align:center; margin-top:8px; min-height:14px;"></div>
 </div>
 
 <button class="btn-launch disabled" id="btnLaunch" type="button" onclick="openEmbeddedForm()">→ Open Field Form</button>
@@ -358,6 +360,11 @@ const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAid
 // /exec URL из Apps Script → Deploy → Manage deployments → Web app → Copy.
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxWlgW4Iqj6a2mjdO8I0f52XIVT8dqal0YnwM4z0CqJGxFT27SePt-QzFDImhd5QSGr/exec';
 const API_SECRET = 'hn-zones-secret-8k3f2m'; // должен совпадать с CONFIG.API_SECRET в .gs
+
+// v8.0: та же страница, что и ссылка "View CI Map" ниже — используется как
+// диплинк-цель для "+ Create new zone here" (Сценарий Б), с ?lat=&lng=
+// вместо простого перехода без параметров.
+const MAP_EDITOR_URL = 'https://xstat-art.github.io/architecturatemporis/ATRC_CI_Map.html';
 
 let savedLat = null;
 let savedLng = null;
@@ -437,26 +444,94 @@ function populateZoneFallback() {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════
+// v8.0: СЦЕНАРИЙ Б — GPS-точка вне ВСЕХ известных зон (например, первый
+// замер в Улцине, где предзапланированных зон ещё нет вообще). Раньше
+// единственный выход был выбрать вручную одну из чужих зон (Херцег-Нови/
+// Котор) — бессмысленно для нового города.
+//
+// Порядок действий:
+// 1) Спрашиваем СЕРВЕР (findZoneForPoint), не устарел ли локальный CSV —
+//    published-CSV кэшируется Google на несколько минут, а зона могла
+//    быть создана и синхронизирована буквально только что (другим
+//    исследователем, или этим же на предыдущем объекте).
+// 2) Если сервер тоже не находит зону — открываем редактор карты
+//    (ATRC_CI_Map.html) в новой вкладке, центрированный на текущей точке,
+//    где уже есть полноценный инструмент рисования контура (OSM-снэппинг,
+//    выбор региона/города, вопрос "историческое ядро?"). Рисовать новый
+//    контур прямо здесь, на телефоне, не пытаемся — инструмент для этого
+//    уже есть и не нуждается в дублировании.
+// 3) Пока исследователь рисует зону в другой вкладке, эта страница остаётся
+//    открытой. Возврат в неё (переключение вкладок) автоматически
+//    перезагружает список зон — см. maybeAutoCheck() ниже.
+// ═══════════════════════════════════════════════════════════════
+let zoneCreationTabOpened = false;
+
+function offerCreateZone() {
+  if (savedLat === null || savedLng === null) {
+    showToast('Get GPS first');
+    return;
+  }
+  const statusEl = document.getElementById('createZoneStatus');
+  if (!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_') === 0) {
+    statusEl.textContent = 'Web App URL not configured yet';
+    return;
+  }
+
+  statusEl.textContent = 'Checking with server (local list may be a few minutes stale)…';
+  const url = WEBAPP_URL + '?action=findZoneForPoint'
+    + '&secret=' + encodeURIComponent(API_SECRET)
+    + '&lat=' + encodeURIComponent(savedLat)
+    + '&lon=' + encodeURIComponent(savedLng);
+
+  fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.ok && data.found) {
+      // Зона на самом деле уже существует — просто локальный CSV отстал.
+      detectedZoneId = data.zoneId;
+      updateZoneDisplay();
+      statusEl.textContent = '✓ Found on server: ' + data.zoneId + ' (local list was just outdated)';
+      return;
+    }
+    // Действительно новая территория — открываем редактор карты.
+    statusEl.textContent = 'Opening zone editor in a new tab… draw & sync the zone there, then come back here.';
+    const editorUrl = MAP_EDITOR_URL + '?lat=' + encodeURIComponent(savedLat) + '&lng=' + encodeURIComponent(savedLng);
+    window.open(editorUrl, '_blank');
+    zoneCreationTabOpened = true;
+  }).catch(function() {
+    statusEl.textContent = 'Network error checking server — try again, or open the map editor directly.';
+  });
+}
+
 function updateZoneDisplay() {
   const el = document.getElementById('zoneValue');
   const sel = document.getElementById('zoneFallback');
+  const createBtn = document.getElementById('btnCreateZone');
   const activeZone = detectedZoneId || manualZoneId;
 
   if (!zonesLoaded) {
     el.className = 'gps-value dim'; el.textContent = 'Loading zones…';
     sel.style.display = 'none';
+    createBtn.style.display = 'none';
   } else if (detectedZoneId) {
     el.className = 'gps-value'; el.textContent = detectedZoneId + ' ✓';
     sel.style.display = 'none';
+    createBtn.style.display = 'none';
   } else if (savedLat === null) {
     el.className = 'gps-value dim'; el.textContent = 'Waiting for GPS…';
     sel.style.display = 'none';
+    createBtn.style.display = 'none';
   } else if (manualZoneId) {
     el.className = 'gps-value'; el.textContent = manualZoneId + ' (manual)';
     sel.style.display = 'block';
+    createBtn.style.display = 'none';
   } else {
-    el.className = 'gps-value error-state'; el.textContent = 'Outside known zones — pick manually below';
+    el.className = 'gps-value error-state'; el.textContent = 'Outside known zones — pick manually below, or create a new zone';
     sel.style.display = 'block';
+    // v8.0: Сценарий Б — точка вне ВСЕХ известных зон (не только текущего
+    // города). Показываем опцию создать зону на месте, а не только выбор
+    // из существующих (который бесполезен для по-настоящему нового города —
+    // например, первый замер в Улцине).
+    createBtn.style.display = 'block';
   }
   refreshLaunchButton();
 }
@@ -853,10 +928,25 @@ document.getElementById('formFallbackLink').addEventListener('click', function()
 });
 function maybeAutoCheck() {
   if (document.visibilityState !== 'visible') return;
-  if (!formWasLaunched) return;
   const now = Date.now();
   if (now - lastAutoCheckAt < 1500) return; // visibilitychange и focus могут сработать оба разом
   lastAutoCheckAt = now;
+
+  // v8.0: возврат из вкладки редактора карты (Сценарий Б) — перечитываем
+  // ZONES_CSV и пробуем определить зону заново. Published-CSV кэшируется
+  // Google на несколько минут, так что свежесозданная зона может ещё не
+  // подхватиться с первой попытки — это ожидаемо, не баг; исследователь
+  // может просто нажать "+ Create new zone here" ещё раз через минуту,
+  // что снова спросит СЕРВЕР напрямую (findZoneForPoint), в обход кэша CSV.
+  if (zoneCreationTabOpened) {
+    zoneCreationTabOpened = false;
+    document.getElementById('createZoneStatus').textContent = 'Refreshing zone list…';
+    zonesLoaded = false;
+    zones = {};
+    loadZones();
+  }
+
+  if (!formWasLaunched) return;
   formWasLaunched = false; // разовая проверка на этот запасной путь
   checkLatestStatus();
 }

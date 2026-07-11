@@ -1126,6 +1126,31 @@ let hullLayer      = L.layerGroup().addTo(map);
 let gradientLayer  = L.layerGroup().addTo(map);
 
 // ═══════════════════════════════════════════════════════════════
+// v8.0: DEEP LINK FROM field.html — ?lat=..&lng=.. приходит, когда
+// исследователь в поле нажал "Create new zone here" (Сценарий Б —
+// GPS-точка вне всех известных зон, например замер в Улцине). Центрируем
+// карту на этой точке и сразу открываем редактор зон — рисование нового
+// контура вокруг метки становится очевидным следующим действием.
+// ═══════════════════════════════════════════════════════════════
+const deepLinkParams = new URLSearchParams(window.location.search);
+const deepLinkLat = parseFloat(deepLinkParams.get('lat'));
+const deepLinkLng = parseFloat(deepLinkParams.get('lng'));
+if (!isNaN(deepLinkLat) && !isNaN(deepLinkLng)) {
+  map.setView([deepLinkLat, deepLinkLng], 18);
+  L.marker([deepLinkLat, deepLinkLng], {
+    icon: L.divIcon({
+      className: '',
+      html: '<div style="width:16px;height:16px;border-radius:50%;background:#c55a11;border:3px solid #fff;box-shadow:0 0 0 2px #c55a11;"></div>',
+      iconSize: [16,16], iconAnchor: [8,8]
+    })
+  }).addTo(map).bindPopup(
+    '📍 Measurement point — no zone covers this yet.<br>Draw a new zone around it, then tap "Start drawing".',
+    { autoClose: false }
+  ).openPopup();
+  setTimeout(() => { if (!editModeOn) toggleEditMode(); }, 300);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // OSM SNAPPING — привязка нарисованного вручную контура к реальным
 // физическим границам (улицы, крепостные стены, границы площадей) из
 // OpenStreetMap. Ручное рисование мышкой/пальцем почти никогда не
