@@ -739,6 +739,15 @@ const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNv
 // приоритетной заливки для ещё не измеренных зон. Ничего не ломается.
 const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1462679093&single=true&output=csv';
 
+// v8.0: справочник регионов (устоявшееся деление побережья + будущие страны,
+// напр. Хорватия) — вынесен из хардкода в форме (#znRegion) в отдельный лист,
+// чтобы добавление нового региона не требовало правки кода, только новую
+// строку в таблице. Пока не настроено (PASTE_) — форма падает на 4 уже
+// зашитых <option> (BJ/BR/BA/UL) как безопасный дефолт, ничего не ломается.
+// Ожидаемые колонки листа REGIONS: Region_Code, Region_Name_EN,
+// Region_Name_Local, Country_Code, Notes.
+const REGIONS_CSV = 'PASTE_REGIONS_CSV_URL_HERE';
+
 // ═══════════════════════════════════════════════════════════════
 // PSM (Protection Status Multiplier, до переименования — CSM) — вес
 // охранного статуса: 1.0 локальный · 1.2 национальный реестр · 1.5 ЮНЕСКО.
@@ -2000,6 +2009,34 @@ function renderZones(zonesMap, drawnZones) {
 // ═══════════════════════════════════════════════════════════════
 let lastDrawnZones = {}; // exposed for the editor sidebar (draw-around reference)
 
+// v8.0: подгружает REGIONS (если настроен) и переписывает <option>-ы в
+// #znRegion живыми данными из таблицы вместо 4 зашитых по умолчанию.
+// Сохраняет текущий выбор пользователя, если его код всё ещё есть в списке.
+// Тихо ничего не делает при ошибке/не настроенном источнике — 4 дефолтных
+// option, уже лежащих в HTML, остаются рабочим фолбэком.
+function loadRegionsSheet() {
+  if (!REGIONS_CSV || REGIONS_CSV.indexOf('PASTE_') === 0) return;
+  Papa.parse(REGIONS_CSV + '&t=' + Date.now(), {
+    download: true, header: true, skipEmptyLines: true,
+    complete(results) {
+      const rows = results.data.filter(r => (r['Region_Code']||'').trim());
+      if (!rows.length) return; // пустой/битый лист — оставляем дефолтные 4
+      const sel = document.getElementById('znRegion');
+      const previousValue = sel.value;
+      sel.innerHTML = '';
+      rows.forEach(r => {
+        const code = r['Region_Code'].trim().toUpperCase();
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = code + ' — ' + (r['Region_Name_EN'] || r['Region_Name_Local'] || code);
+        sel.appendChild(opt);
+      });
+      if ([...sel.options].some(o => o.value === previousValue)) sel.value = previousValue;
+    },
+    error() { /* сеть недоступна/лист не опубликован — молча остаёмся на дефолтных 4 */ }
+  });
+}
+
 function loadZonesSheet(callback) {
   if (!ZONES_CSV || ZONES_CSV.indexOf('PASTE_') === 0) { callback({}); return; }
   Papa.parse(ZONES_CSV + '&t=' + Date.now(), {
@@ -2096,6 +2133,7 @@ function loadData() {
 // ═══════════════════════════════════════════════════════════════
 buildLegend();
 loadData();
+loadRegionsSheet();
 
 // Auto-refresh every 60 seconds
 setInterval(loadData, 60000);
