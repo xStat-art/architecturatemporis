@@ -605,9 +605,16 @@
 
   <div class="es-section" id="metaSection" style="display:none">
     <h2>Zone details</h2>
-    <label>City code (e.g. HN, KT)</label>
+    <label>Region code (established coastal division)</label>
+    <select id="znRegion">
+      <option value="BJ">BJ — Boka Kotorska</option>
+      <option value="BR">BR — Budvanska rivijera</option>
+      <option value="BA">BA — Barsko primorje</option>
+      <option value="UL">UL — Ulcinjska rivijera</option>
+    </select>
+    <label>City code (e.g. HN, KO, PR, RI)</label>
     <input type="text" id="znCity" placeholder="HN">
-    <label>Zone ID (ZN·ME·BJ·{city}·###)</label>
+    <label>Zone ID (ZN·ME·{region}·{city}·###)</label>
     <input type="text" id="znId" placeholder="ZN-ME-BJ-HN-003">
     <label>Display name</label>
     <input type="text" id="znName" placeholder="e.g. Herceg Novi — Stari Grad">
@@ -615,9 +622,15 @@
     <input type="number" id="znCi" step="0.001" min="0" max="1" placeholder="0.000">
     <div class="checkbox-row">
       <input type="checkbox" id="znCentral">
-      <label for="znCentral">This is the central zone (one per city)</label>
+      <label for="znCentral">This is the central/historic core zone (one per city — reserves ···001)</label>
     </div>
-    <div class="ehint">The central zone anchors Prior_CI for all other zones in the same city.</div>
+    <div class="ehint">The central zone anchors Prior_CI for all other zones in the same city. Number ···001 is reserved for it — non-central zones always start at ···002, even if created first.</div>
+    <label>UNESCO status</label>
+    <select id="znUnesco">
+      <option value="none">none</option>
+      <option value="buffer">buffer</option>
+      <option value="core">core</option>
+    </select>
     <div class="ebtn-row">
       <button class="ebtn primary" id="saveZoneBtn" style="flex:1">Save zone</button>
       <button class="ebtn ghost" id="discardZoneBtn" style="flex:1">Discard</button>
@@ -1246,6 +1259,7 @@ let vertexMarkers = [];
 let drawLayer = null;
 let zoneIdCounter = 1;
 let pendingEditMeta = null;
+let creatingNewZone = true; // false while editing an already-saved zone — see refreshSuggestedIdIfNew()
 let editModeOn = false;
 
 function toggleEditMode(){
@@ -1272,6 +1286,9 @@ document.getElementById('undoBtn').addEventListener('click', undoPointEd);
 document.getElementById('finishBtn').addEventListener('click', finishDrawingEd);
 document.getElementById('saveZoneBtn').addEventListener('click', saveZoneEd);
 document.getElementById('discardZoneBtn').addEventListener('click', discardZoneEd);
+document.getElementById('znRegion').addEventListener('change', refreshSuggestedIdIfNew);
+document.getElementById('znCity').addEventListener('input', refreshSuggestedIdIfNew);
+document.getElementById('znCentral').addEventListener('change', refreshSuggestedIdIfNew);
 document.getElementById('syncBtn').addEventListener('click', syncZonesToSheet);
 document.getElementById('recalcBtn').addEventListener('click', recalculateZoneAssignments);
 
@@ -1354,11 +1371,56 @@ function cancelDrawingEd(){
   restoreSidebarMobile();
 }
 
-function suggestZoneIdEd(cityCode){
+// v8.0: региональный сегмент больше не зашит буквально (был жёсткий 'BJ') —
+// приходит параметром, чтобы новые регионы (BR/BA/UL, позже — другие страны)
+// не требовали правки этой функции, только выбора в форме (см. #znRegion).
+//
+// Правило нумерации (сессия 11 июля 2026): ···001 — это осознанный выбор
+// исторического/центрального ядра города, НЕ "первая созданная зона".
+// isCentral=true всегда просит 001 (с проверкой конфликта — см. saveZoneEd).
+// Остальные зоны нумеруются с 002, даже если центральная зона города ещё
+// не создана вообще — 001 просто остаётся зарезервированным, никому не
+// выдаётся по умолчанию.
+function suggestZoneIdEd(cityCode, regionCode, isCentral){
   const city = (cityCode || 'HN').toUpperCase();
-  const existingCount = editZones.filter(z => (z.cityCode||'').toUpperCase() === city).length
-    + Object.keys(lastDrawnZones).filter(zid => (lastDrawnZones[zid].cityCode||'').toUpperCase() === city).length;
-  return `ZN·ME·BJ·${city}·${String(existingCount + 1).padStart(3,'0')}`;
+  const region = (regionCode || 'BJ').toUpperCase();
+
+  if (isCentral) {
+    return `ZN·ME·${region}·${city}·001`;
+  }
+
+  const usedNumbers = new Set();
+  editZones.forEach(z => {
+    if ((z.cityCode||'').toUpperCase() === city) {
+      const n = parseInt(String(z.zn_id).split('·').pop(), 10);
+      if (!isNaN(n)) usedNumbers.add(n);
+    }
+  });
+  Object.keys(lastDrawnZones).forEach(zid => {
+    const z = lastDrawnZones[zid];
+    if ((z.cityCode||'').toUpperCase() === city) {
+      const n = parseInt(String(zid).split('·').pop(), 10);
+      if (!isNaN(n)) usedNumbers.add(n);
+    }
+  });
+
+  let n = 2; // 001 зарезервирован под central, обычные зоны стартуют с 002
+  while (usedNumbers.has(n)) n++;
+  return `ZN·ME·${region}·${city}·${String(n).padStart(3,'0')}`;
+}
+
+// Пересчитывает предложенный Zone ID при смене региона/города/чекбокса
+// central — но ТОЛЬКО для новой, ещё не сохранённой зоны (creatingNewZone).
+// Для правки уже существующей сохранённой зоны ID остаётся тем, что было
+// загружено — автоматическая перенумерация задним числом сюда не входит
+// (переименование Zone_ID существующей зоны затронуло бы уже привязанные
+// CP_ID объектов и требует отдельного, осознанного flow, не этой правки).
+function refreshSuggestedIdIfNew(){
+  if (!creatingNewZone) return;
+  const cityCode = document.getElementById('znCity').value.trim();
+  const regionCode = document.getElementById('znRegion').value;
+  const isCentral = document.getElementById('znCentral').checked;
+  document.getElementById('znId').value = suggestZoneIdEd(cityCode, regionCode, isCentral);
 }
 
 async function finishDrawingEd(){
@@ -1402,33 +1464,56 @@ async function finishDrawingEd(){
   }
 
   if(pendingEditMeta){
+    creatingNewZone = false; // правим уже существующую сохранённую зону — ID не пересчитываем автоматически
+    document.getElementById('znRegion').value = pendingEditMeta.regionCode || 'BJ';
     document.getElementById('znCity').value = pendingEditMeta.cityCode || 'HN';
     document.getElementById('znId').value = pendingEditMeta.znId;
     document.getElementById('znName').value = pendingEditMeta.name;
     document.getElementById('znCi').value = pendingEditMeta.ci != null ? pendingEditMeta.ci : '';
     document.getElementById('znCentral').checked = !!pendingEditMeta.isCentral;
+    document.getElementById('znUnesco').value = pendingEditMeta.unescoStatus || 'none';
     pendingEditMeta = null;
   }else{
-    const lastCity = editZones.length ? editZones[editZones.length-1].cityCode : 'HN';
+    creatingNewZone = true;
+    const lastZone = editZones.length ? editZones[editZones.length-1] : null;
+    const lastCity = lastZone ? lastZone.cityCode : 'HN';
+    const lastRegion = lastZone ? lastZone.regionCode : 'BJ';
+    document.getElementById('znRegion').value = lastRegion || 'BJ';
     document.getElementById('znCity').value = lastCity;
-    document.getElementById('znId').value = suggestZoneIdEd(lastCity);
+    document.getElementById('znId').value = suggestZoneIdEd(lastCity, lastRegion, false);
     document.getElementById('znName').value = '';
     document.getElementById('znCi').value = '';
     document.getElementById('znCentral').checked = false;
+    document.getElementById('znUnesco').value = 'none';
   }
   restoreSidebarMobile();
   document.getElementById('metaSection').style.display = 'block';
 }
 
 function saveZoneEd(){
+  const regionCode = document.getElementById('znRegion').value;
   const cityCode = document.getElementById('znCity').value.trim().toUpperCase();
   const znId = document.getElementById('znId').value.trim();
   const name = document.getElementById('znName').value.trim() || znId;
   const ci = parseFloat(document.getElementById('znCi').value);
   const isCentral = document.getElementById('znCentral').checked;
+  const unescoStatus = document.getElementById('znUnesco').value;
   if(!cityCode){ alert('City code is required (e.g. HN, KT)'); return; }
   if(!znId){ alert('Zone ID is required'); return; }
   if(currentPoints.length < 3){ alert('Draw at least 3 vertices first'); return; }
+
+  // v8.0: ···001 значит "историческое ядро" и ничего больше — не даём
+  // случайно рассинхронить чекбокс central и хвост номера, если Zone ID был
+  // изменён вручную после автоподстановки.
+  const idNumberTail = znId.split('·').pop();
+  if (isCentral && idNumberTail !== '001') {
+    alert(`Central zone must use number ···001 (got ···${idNumberTail}). Fix the Zone ID or uncheck "central".`);
+    return;
+  }
+  if (!isCentral && idNumberTail === '001') {
+    alert(`···001 is reserved for the central/historic core zone. Check "central" above, or change the Zone ID number.`);
+    return;
+  }
 
   if(isCentral){
     const otherCentral = editZones.find(z => z.zn_id !== znId && (z.cityCode||'').toUpperCase() === cityCode && z.isCentral);
@@ -1449,7 +1534,7 @@ function saveZoneEd(){
   const existingIdx = editZones.findIndex(z => z.zn_id === znId);
   const zoneObj = {
     id: existingIdx>=0 ? editZones[existingIdx].id : 'z' + (zoneIdCounter++),
-    zn_id: znId, name, cityCode, isCentral,
+    zn_id: znId, name, cityCode, regionCode, isCentral, unescoStatus,
     ci: isNaN(ci) ? null : ci, ring, layer: drawLayer, synced: false
   };
   if(existingIdx>=0) editZones[existingIdx] = zoneObj; else editZones.push(zoneObj);
@@ -1458,6 +1543,7 @@ function saveZoneEd(){
   vertexMarkers.forEach(m=>map.removeLayer(m));
   vertexMarkers = [];
   drawLayer = null;
+  creatingNewZone = true; // готовы к следующей зоне "с нуля", пока не открыт editZoneEd/loadSavedZoneForEditing
   document.getElementById('vcount').textContent = 0;
   document.getElementById('undoBtn').disabled = true;
   document.getElementById('finishBtn').disabled = true;
@@ -1490,7 +1576,7 @@ function renderEditZoneList(){
     card.className = 'zone-card';
     card.innerHTML = `
       <div class="zc-name">${z.name}${z.isCentral?'<span class="badge-central">★ central</span>':''}${z.synced?'<span class="badge-prior">✓ synced</span>':''}</div>
-      <div class="zc-id">${z.zn_id} · ${z.cityCode||'—'}</div>
+      <div class="zc-id">${z.zn_id} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? ' · UNESCO: '+z.unescoStatus : ''}</div>
       <div class="zc-meta">${z.ring.length-1} vertices · CI_zone: ${z.ci!=null ? z.ci.toFixed(3) : '—'}</div>
       <div class="zc-actions">
         <button data-action="focus" data-id="${z.id}">Focus</button>
@@ -1534,7 +1620,7 @@ function editZoneEd(id){
   document.getElementById('editModeBanner').classList.add('show');
   map.on('click', onMapClickEd);
   map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
-  pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci, cityCode: zone.cityCode, isCentral: zone.isCentral };
+  pendingEditMeta = { znId: zone.zn_id, name: zone.name, ci: zone.ci, cityCode: zone.cityCode, regionCode: zone.regionCode, isCentral: zone.isCentral, unescoStatus: zone.unescoStatus };
   collapseSidebarMobile();
 }
 
@@ -1571,7 +1657,7 @@ function renderSavedZoneList(){
     card.className = 'zone-card';
     card.innerHTML = `
       <div class="zc-name">${z.name || zid}${z.isCentral?'<span class="badge-central">★ central</span>':''}</div>
-      <div class="zc-id">${zid} · ${z.cityCode||'—'}</div>
+      <div class="zc-id">${zid} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? ' · UNESCO: '+z.unescoStatus : ''}</div>
       <div class="zc-meta">${hasGeometry ? (z.ring.length + ' vertices (saved)') : 'no saved geometry (Polygon_GeoJSON empty/unparseable)'}</div>
       <div class="zc-actions">
         <button data-zid="${zid}" ${hasGeometry ? '' : 'disabled'}>Edit saved contour</button>
@@ -1604,7 +1690,7 @@ function loadSavedZoneForEditing(zoneId){
   document.getElementById('editModeBanner').classList.add('show');
   map.on('click', onMapClickEd);
   map.fitBounds(L.polygon(currentPoints).getBounds().pad(0.2));
-  pendingEditMeta = { znId: zoneId, name: zone.name, ci: null, cityCode: zone.cityCode, isCentral: zone.isCentral };
+  pendingEditMeta = { znId: zoneId, name: zone.name, ci: null, cityCode: zone.cityCode, regionCode: zone.regionCode, isCentral: zone.isCentral, unescoStatus: zone.unescoStatus };
   collapseSidebarMobile();
 }
 
@@ -1624,7 +1710,8 @@ async function syncZonesToSheet(){
     secret: API_SECRET,
     action: 'saveZones',
     zones: editZones.map(z => ({
-      zoneId: z.zn_id, name: z.name, cityCode: z.cityCode, isCentral: z.isCentral,
+      zoneId: z.zn_id, name: z.name, cityCode: z.cityCode, regionCode: z.regionCode,
+      isCentral: z.isCentral, unescoStatus: z.unescoStatus,
       ring: z.ring.slice(0, -1).map(p => [p[1], p[0]])
     }))
   };
@@ -1903,7 +1990,10 @@ function loadZonesSheet(callback) {
           ring = geo.coordinates[0].slice(0, -1).map(c => [c[1], c[0]]); // [lng,lat]->[lat,lng]
         } catch(e) { ring = null; }
         zones[zoneId] = {
-          name: row['Name'], cityCode: row['City_Code'], ring,
+          name: row['Name'], cityCode: row['City_Code'],
+          regionCode: row['Region_Code'] || 'BJ', // старые строки без этой колонки — считаем BJ (единственный регион до этой сессии)
+          unescoStatus: row['UNESCO_Status'] || 'none',
+          ring,
           isCentral: String(row['Is_Central']).toUpperCase() === 'TRUE',
           priorCI: row['Prior_CI'] === '' || row['Prior_CI'] == null ? null : Number(row['Prior_CI'])
         };
