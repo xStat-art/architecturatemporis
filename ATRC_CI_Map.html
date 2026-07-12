@@ -2024,7 +2024,16 @@ function renderZones(zonesMap, drawnZones) {
     if (!hull) return; // nothing to draw for this zone yet
 
     const hullBounds = L.geoJSON(hull).getBounds();
-    const center = turf.centroid(hull);
+    // v8.0: turf.centroid — это среднее арифметическое ВЕРШИН контура, не
+    // "визуальный центр" фигуры. У вытянутой/неправильной зоны с неровной
+    // плотностью точек (особенно после снаппинга, который местами
+    // "дорисовывает" много лишних вершин вдоль одной границы) это среднее
+    // может уехать к самому краю — замечено на живом примере 12 июля
+    // (подпись зоны 003 сместилась к границе с соседней зоной 002).
+    // turf.pointOnFeature гарантированно возвращает точку НА поверхности
+    // полигона (а не просто среднее его вершин) — визуально всегда внутри
+    // фигуры, независимо от того, насколько неровно она нарисована.
+    const center = turf.pointOnFeature(hull);
     const [cLng, cLat] = center.geometry.coordinates;
 
     if (objects.length >= 3) {
