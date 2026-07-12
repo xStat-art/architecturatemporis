@@ -1294,7 +1294,16 @@ async function snapContourToOSM(points) {
 //   lastDrawnZones (загружено из ZONES sheet)   -> ring в [lat,lng]
 // Обе нормализуются здесь к turf-формату [lng,lat] перед сравнением.
 // ═══════════════════════════════════════════════════════════════
-const ZONE_SNAP_TOLERANCE_M = 4; // тот же порядок, что и OSM_SNAP_TOLERANCE_M — не шире ширины улицы
+// v8.0: допуск для привязки к соседним зонам ЗАМЕТНО шире, чем для OSM
+// (было 4м, стало 12м) — сознательно другая логика допуска. У OSM-снаппинга
+// узкий допуск защищает от перепрыгивания через улицу к чужой, дальней
+// линии; здесь такого риска нет — сравниваем только с уже нарисованными
+// исследовательскими зонами, их мало, и они по определению должны
+// соседствовать. Узкий 4м-допуск на практике почти не срабатывал (см.
+// живой пример 12 июля: 9 из 71 вершины) — граница двух независимо
+// нарисованных вручную контуров расходится на 5-15м, это нормально для
+// ручной оцифровки, а не признак ошибки рисования.
+const ZONE_SNAP_TOLERANCE_M = 12;
 
 function buildExistingZoneLines(excludeZoneId) {
   const lines = [];
@@ -1314,39 +1323,63 @@ function buildExistingZoneLines(excludeZoneId) {
 /**
  * points: [[lat,lng], ...] — контур ПОСЛЕ OSM-снаппинга.
  * excludeZoneId: не привязываться к собственной прежней геометрии при
- * редактировании уже существующей зоны (иначе снап тривиально "находит"
- * саму себя вместо настоящего соседа).
- * Возвращает { points, snappedCount } — без денсификации кривизны (в
- * отличие от snapContourToOSM): границы между исследовательскими зонами
- * почти всегда состоят из тех же прямых сегментов, что уже есть в
- * вершинах соседней зоны, растягивать по кривой здесь не нужно.
+ * редактировании уже существующей зоны.
+ * v8.0 (правка после живого теста 12 июля): раньше был только проход 1
+ * (снап отдельных вершин) — при разреженной сетке снаппнутых точек между
+ * ними оставался рваный промежуток. Теперь, как и в snapContourToOSM,
+ * добавлен проход 2 — если ДВЕ СОСЕДНИЕ вершины прилипли к ОДНОЙ И ТОЙ ЖЕ
+ * линии соседней зоны, отрезок между ними заменяется на реальный кусок её
+ * границы (turf.lineSlice), а не остаётся прямой "срезкой угла".
  */
 function snapContourToExistingZones(points, excludeZoneId) {
   const lines = buildExistingZoneLines(excludeZoneId);
   if (!lines.length) return { points: points.slice(), snappedCount: 0 };
 
   let snappedCount = 0;
-  const snapped = points.map(([lat, lng]) => {
+
+  const matches = points.map(([lat, lng]) => {
     const pt = turf.point([lng, lat]);
-    let best = null;
-    lines.forEach(line => {
+    let best = null, bestIdx = -1;
+    lines.forEach((line, idx) => {
       let np;
       try { np = turf.nearestPointOnLine(line, pt, { units: 'meters' }); }
       catch (e) { return; }
       if (np && np.properties && np.properties.dist != null &&
           (!best || np.properties.dist < best.properties.dist)) {
-        best = np;
+        best = np; bestIdx = idx;
       }
     });
     if (best && best.properties.dist <= ZONE_SNAP_TOLERANCE_M) {
       snappedCount++;
       const [snLng, snLat] = best.geometry.coordinates;
-      return [snLat, snLng];
+      return { coord: [snLat, snLng], lineIndex: bestIdx };
     }
-    return [lat, lng];
+    return { coord: [lat, lng], lineIndex: null };
   });
 
-  return { points: snapped, snappedCount };
+  const densified = [];
+  const n = matches.length;
+  for (let i = 0; i < n; i++) {
+    const cur = matches[i];
+    densified.push(cur.coord);
+    const next = matches[(i + 1) % n];
+    if (cur.lineIndex != null && cur.lineIndex === next.lineIndex) {
+      const line = lines[cur.lineIndex];
+      const a = turf.point([cur.coord[1], cur.coord[0]]);
+      const b = turf.point([next.coord[1], next.coord[0]]);
+      let seg;
+      try { seg = turf.lineSlice(a, b, line); } catch (e) { seg = null; }
+      if (seg && seg.geometry && seg.geometry.coordinates.length > 2) {
+        let coords = seg.geometry.coordinates.slice();
+        const distToFirst = turf.distance(a, turf.point(coords[0]), { units: 'meters' });
+        const distToLast  = turf.distance(a, turf.point(coords[coords.length - 1]), { units: 'meters' });
+        if (distToLast < distToFirst) coords.reverse();
+        for (const [lng, lat] of coords.slice(1, -1)) densified.push([lat, lng]);
+      }
+    }
+  }
+
+  return { points: densified, snappedCount };
 }
 
 // ═══════════════════════════════════════════════════════════════
