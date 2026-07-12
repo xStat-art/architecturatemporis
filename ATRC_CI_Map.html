@@ -498,6 +498,7 @@
   #editorSidebar #zoneList{ max-height: 220px; overflow-y: auto; flex: none; }
   #editorSidebar .zone-card{background:var(--ed-panel-2);border:1px solid var(--ed-line);border-radius:8px;padding:10px;margin-bottom:8px;}
   #editorSidebar .zone-card-synced{opacity:0.6;}
+  #editorSidebar .zone-city-header{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ed-muted);font-weight:700;padding:10px 2px 4px;border-bottom:1px solid var(--ed-line);margin-bottom:6px;}
   #editorSidebar .zone-card .zc-name{font-weight:700;font-size:12px;}
   #editorSidebar .zone-card .zc-id{font-family:monospace;font-size:10px;color:var(--ed-muted);margin-top:2px;}
   #editorSidebar .zone-card .zc-meta{font-size:10px;color:var(--ed-muted);margin-top:5px;}
@@ -610,6 +611,9 @@
   <div class="es-section">
     <h2>Edit existing saved zone</h2>
     <div class="ehint">These are zones already stored in the ZONES sheet. Editing loads the real saved contour into the drawer above — fix it (e.g. re-run OSM snapping after this session's update) and save under the same Zone ID to overwrite.</div>
+    <select id="savedZoneCityFilter" style="width:100%; margin-bottom:8px; padding:8px; font-family:Arial, sans-serif;">
+      <option value="">All cities</option>
+    </select>
     <div class="zone-list" id="savedZoneList">
       <div class="empty">Loading…</div>
     </div>
@@ -1457,6 +1461,10 @@ document.getElementById('discardZoneBtn').addEventListener('click', discardZoneE
 document.getElementById('znRegion').addEventListener('change', refreshSuggestedIdIfNew);
 document.getElementById('znCity').addEventListener('input', refreshSuggestedIdIfNew);
 document.getElementById('znCentral').addEventListener('change', refreshSuggestedIdIfNew);
+document.getElementById('savedZoneCityFilter').addEventListener('change', function(){
+  savedZoneCityFilterValue = this.value;
+  renderSavedZoneList();
+});
 document.getElementById('syncBtn').addEventListener('click', syncZonesToSheet);
 document.getElementById('recalcBtn').addEventListener('click', recalculateZoneAssignments);
 
@@ -1841,28 +1849,74 @@ function editZoneEd(id){
 // в отличие от editZones[].ring, который [lng,lat] и С замыканием.
 // Поэтому здесь координаты не нужно ни переворачивать, ни резать.
 // ═══════════════════════════════════════════════════════════════
+// v8.0: НАВИГАЦИЯ МЕЖДУ ГОРОДАМИ — раньше список был плоским, все города
+// вперемешку. С появлением Котора/Пераста/Рисана (и далее) это стало бы
+// неудобно искать нужную зону. Теперь: (1) выпадающий фильтр по городу
+// над списком — можно сузить до одного города; (2) при "All cities"
+// список группируется заголовками по City_Code, а не идёт сплошным
+// потоком карточек. Выбранный фильтр запоминается в savedZoneCityFilterValue
+// и переживает повторные renderSavedZoneList() (например, после каждого
+// loadData()) — иначе фильтр сбрасывался бы на "All" при каждом обновлении.
+let savedZoneCityFilterValue = '';
+
 function renderSavedZoneList(){
   const el = document.getElementById('savedZoneList');
+  const filterEl = document.getElementById('savedZoneCityFilter');
   if(!el) return;
   const ids = Object.keys(lastDrawnZones);
   if(!ids.length){
     el.innerHTML = '<div class="empty">No saved zones loaded yet</div>';
+    if (filterEl) filterEl.innerHTML = '<option value="">All cities</option>';
     return;
   }
+
+  // Обновляем список городов в фильтре, сохраняя текущий выбор, если он
+  // всё ещё существует среди актуальных данных.
+  const cities = Array.from(new Set(ids.map(zid => lastDrawnZones[zid].cityCode || '—'))).sort();
+  if (filterEl) {
+    filterEl.innerHTML = '<option value="">All cities</option>' +
+      cities.map(c => `<option value="${c}">${c}</option>`).join('');
+    filterEl.value = cities.includes(savedZoneCityFilterValue) ? savedZoneCityFilterValue : '';
+  }
+
+  const grouped = {};
+  ids.forEach(zid => {
+    const c = lastDrawnZones[zid].cityCode || '—';
+    if (savedZoneCityFilterValue && c !== savedZoneCityFilterValue) return;
+    (grouped[c] = grouped[c] || []).push(zid);
+  });
+
+  const groupCities = Object.keys(grouped).sort();
+  if (!groupCities.length) {
+    el.innerHTML = '<div class="empty">No saved zones for this city</div>';
+    return;
+  }
+
   el.innerHTML = '';
-  ids.forEach(zid=>{
-    const z = lastDrawnZones[zid];
-    const hasGeometry = z.ring && z.ring.length >= 3;
-    const card = document.createElement('div');
-    card.className = 'zone-card';
-    card.innerHTML = `
-      <div class="zc-name">${z.name || zid}${z.isCentral?'<span class="badge-central">★ central</span>':''}</div>
-      <div class="zc-id">${zid} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? ' · UNESCO: '+z.unescoStatus : ''}</div>
-      <div class="zc-meta">${hasGeometry ? (z.ring.length + ' vertices (saved)') : 'no saved geometry (Polygon_GeoJSON empty/unparseable)'}</div>
-      <div class="zc-actions">
-        <button data-zid="${zid}" ${hasGeometry ? '' : 'disabled'}>Edit saved contour</button>
-      </div>`;
-    el.appendChild(card);
+  groupCities.forEach(cityCode => {
+    // Заголовок группы показываем только когда фильтр не сужает до одного
+    // города — если "All cities" выбрано специально, чтобы видеть, где
+    // граница между городами; при активном фильтре он и так один.
+    if (!savedZoneCityFilterValue) {
+      const header = document.createElement('div');
+      header.className = 'zone-city-header';
+      header.textContent = cityCode + ' · ' + grouped[cityCode].length + ' zone' + (grouped[cityCode].length > 1 ? 's' : '');
+      el.appendChild(header);
+    }
+    grouped[cityCode].sort().forEach(zid => {
+      const z = lastDrawnZones[zid];
+      const hasGeometry = z.ring && z.ring.length >= 3;
+      const card = document.createElement('div');
+      card.className = 'zone-card';
+      card.innerHTML = `
+        <div class="zc-name">${z.name || zid}${z.isCentral?'<span class="badge-central">★ central</span>':''}</div>
+        <div class="zc-id">${zid} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? ' · UNESCO: '+z.unescoStatus : ''}</div>
+        <div class="zc-meta">${hasGeometry ? (z.ring.length + ' vertices (saved)') : 'no saved geometry (Polygon_GeoJSON empty/unparseable)'}</div>
+        <div class="zc-actions">
+          <button data-zid="${zid}" ${hasGeometry ? '' : 'disabled'}>Edit saved contour</button>
+        </div>`;
+      el.appendChild(card);
+    });
   });
   el.querySelectorAll('button[data-zid]').forEach(btn=>{
     btn.addEventListener('click', ()=> loadSavedZoneForEditing(btn.dataset.zid));
