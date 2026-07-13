@@ -2085,7 +2085,16 @@ function addZoneCasing(hull) {
   L.geoJSON(hull, { style: { fillOpacity: 0, color: '#1b1e24', weight: 3, opacity: 0.55 } }).addTo(hullLayer);
 }
 
-function renderZones(zonesMap, drawnZones) {
+// v8.1 (найдено 13 июля — во время отрисовки зоны в Перасте карту раз в 60с
+// откидывало обратно к Херцег-Нови): раньше renderZones() безусловно звала
+// map.fitBounds() в конце — и на первой загрузке это правильно (нечего
+// подгонять камеру ещё не к чему), и на КАЖДОМ автообновлении тоже, что
+// перечёркивало любое ручное панорамирование/зум пользователя, включая
+// момент активного рисования новой зоны в другом городе. fitBounds теперь
+// вызывается только на самой первой успешной загрузке страницы —
+// см. didInitialFit ниже, в loadData().
+function renderZones(zonesMap, drawnZones, fitBounds) {
+  if (fitBounds === undefined) fitBounds = true;
   markersLayer.clearLayers();
   hullLayer.clearLayers();
   gradientLayer.clearLayers();
@@ -2249,14 +2258,18 @@ function renderZones(zonesMap, drawnZones) {
     document.getElementById('statsPanel').style.display = 'none';
   }
 
-  // Fit bounds to whatever we have — objects if any, else drawn zones
-  let fitLayer = null;
-  if (allObjects.length > 0) {
-    fitLayer = L.latLngBounds(allObjects.map(o => [o.lat, o.lng]));
-  } else if (hullLayer.getLayers().length > 0) {
-    fitLayer = hullLayer.getBounds();
+  // Fit bounds to whatever we have — objects if any, else drawn zones.
+  // v8.1: только когда явно попросили (см. комментарий у renderZones выше) —
+  // иначе автообновление сбрасывает ручной пан/зум пользователя.
+  if (fitBounds) {
+    let fitLayer = null;
+    if (allObjects.length > 0) {
+      fitLayer = L.latLngBounds(allObjects.map(o => [o.lat, o.lng]));
+    } else if (hullLayer.getLayers().length > 0) {
+      fitLayer = hullLayer.getBounds();
+    }
+    if (fitLayer && (!fitLayer.isValid || fitLayer.isValid())) map.fitBounds(fitLayer, { padding: [60, 60] });
   }
-  if (fitLayer && (!fitLayer.isValid || fitLayer.isValid())) map.fitBounds(fitLayer, { padding: [60, 60] });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2321,9 +2334,20 @@ function loadZonesSheet(callback) {
   });
 }
 
+// v8.1: fitBounds должен сработать один раз — на самой первой загрузке
+// страницы, чтобы камера нашла данные. На всех последующих автообновлениях
+// (каждые 60с, см. setInterval ниже) — нет, иначе перечёркивает ручной пан.
+// Исключение: если страница открыта по deep-link из field.html (Сценарий Б,
+// ?lat=&lng=, см. блок выше) — там map.setView() уже намеренно центрирует
+// карту на новой точке (например, в Перасте), и даже ПЕРВЫЙ fitBounds её
+// тут же затёр бы обратно на охват всех объектов (в основном Херцег-Нови).
+// Поэтому при наличии deep-link'а первый fit тоже пропускается.
+let didInitialFit = !isNaN(deepLinkLat) && !isNaN(deepLinkLng);
+
 function loadData() {
   document.getElementById('loadingOverlay').style.display = 'flex';
   document.getElementById('statusDot').style.background = '#c55a11';
+  const shouldFit = !didInitialFit;
 
   loadZonesSheet(function(drawnZones) {
     lastDrawnZones = drawnZones;
@@ -2368,16 +2392,18 @@ function loadData() {
 
         if (objects.length === 0 && Object.keys(drawnZones).length === 0) {
           console.log('No registry rows and no drawn zones — showing demo objects');
-          renderZones(groupByZone(DEMO_DATA), {});
+          renderZones(groupByZone(DEMO_DATA), {}, shouldFit);
         } else {
-          renderZones(groupByZone(objects), drawnZones);
+          renderZones(groupByZone(objects), drawnZones, shouldFit);
         }
+        didInitialFit = true;
       },
       error: function(err) {
         console.log('CSV load error, using demo data:', err);
         document.getElementById('loadingOverlay').style.display = 'none';
         document.getElementById('statusDot').style.background = '#888';
-        renderZones(groupByZone(DEMO_DATA), {});
+        renderZones(groupByZone(DEMO_DATA), {}, shouldFit);
+        didInitialFit = true;
       }
     });
   });
@@ -2391,7 +2417,25 @@ loadData();
 loadRegionsSheet();
 
 // Auto-refresh every 60 seconds
-setInterval(loadData, 60000);
+// v8.1: интервал увеличен с 60с до 5 минут — при обычном просмотре карты
+// данные меняются не настолько часто, чтобы оправдать перезагрузку каждую
+// минуту, а более редкий тик сам по себе снижает шанс словить обновление
+// прямо посреди работы. Дополнительно: пока открыт редактор зон
+// (editModeOn — рисование/редактирование контура), автообновление вообще
+// пропускается целиком — раньше даже с fitBounds-фиксом выше сам факт
+// перезагрузки слоёв (markersLayer/hullLayer/gradientLayer) под рукой во
+// время вычерчивания контура в другом городе визуально мешал (моргание
+// существующих зон), хотя сам рисуемый контур (drawLayer/vertexMarkers) —
+// отдельный слой и не затирался. Возобновляется само на следующем тике
+// после закрытия редактора.
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+setInterval(() => {
+  if (editModeOn) {
+    console.log('Auto-refresh skipped — zone editor is open');
+    return;
+  }
+  loadData();
+}, AUTO_REFRESH_MS);
 
 // Deep link: ATRC_CI_Map.html?edit=1 opens the Edit Zones panel directly
 // (used by the "Zone Editor" card on field-workspace.html).

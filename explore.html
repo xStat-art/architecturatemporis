@@ -469,7 +469,7 @@ function renderGradientCanvas(grid, gridSize, ringLngLat, bounds) {
   return canvas.toDataURL();
 }
 
-let drawnZones = {}; // Zone_ID -> {ring: [[lat,lng],...] | null, ...} from ZONES_CSV
+let drawnZones = {}; // Zone_ID -> {ring, priorCI, isCentral} from ZONES_CSV
 
 function loadZonesSheet(callback) {
   Papa.parse(ZONES_CSV, {
@@ -484,7 +484,11 @@ function loadZonesSheet(callback) {
           const geo = JSON.parse(row['Polygon_GeoJSON']);
           ring = geo.coordinates[0].slice(0, -1).map(c => [c[1], c[0]]); // [lng,lat]->[lat,lng]
         } catch(e) { ring = null; }
-        zones[zoneId] = { ring };
+        zones[zoneId] = {
+          ring,
+          priorCI: row['Prior_CI'] === '' || row['Prior_CI'] == null ? null : Number(row['Prior_CI']),
+          isCentral: String(row['Is_Central']).toUpperCase() === 'TRUE',
+        };
       });
       callback(zones);
     },
@@ -492,9 +496,56 @@ function loadZonesSheet(callback) {
   });
 }
 
+// Порт из ATRC_CI_Map.html (v8.0) — декоративный (не CI-содержательный!)
+// цвет для зон без единого измерения, чтобы соседние нарисованные-но-
+// неизмеренные зоны визуально не сливались друг с другом на explore.html
+// так же, как раньше сливались на самой карте (см. коммент в
+// ATRC_CI_Map.html у decorativeZoneColor — тот же murmur3-подобный
+// финализатор, тот же принцип).
+function decorativeZoneColor(zoneId) {
+  let hash = 0;
+  for (let i = 0; i < zoneId.length; i++) {
+    hash = (hash * 31 + zoneId.charCodeAt(i)) >>> 0;
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x45d9f3b) >>> 0;
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x45d9f3b) >>> 0;
+  hash ^= hash >>> 16;
+  const hue = (hash >>> 0) % 360;
+  return `hsl(${hue}, 42%, 62%)`;
+}
+
 function renderZoneShape(zoneId, objects) {
-  if(!objects.length) return;
   const drawn = drawnZones[zoneId];
+
+  // ── STAGE 1 (порт из ATRC_CI_Map.html, 13 июля): ноль измерений — рисуем
+  // только если есть реальный нарисованный контур (drawn.ring); без него и
+  // без объектов строить нечего (convex hull не из чего собрать). ──
+  if (!objects.length) {
+    if (!drawn || !drawn.ring) return;
+    const latLngs = drawn.ring;
+    const lats = latLngs.map(p=>p[0]), lngs = latLngs.map(p=>p[1]);
+    const centerLat = (Math.min(...lats)+Math.max(...lats))/2;
+    const centerLng = (Math.min(...lngs)+Math.max(...lngs))/2;
+    const color = decorativeZoneColor(zoneId);
+    const priorCI = drawn.priorCI;
+    L.polygon(latLngs, {
+      fillColor: color, fillOpacity: drawn.isCentral ? 0.5 : 0.35,
+      color, weight: 2, opacity: 0.85, dashArray: '2 6'
+    }).addTo(hullLayer);
+    L.marker([centerLat, centerLng], {
+      icon: L.divIcon({
+        className: 'zone-label',
+        html: `<div style="text-align:center;">
+                 <div style="color:rgba(255,255,255,0.85);font-weight:700;font-size:9px;letter-spacing:1.5px;text-shadow:0 0 6px rgba(0,0,0,0.8);">${zoneId}${drawn.isCentral?' ★':''}</div>
+                 <div style="color:${color};font-weight:600;font-size:9px;letter-spacing:1px;text-shadow:0 0 6px rgba(0,0,0,0.8);">Not yet measured${priorCI!=null ? ' · Prior_CI '+priorCI.toFixed(3) : ''}</div>
+               </div>`,
+        iconAnchor:[40,16]}), interactive:false
+    }).addTo(hullLayer);
+    return;
+  }
+
   const avgCI = objects.reduce((s,o)=>s+o.CI,0)/objects.length;
   const avgHex = ciToHex(avgCI);
 
@@ -547,12 +598,23 @@ function renderZoneShape(zoneId, objects) {
       iconAnchor:[40,16]}),interactive:false}).addTo(hullLayer);
 }
 
-function renderMap(objects) {
+// v8.1: та же правка, что в ATRC_CI_Map.html — fitBounds раньше срабатывал
+// на КАЖДОЕ автообновление (каждые 60с), перечёркивая ручной пан/зум, пока
+// кто-то рассматривает конкретный город на карте. Теперь только на первой
+// загрузке страницы, см. didInitialFit в loadAll().
+//
+// v8.1 (порт из ATRC_CI_Map.html, обнаружено 13 июля): зоны без единого
+// измерения раньше вообще не попадали на карту — group-by-zone строился
+// только по object.zn_id, а нарисованные, но ещё не измеренные зоны (002-005)
+// не имеют ни одного объекта и поэтому никогда не участвовали в цикле ниже.
+// Теперь берём объединение zoneId из объектов И из drawnZones (ZONES_CSV) —
+// см. zoneIds ниже, как в renderZones() в ATRC_CI_Map.html.
+function renderMap(objects, fitBounds) {
+  if (fitBounds === undefined) fitBounds = true;
   markersLayer.clearLayers();
   hullLayer.clearLayers();
   document.getElementById('gradient-defs').innerHTML='';
   gradCounter=0;
-  if(!objects.length) return;
 
   // Group by zone — each zone drawn once, using its real contour if available
   const zones={};
@@ -561,7 +623,10 @@ function renderMap(objects) {
     if(!zones[z]) zones[z]=[];
     zones[z].push(o);
   });
-  Object.entries(zones).forEach(([zoneId,grp])=>{ renderZoneShape(zoneId, grp); });
+  const zoneIds = Array.from(new Set([...Object.keys(zones), ...Object.keys(drawnZones)]));
+  zoneIds.forEach(zoneId=>{ renderZoneShape(zoneId, zones[zoneId] || []); });
+
+  if (!objects.length && zoneIds.length === 0) return;
 
   objects.forEach(obj=>{
     if(!obj.lat||!obj.lng) return;
@@ -584,8 +649,17 @@ function renderMap(objects) {
       </div>`)).addTo(markersLayer);
   });
 
-  const withGPS=objects.filter(o=>o.lat&&o.lng);
-  if(withGPS.length) map.fitBounds(L.latLngBounds(withGPS.map(o=>[o.lat,o.lng])),{padding:[60,60]});
+  if (fitBounds) {
+    const withGPS=objects.filter(o=>o.lat&&o.lng);
+    if (withGPS.length) {
+      map.fitBounds(L.latLngBounds(withGPS.map(o=>[o.lat,o.lng])),{padding:[60,60]});
+    } else if (hullLayer.getLayers().length > 0) {
+      // Нет ни одного измеренного объекта, но есть распланированные зоны
+      // (Stage 1) — подгоняем камеру под них, а не оставляем в дефолтном
+      // положении (было бы, например, на весь мир при zoom:4).
+      map.fitBounds(hullLayer.getBounds(), {padding:[60,60]});
+    }
+  }
 }
 
 // ── Registry table ────────────────────────────────────────────────────────────
@@ -745,6 +819,9 @@ let loadedCount = 0;
 let registryData = null;
 let mapData = null;
 let zonesReady = false;
+// v8.1: как и в ATRC_CI_Map.html — fitBounds только на самой первой
+// загрузке страницы, не на каждом 60-секундном автообновлении.
+let didInitialFit = false;
 
 function tryRender() {
   loadedCount++;
@@ -771,8 +848,9 @@ function tryRender() {
   allObjects = objects;
 
   updateStats(objects);
-  renderMap(objects);
+  renderMap(objects, !didInitialFit);
   renderTable(objects);
+  didInitialFit = true;
 }
 
 function loadAll() {
@@ -800,7 +878,10 @@ function loadAll() {
 }
 
 loadAll();
-setInterval(loadAll, 60000);
+// v8.1: интервал увеличен с 60с до 5 минут — тот же аргумент, что в
+// ATRC_CI_Map.html (см. коммент там). explore.html не имеет редактора зон,
+// поэтому пропускать тик тут не нужно — просто реже дёргаем данные.
+setInterval(loadAll, 5 * 60 * 1000);
 </script>
 </body>
 </html>
