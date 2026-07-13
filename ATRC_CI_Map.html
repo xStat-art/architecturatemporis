@@ -599,6 +599,7 @@
     <h2>Draw contour</h2>
     <div class="ehint">Trace the zone by physical boundaries (fortress wall, road, terrain, coastline) — not administrative borders. Existing measured objects (colored dots) are shown on the map — draw around them. After "Finish contour", vertices within a few meters of a real OSM street/wall line snap to it automatically, then vertices near an already-drawn neighboring zone snap to that zone's edge too — so adjacent zones share a clean border instead of a gap or overlap.</div>
     <div class="evcount">Vertices: <b id="vcount">0</b></div>
+    <div class="status-bar" id="geoDetectNote"></div>
     <div class="ebtn-row">
       <button class="ebtn primary" id="startBtn" style="flex:1">Start drawing</button>
       <button class="ebtn ghost" id="undoBtn" style="flex:1" disabled>Undo point</button>
@@ -630,6 +631,11 @@
     </select>
     <label>City code (e.g. HN, KO, PR, RI)</label>
     <input type="text" id="znCity" placeholder="HN">
+    <div class="status-bar" id="cityMismatchWarning"></div>
+    <label class="checkbox-row" id="mismatchAckRow" style="display:none">
+      <input type="checkbox" id="mismatchAck">
+      <span>I've checked — this location and City code are correct. Save anyway.</span>
+    </label>
     <label>Zone ID (ZN·ME·{region}·{city}·###)</label>
     <input type="text" id="znId" placeholder="ZN-ME-BJ-HN-003">
     <label>Display name</label>
@@ -640,7 +646,7 @@
       <input type="checkbox" id="znCentral">
       <label for="znCentral">This is the central/historic core zone (one per city — reserves ···001)</label>
     </div>
-    <div class="ehint">The central zone anchors Prior_CI for all other zones in the same city. Number ···001 is reserved for it — non-central zones always start at ···002, even if created first.</div>
+    <div class="ehint">The central zone anchors Prior_CI for all other zones in the same city. Number ···001 is reserved for it — non-central zones always start at ···002, even if created first. <b>This checkbox only changes the number — it does NOT detect or change which city/region the zone belongs to.</b> Set City code above correctly first.</div>
     <label>UNESCO status</label>
     <select id="znUnesco">
       <option value="none">none</option>
@@ -763,6 +769,99 @@ const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAid
 // Ожидаемые колонки листа REGIONS: Region_Code, Region_Name_EN,
 // Region_Name_Local, Country_Code, Notes.
 const REGIONS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1949264085&single=true&output=csv';
+
+// v8.1 — МУНИЦИПАЛИТЕТ КАК ОТДЕЛЬНЫЙ, ОФИЦИАЛЬНЫЙ УРОВЕНЬ ИЕРАРХИИ
+// (решение от 13 июля): в отличие от кода поселения (City_Code — HN/KO/
+// PR/RI), который целиком придумывает сам проект, код муниципалитета —
+// это существующий государственный стандарт: коды регистрации транспорта
+// по опшинам Черногории (Wikipedia: Vehicle registration plates of
+// Montenegro), один код на муниципалитет, без коллизий, официально
+// закреплён. Важно: муниципалитет и поселение — РАЗНЫЕ уровни детализации.
+// Опшина Котор (код KO) включает Котор, Пераст, Рисан и другие поселения —
+// у них РАЗНЫЕ City_Code, но ОДИН И ТОТ ЖЕ Municipality_Code = KO. Именно
+// муниципалитет определяет официальный охранный статус территории (ЮНЕСКО
+// у Котора — это статус всей опшины, не только городка). Municipality_Code
+// живёт как атрибут ПОСЕЛЕНИЯ (в KNOWN_CITIES/CITY_CODES), не самой зоны —
+// формат Zone_ID (ZN·ME·{region}·{city}·###) не меняется, старые
+// сохранённые зоны Херцег-Нови не затронуты.
+//
+// В отличие от кодов поселений (нужно постоянно пополнять вручную по мере
+// работы), официальные коды муниципалитетов практически никогда не
+// меняются — поэтому это статический, зашитый в код справочник по стране,
+// а не отдельный редактируемый лист. Для новой страны (напр. Хорватии)
+// достаточно добавить её официальный список кодов регистрации ТС отдельным
+// блоком ниже — это разовая работа разработчика, а не полевого исследователя.
+const MUNICIPALITY_CODES = {
+  ME: { // Черногория — официальные коды регистрации ТС по опшинам
+    AN:'Andrijevica', BA:'Berane', BD:'Budva', BP:'Bijelo Polje', BR:'Bar', CT:'Cetinje',
+    DG:'Danilovgrad', GS:'Gusinje', HN:'Herceg Novi', KL:'Kolašin', KO:'Kotor', MK:'Mojkovac',
+    NK:'Nikšić', PG:'Podgorica', PL:'Plav', PT:'Petnjica', 'PŽ':'Plužine', PV:'Pljevlja',
+    RO:'Rožaje', 'ŠN':'Šavnik', TV:'Tivat', TZ:'Tuzi', UL:'Ulcinj', ZT:'Zeta', 'ŽB':'Žabljak',
+  },
+  // HR: { ... } — добавить при начале работы в Хорватии тем же принципом:
+  // официальный список кодов регистрации ТС по жупаниям/градовима.
+};
+
+// v8.1 — СПРАВОЧНИК ЗАПЛАНИРОВАННЫХ ПОСЕЛЕНИЙ: вместо того чтобы зашивать
+// города прямо в код (что означало бы правку файла и повторную заливку
+// сайта при каждом новом поселении/стране), справочник читается из
+// отдельного листа CITY_CODES, опубликованного как CSV — той же схемой,
+// что уже работает для REGIONS_CSV выше. Добавление Хорватии = новые
+// строки в таблице (Country_Code=HR), без единой правки этого файла.
+//
+// Ожидаемые колонки листа CITY_CODES: City_Code, City_Name, Country_Code,
+// Region_Code, Municipality_Code, Approx_Lat, Approx_Lng, Notes.
+// Municipality_Code сверяется с MUNICIPALITY_CODES[Country_Code] выше —
+// опечатка в этом поле будет видна сразу (см. validateMunicipalityCode).
+//
+// Пока лист не настроен (PASTE_) — используются 3 зашитых дефолта по
+// Черногории ниже как безопасный фолбэк, ничего не ломается прямо сейчас;
+// как только лист опубликован, loadCityCodesSheet() их полностью заменит.
+const CITY_CODES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1145905371&single=true&output=csv';
+
+let KNOWN_CITIES = {
+  HN: { name: 'Herceg Novi', regionCode: 'BJ', municipalityCode: 'HN', countryCode: 'ME', lat: 42.4531, lng: 18.5375 },
+  KO: { name: 'Kotor',  regionCode: 'BJ', municipalityCode: 'KO', countryCode: 'ME', lat: 42.4247, lng: 18.7712 },
+  PR: { name: 'Perast', regionCode: 'BJ', municipalityCode: 'KO', countryCode: 'ME', lat: 42.4881, lng: 18.6989 },
+  RI: { name: 'Risan',  regionCode: 'BJ', municipalityCode: 'KO', countryCode: 'ME', lat: 42.5119, lng: 18.6928 },
+};
+
+// Сверяет Municipality_Code с официальным списком для данной страны — null,
+// если код не найден (опечатка в листе CITY_CODES или страна ещё не
+// заведена в MUNICIPALITY_CODES), иначе возвращает полное название.
+function validateMunicipalityCode(countryCode, municipalityCode) {
+  const table = MUNICIPALITY_CODES[(countryCode||'ME').toUpperCase()];
+  if (!table) return null;
+  return table[(municipalityCode||'').toUpperCase()] || null;
+}
+
+function loadCityCodesSheet() {
+  if (!CITY_CODES_CSV || CITY_CODES_CSV.indexOf('PASTE_') === 0) return; // лист ещё не создан — остаёмся на зашитых дефолтах
+  Papa.parse(CITY_CODES_CSV + '&t=' + Date.now(), {
+    download: true, header: true, skipEmptyLines: true,
+    complete(results) {
+      const rows = results.data.filter(r => (r['City_Code']||'').trim() && (r['Approx_Lat']||'') && (r['Approx_Lng']||''));
+      if (!rows.length) return; // пустой/битый лист — не затираем рабочие дефолты
+      const fresh = {};
+      rows.forEach(r => {
+        const code = r['City_Code'].trim().toUpperCase();
+        const lat = Number(r['Approx_Lat']), lng = Number(r['Approx_Lng']);
+        if (isNaN(lat) || isNaN(lng)) return;
+        const countryCode = r['Country_Code'] || 'ME';
+        const municipalityCode = (r['Municipality_Code'] || '').trim().toUpperCase();
+        fresh[code] = {
+          name: r['City_Name'] || code, regionCode: r['Region_Code'] || 'BJ',
+          municipalityCode, countryCode, lat, lng,
+        };
+        if (municipalityCode && !validateMunicipalityCode(countryCode, municipalityCode)) {
+          console.log(`CITY_CODES: "${code}" указывает Municipality_Code="${municipalityCode}", которого нет в официальном списке для ${countryCode} — проверьте опечатку в листе.`);
+        }
+      });
+      if (Object.keys(fresh).length) KNOWN_CITIES = fresh; // полностью заменяет зашитые дефолты живыми данными
+    },
+    error() { /* сеть недоступна/лист не опубликован — молча остаёмся на дефолтах */ }
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════
 // PSM (Protection Status Multiplier, до переименования — CSM) — вес
@@ -1443,6 +1542,8 @@ const API_SECRET = 'hn-zones-secret-8k3f2m';
 let editZones = [];       // zones drawn/edited THIS session, not yet necessarily synced
 let drawing = false;
 let currentPoints = [];
+let detectedCity = null;  // v8.1 — авто-определение по первой точке контура, см. detectCityFromPoint()
+let geoLookupRequestId = 0; // v8.1 — защита от гонки: устаревший ответ Nominatim не должен перетереть свежее состояние
 let vertexMarkers = [];
 let drawLayer = null;
 let zoneIdCounter = 1;
@@ -1476,7 +1577,11 @@ document.getElementById('saveZoneBtn').addEventListener('click', saveZoneEd);
 document.getElementById('discardZoneBtn').addEventListener('click', discardZoneEd);
 document.getElementById('znRegion').addEventListener('change', refreshSuggestedIdIfNew);
 document.getElementById('znCity').addEventListener('input', refreshSuggestedIdIfNew);
+document.getElementById('znCity').addEventListener('input', checkCityMismatch);
 document.getElementById('znCentral').addEventListener('change', refreshSuggestedIdIfNew);
+document.getElementById('znCentral').addEventListener('change', updateSaveGate);
+document.getElementById('znId').addEventListener('input', updateSaveGate); // v8.1: ручная правка ID тоже пересчитывает блокировку
+document.getElementById('mismatchAck').addEventListener('change', updateSaveGate); // v8.1: сразу включает/выключает кнопку Save
 document.getElementById('savedZoneCityFilter').addEventListener('change', function(){
   savedZoneCityFilterValue = this.value;
   renderSavedZoneList();
@@ -1487,6 +1592,9 @@ document.getElementById('recalcBtn').addEventListener('click', recalculateZoneAs
 function startDrawingEd(){
   drawing = true;
   currentPoints = [];
+  detectedCity = null;
+  geoLookupRequestId++; // v8.1: обесценивает любой ещё летящий запрос к Nominatim от прошлого контура
+  document.getElementById('geoDetectNote').className = 'status-bar';
   vertexMarkers.forEach(m=>map.removeLayer(m));
   vertexMarkers = [];
   if(drawLayer){ map.removeLayer(drawLayer); drawLayer = null; }
@@ -1511,6 +1619,25 @@ function onMapClickEd(e){
   document.getElementById('vcount').textContent = currentPoints.length;
   document.getElementById('undoBtn').disabled = false;
   document.getElementById('finishBtn').disabled = currentPoints.length < 3;
+
+  // v8.1: определяем географию сразу по ПЕРВОЙ точке, а не постфактум после
+  // "Finish contour" — исследователь сразу видит, к какому городу привязано
+  // место, где он реально стоит, ещё до того, как начнёт заполнять форму.
+  if (currentPoints.length === 1) {
+    detectedCity = detectCityFromPoint(e.latlng.lat, e.latlng.lng);
+    if (detectedCity) {
+      const muniName = validateMunicipalityCode(detectedCity.countryCode, detectedCity.municipalityCode);
+      const muniNote = muniName ? ` · ${muniName} Municipality` : '';
+      if (!detectedCity.seeded) {
+        setEdStatus('geoDetectNote', 'ok', `📍 Detected: ${detectedCity.cityCode}${muniNote} (${detectedCity.distKm.toFixed(1)} km from its other zones)`);
+      } else {
+        setEdStatus('geoDetectNote', 'ok', `📍 Detected: ${detectedCity.cityCode}${muniNote} — planned settlement, no zones drawn there yet (${detectedCity.distKm.toFixed(1)} km from its approximate center)`);
+      }
+    } else {
+      setEdStatus('geoDetectNote', 'busy', `📍 No known/planned settlement within ${CITY_AUTO_DETECT_RADIUS_KM} km — new area, City code must be entered manually.`);
+      lookupPlaceNameFallback(e.latlng.lat, e.latlng.lng); // v8.1: best-effort реверс-геокодинг, см. функцию ниже
+    }
+  }
 }
 
 function redrawCurrentShapeEd(){
@@ -1551,6 +1678,9 @@ function restoreSidebarMobile(){
 function cancelDrawingEd(){
   drawing = false;
   pendingEditMeta = null;
+  detectedCity = null;
+  geoLookupRequestId++;
+  document.getElementById('geoDetectNote').className = 'status-bar';
   map.off('click', onMapClickEd);
   currentPoints = [];
   vertexMarkers.forEach(m=>map.removeLayer(m));
@@ -1560,6 +1690,9 @@ function cancelDrawingEd(){
   document.getElementById('cancelBtn').style.display = 'none';
   document.getElementById('editModeBanner').classList.remove('show');
   document.getElementById('vcount').textContent = 0;
+  document.getElementById('cityMismatchWarning').className = 'status-bar';
+  document.getElementById('mismatchAckRow').style.display = 'none';
+  document.getElementById('mismatchAck').checked = false;
   restoreSidebarMobile();
 }
 
@@ -1573,8 +1706,212 @@ function cancelDrawingEd(){
 // Остальные зоны нумеруются с 002, даже если центральная зона города ещё
 // не создана вообще — 001 просто остаётся зарезервированным, никому не
 // выдаётся по умолчанию.
+// ═══════════════════════════════════════════════════════════════
+// v8.1 — ГЕОГРАФИЧЕСКАЯ ПРОВЕРКА КОДА ГОРОДА (найдено 13 июля: поле City
+// ничего не проверяет само по себе, оно просто ПОМНИТ последний введённый
+// код (см. lastCity в finishDrawingEd ниже) — если начать рисовать зону в
+// Перасте сразу после Херцег-Нови, оно молча предложит "HN·006", хотя
+// контур физически в другом городе. Постороннему исследователю в поле,
+// в отличие от того, кто помнит историю проекта, неоткуда об этом узнать.
+//
+// Полноценный реверс-геокодинг (запрос к внешнему API типа OSM Nominatim по
+// координатам) — отдельная, более тяжёлая задача (сетевая зависимость,
+// лимиты запросов) и осталась в техдолге как есть. Вместо этого — более
+// простая, детерминированная эвристика без внешних запросов: сравниваем
+// центр НОВОГО контура со средним центром уже известных зон с ТЕМ ЖЕ кодом
+// города (из этой сессии и из уже сохранённых в ZONES) и явно
+// предупреждаем, если они далеко друг от друга. Ничего не переключаем
+// автоматически — автопереключение было бы так же опасно (например, если
+// данных по городу ещё мало и "средний центр" неточен), поэтому решение
+// всегда остаётся за человеком, эвристика только привлекает внимание.
+// ═══════════════════════════════════════════════════════════════
+const CITY_MISMATCH_THRESHOLD_KM = 2.5;
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function ringCentroid(ring) {
+  const lats = ring.map(p => p[0]), lngs = ring.map(p => p[1]);
+  return [lats.reduce((a,b)=>a+b,0)/lats.length, lngs.reduce((a,b)=>a+b,0)/lngs.length];
+}
+
+// Средний центр всех известных зон по каждому коду города — из зон этой
+// сессии (editZones) и уже сохранённых в ZONES (lastDrawnZones).
+// ВАЖНО: editZones[].ring хранится как [lng,lat] (см. saveZoneEd), а
+// lastDrawnZones[].ring — как [lat,lng] (см. loadZonesSheet, комментарий
+// у loadSavedZoneForEditing) — тот же нюанс формата, что уже отмечен в коде
+// ниже. Нормализуем оба к [lat,lng] перед усреднением.
+function getCityCentroids() {
+  const sums = {}; // CITY -> {lat, lng, n, regionCode}
+  const add = (cityCode, regionCode, ringLatLng) => {
+    if (!cityCode || !ringLatLng || !ringLatLng.length) return;
+    const city = cityCode.toUpperCase();
+    const [lat, lng] = ringCentroid(ringLatLng);
+    if (!sums[city]) sums[city] = { lat: 0, lng: 0, n: 0, regionCode: regionCode || 'BJ' };
+    sums[city].lat += lat; sums[city].lng += lng; sums[city].n++;
+    if (regionCode) sums[city].regionCode = regionCode; // последний известный — этого достаточно, город обычно в одном регионе
+  };
+  editZones.forEach(z => add(z.cityCode, z.regionCode, z.ring ? z.ring.map(p => [p[1], p[0]]) : null)); // [lng,lat] -> [lat,lng]
+  Object.values(lastDrawnZones).forEach(z => add(z.cityCode, z.regionCode, z.ring)); // уже [lat,lng]
+  const out = {};
+  Object.keys(sums).forEach(city => {
+    out[city] = { lat: sums[city].lat / sums[city].n, lng: sums[city].lng / sums[city].n, regionCode: sums[city].regionCode };
+  });
+  return out;
+}
+
+// v8.1 — ПРОАКТИВНОЕ определение города, а не только предупреждение
+// постфактум (см. checkCityMismatch выше). Вызывается один раз — при
+// постановке ПЕРВОЙ точки нового контура (onMapClickEd) — и сразу
+// показывает исследователю, к какому известному кластеру зон физически
+// относится место, где он сейчас стоит. Тот же принцип: без внешних API,
+// сравнение с центроидами уже известных зон (сессия + сохранённые).
+const CITY_AUTO_DETECT_RADIUS_KM = 5;
+
+// v8.1 — РЕВЕРС-ГЕОКОДИНГ (пункт из техдолга брифа v19, реализован частично
+// и только как best-effort подсказка): для территории, которой нет ни среди
+// уже нарисованных зон, ни в KNOWN_CITIES выше — единственное, что раньше
+// мог сделать инструмент, это сказать "новая территория, вводите код сами".
+// Для стороннего исследователя это и есть та самая "мина" — приходится
+// полагаться на память вместо объективной проверки. Запрос к публичному
+// OSM Nominatim (без ключа, без сборки, но с учётом их policy: не чаще
+// нескольких раз за сессию — вызывается только на первой точке НОВОЙ зоны,
+// не на каждый клик) возвращает настоящее название места. Это НЕ подставляет
+// код города автоматически (сами коды — решение проекта, не алгоритма) —
+// только показывает название рядом с полем, чтобы было с чем сверить
+// то, что исследователь введёт вручную. Сеть недоступна/лимит — тихо
+// ничего не добавляет, ручной ввод остаётся рабочим фолбэком как и раньше.
+async function lookupPlaceNameFallback(lat, lng) {
+  const myRequestId = ++geoLookupRequestId;
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (myRequestId !== geoLookupRequestId) return; // рисование сменилось за время запроса — не перетираем чужое состояние
+    const addr = data.address || {};
+    const place = addr.town || addr.city || addr.village || addr.municipality || addr.county || null;
+    const el = document.getElementById('geoDetectNote');
+    if (place && el.classList.contains('show')) {
+      el.innerHTML += ` · OpenStreetMap says this is near <b>${place}</b>.`;
+    }
+  } catch (e) {
+    console.log('Nominatim reverse lookup unavailable (non-critical, manual entry still works):', e.message);
+  }
+}
+
+function detectCityFromPoint(lat, lng) {
+  const centroids = getCityCentroids();
+  // v8.1: KNOWN_CITIES заполняет пробел только там, где для этого кода
+  // ГОРОДА ещё нет ни одной реальной зоны — реальная геометрия (centroids)
+  // всегда побеждает справочник, если для города уже есть drawn-данные.
+  // Municipality_Code/countryCode centroids (реальные зоны) не хранят —
+  // добираем их из KNOWN_CITIES по City_Code, если он там есть.
+  const candidates = { ...centroids };
+  Object.keys(KNOWN_CITIES).forEach(city => {
+    if (!candidates[city]) {
+      candidates[city] = { lat: KNOWN_CITIES[city].lat, lng: KNOWN_CITIES[city].lng, regionCode: KNOWN_CITIES[city].regionCode, seeded: true };
+    }
+  });
+  let best = null;
+  Object.keys(candidates).forEach(city => {
+    const d = haversineKm(lat, lng, candidates[city].lat, candidates[city].lng);
+    if (d <= CITY_AUTO_DETECT_RADIUS_KM && (!best || d < best.distKm)) {
+      const seed = KNOWN_CITIES[city] || {};
+      best = {
+        cityCode: city, distKm: d, regionCode: candidates[city].regionCode,
+        seeded: !!candidates[city].seeded,
+        municipalityCode: seed.municipalityCode || null,
+        countryCode: seed.countryCode || 'ME',
+      };
+    }
+  });
+  return best; // null если в радиусе 5км нет ни одного известного/запланированного города — настоящая новая территория
+}
+
+// Вызывается: сразу после отрисовки контура (finishDrawingEd) и при каждом
+// изменении поля City — чтобы предупреждение появлялось/пропадало вживую.
+function checkCityMismatch() {
+  const el = document.getElementById('cityMismatchWarning');
+  const cityCode = document.getElementById('znCity').value.trim().toUpperCase();
+  if (!cityCode || currentPoints.length < 3) { el.className = 'status-bar'; return; }
+
+  const centroids = getCityCentroids();
+  const known = centroids[cityCode];
+  if (!known) { el.className = 'status-bar'; return; } // новый код города — сравнивать не с чем, это ожидаемо
+
+  const [lat, lng] = ringCentroid(currentPoints.map(p => [p[0], p[1]]));
+  const distKm = haversineKm(lat, lng, known.lat, known.lng);
+  if (distKm > CITY_MISMATCH_THRESHOLD_KM) {
+    setEdStatus('cityMismatchWarning', 'err',
+      `⚠ This contour is ~${distKm.toFixed(1)} km from other "${cityCode}" zones. Double-check the city code above — did the location change?`);
+  } else {
+    el.className = 'status-bar';
+  }
+  updateSaveGate();
+}
+
+// v8.1 — ЖЁСТКАЯ блокировка сохранения вместо мягкого confirm(), который
+// можно машинально закрыть кликом/пробелом не читая (именно так, судя по
+// всему, и проскочила перезапись настоящей ZN·ME·BJ·HN·001 контуром
+// Пераста). Кнопка "Save zone" физически недоступна, пока не отмечен
+// чекбокс подтверждения — а чекбокс появляется только когда есть повод:
+// (а) контур далеко от зон с таким же кодом города (см. checkCityMismatch)
+// или (б) Zone ID новой зоны уже существует в сохранённом листе ZONES
+// (см. тот же случай, что произошёл 13 июля). Без проблем — чекбокс скрыт,
+// кнопка активна как обычно, ничего не меняется в обычном рабочем процессе.
+function updateSaveGate() {
+  const ackRow = document.getElementById('mismatchAckRow');
+  const ackBox = document.getElementById('mismatchAck');
+  const saveBtn = document.getElementById('saveZoneBtn');
+  if (!saveBtn) return; // форма может быть ещё не отрисована в разметке на момент первого вызова
+
+  const cityCode = document.getElementById('znCity').value.trim().toUpperCase();
+  const znId = document.getElementById('znId').value.trim();
+  let hasIssue = false;
+
+  if (cityCode && currentPoints.length >= 3) {
+    const centroids = getCityCentroids();
+    const known = centroids[cityCode];
+    if (known) {
+      const [lat, lng] = ringCentroid(currentPoints.map(p => [p[0], p[1]]));
+      if (haversineKm(lat, lng, known.lat, known.lng) > CITY_MISMATCH_THRESHOLD_KM) hasIssue = true;
+    }
+  }
+  if (creatingNewZone && znId && lastDrawnZones[znId]) hasIssue = true;
+
+  if (hasIssue) {
+    ackRow.style.display = 'flex';
+    saveBtn.disabled = !ackBox.checked;
+  } else {
+    ackRow.style.display = 'none';
+    ackBox.checked = false;
+    saveBtn.disabled = false;
+  }
+}
+
+// v8.0: региональный сегмент больше не зашит буквально (был жёсткий 'BJ') —
+// приходит параметром, чтобы новые регионы (BR/BA/UL, позже — другие страны)
+// не требовали правки этой функции, только выбора в форме (см. #znRegion).
+//
+// Правило нумерации (сессия 11 июля 2026): ···001 — это осознанный выбор
+// исторического/центрального ядра города, НЕ "первая созданная зона".
+// isCentral=true всегда просит 001 (с проверкой конфликта — см. saveZoneEd).
+// Остальные зоны нумеруются с 002, даже если центральная зона города ещё
+// не создана вообще — 001 просто остаётся зарезервированным, никому не
+// выдаётся по умолчанию.
 function suggestZoneIdEd(cityCode, regionCode, isCentral){
-  const city = (cityCode || 'HN').toUpperCase();
+  // v8.1: раньше здесь был жёсткий фолбэк на 'HN', если поле City ещё
+  // пустое — из-за этого Zone ID мог выглядеть валидным (...HN·002) даже
+  // когда исследователь ничего не вводил. Пустой город теперь даёт пустой
+  // ID — форма явно остаётся незаполненной, а не тихо подсовывает Херцег-Нови.
+  if (!cityCode) return '';
+  const city = cityCode.toUpperCase();
   const region = (regionCode || 'BJ').toUpperCase();
 
   if (isCentral) {
@@ -1684,12 +2021,21 @@ async function finishDrawingEd(){
     pendingEditMeta = null;
   }else{
     creatingNewZone = true;
+    // v8.1: раньше по умолчанию подставлялся город ПОСЛЕДНЕЙ нарисованной
+    // в этой сессии зоны (или жёстко 'HN', если сессия только началась) —
+    // именно это и позволило контуру в Перасте молча продолжить нумерацию
+    // Херцег-Нови. Теперь в приоритете — географический детект по первой
+    // точке контура (см. detectCityFromPoint, сработал ещё при рисовании).
+    // Если детект ничего не нашёл (новая территория, никаких известных зон
+    // в радиусе 5км) — поле City остаётся ПУСТЫМ, а не тихо принимает
+    // случайный дефолт: пустое поле физически не даст сохранить зону, пока
+    // исследователь не впишет код города сам (см. проверку в saveZoneEd).
     const lastZone = editZones.length ? editZones[editZones.length-1] : null;
-    const lastCity = lastZone ? lastZone.cityCode : 'HN';
-    const lastRegion = lastZone ? lastZone.regionCode : 'BJ';
-    document.getElementById('znRegion').value = lastRegion || 'BJ';
-    document.getElementById('znCity').value = lastCity;
-    document.getElementById('znId').value = suggestZoneIdEd(lastCity, lastRegion, false);
+    const city = detectedCity ? detectedCity.cityCode : '';
+    const region = detectedCity ? detectedCity.regionCode : (lastZone ? lastZone.regionCode : 'BJ');
+    document.getElementById('znRegion').value = region || 'BJ';
+    document.getElementById('znCity').value = city;
+    document.getElementById('znId').value = city ? suggestZoneIdEd(city, region, false) : '';
     document.getElementById('znName').value = '';
     document.getElementById('znCi').value = '';
     document.getElementById('znCentral').checked = false;
@@ -1697,6 +2043,8 @@ async function finishDrawingEd(){
   }
   restoreSidebarMobile();
   document.getElementById('metaSection').style.display = 'block';
+  checkCityMismatch(); // v8.1: сразу видно, если контур далеко от предложенного города
+  updateSaveGate();
 }
 
 function saveZoneEd(){
@@ -1711,6 +2059,23 @@ function saveZoneEd(){
   if(!znId){ alert('Zone ID is required'); return; }
   if(currentPoints.length < 3){ alert('Draw at least 3 vertices first'); return; }
 
+  // v8.1: та же подстраховка, что и для коллизии ID ниже — если контур
+  // геометрически далеко от других зон с этим кодом города (см.
+  // checkCityMismatch/updateSaveGate), без отмеченного чекбокса — не даём
+  // сохранить молча.
+  {
+    const centroids = getCityCentroids();
+    const known = centroids[cityCode];
+    if (known) {
+      const [lat, lng] = ringCentroid(currentPoints.map(p => [p[0], p[1]]));
+      const distKm = haversineKm(lat, lng, known.lat, known.lng);
+      if (distKm > CITY_MISMATCH_THRESHOLD_KM && !document.getElementById('mismatchAck').checked) {
+        alert(`This contour is ~${distKm.toFixed(1)} km from other "${cityCode}" zones.\n\nTick the confirmation checkbox above if the location is really correct, or fix the City code.`);
+        return;
+      }
+    }
+  }
+
   // v8.0: ···001 значит "историческое ядро" и ничего больше — не даём
   // случайно рассинхронить чекбокс central и хвост номера, если Zone ID был
   // изменён вручную после автоподстановки.
@@ -1721,6 +2086,33 @@ function saveZoneEd(){
   }
   if (!isCentral && idNumberTail === '001') {
     alert(`···001 is reserved for the central/historic core zone. Check "central" above, or change the Zone ID number.`);
+    return;
+  }
+
+  // v8.1 (найдено 13 июля — контур Пераста тихо перезаписал геометрию
+  // настоящей измеренной ZN·ME·BJ·HN·001): раньше ничего не проверяло,
+  // что Zone ID новой зоны совпадает с уже СОХРАНЁННОЙ в листе ZONES —
+  // единственная проверка на конфликт central смотрела только на зоны
+  // ЭТОЙ сессии (editZones), а не на lastDrawnZones (уже отданные на
+  // сервер). Достаточно было отметить чекбокс "central" при City=HN
+  // (оставшемся от прошлой зоны по умолчанию) — ID сразу стал ···001,
+  // без единого предупреждения, что такая зона уже существует и имеет
+  // реальные измерения. Первая версия этой правки использовала confirm() —
+  // но именно диалог, который можно закрыть не глядя, скорее всего и
+  // пропустил перезапись в первый раз. Теперь — жёсткая проверка того же
+  // состояния, что управляет disabled на кнопке (updateSaveGate); это
+  // подстраховка на случай, если Save всё же был активирован в обход
+  // обычного потока (например, программно или через Enter в поле формы).
+  if (creatingNewZone && lastDrawnZones[znId] && !document.getElementById('mismatchAck').checked) {
+    const existing = lastDrawnZones[znId];
+    const priorNote = existing.priorCI != null ? ` (Prior_CI ${existing.priorCI.toFixed(3)})` : '';
+    alert(
+      `"${znId}" already exists in the saved ZONES sheet${priorNote}.\n\n` +
+      `Saving here will OVERWRITE its contour geometry the next time you sync — ` +
+      `even if it's a measured/central zone with real field data.\n\n` +
+      `Tick the confirmation checkbox above if you really intend to update that exact zone's boundary, ` +
+      `or fix the City code / Zone ID first.`
+    );
     return;
   }
 
@@ -1757,6 +2149,10 @@ function saveZoneEd(){
   document.getElementById('undoBtn').disabled = true;
   document.getElementById('finishBtn').disabled = true;
   document.getElementById('metaSection').style.display = 'none';
+  document.getElementById('cityMismatchWarning').className = 'status-bar';
+  document.getElementById('geoDetectNote').className = 'status-bar';
+  document.getElementById('mismatchAckRow').style.display = 'none';
+  document.getElementById('mismatchAck').checked = false;
 
   renderEditZoneList();
 }
@@ -1766,8 +2162,13 @@ function discardZoneEd(){
   vertexMarkers.forEach(m=>map.removeLayer(m));
   vertexMarkers = [];
   currentPoints = [];
+  detectedCity = null;
   document.getElementById('vcount').textContent = 0;
   document.getElementById('metaSection').style.display = 'none';
+  document.getElementById('cityMismatchWarning').className = 'status-bar';
+  document.getElementById('geoDetectNote').className = 'status-bar';
+  document.getElementById('mismatchAckRow').style.display = 'none';
+  document.getElementById('mismatchAck').checked = false;
 }
 
 function renderEditZoneList(){
@@ -2415,6 +2816,7 @@ function loadData() {
 buildLegend();
 loadData();
 loadRegionsSheet();
+loadCityCodesSheet();
 
 // Auto-refresh every 60 seconds
 // v8.1: интервал увеличен с 60с до 5 минут — при обычном просмотре карты
