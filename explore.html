@@ -86,7 +86,7 @@ html, body {
 .legend-title { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
 .legend-spectrum {
   height: 10px;
-  background: linear-gradient(to right, #ff0000, #ff0000, #ff6300, #ffbe00, #f0ff00, #a3ff00, #4aff00, #00ff92);
+  background: linear-gradient(to right, #7B00D4, #0000FF, #00BFFF, #00FF00, #FFFF00, #FF8C00, #FF0000);
   margin-bottom: 5px;
 }
 .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
@@ -201,45 +201,6 @@ footer {
 #svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .zone-label { background: transparent; border: none; pointer-events: none; }
 
-/* ── ZONE IMPACT CHART ── */
-.zone-chart-section {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 32px 56px;
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
-}
-.zone-chart-section.is-visible { opacity: 1; transform: translateY(0); }
-.zone-chart-section .section-title { margin-bottom: 6px; }
-.zc-subtitle { font-size: 12px; color: var(--light); margin-bottom: 22px; max-width: 640px; line-height: 1.5; }
-.zc-subtitle b { color: var(--text); }
-.zc-frame {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 28px 28px 20px;
-}
-.zc-bar-name { font-size: 9px; fill: var(--muted); }
-.zc-bar-name.is-flagged { fill: #ff8a75; font-weight: 700; }
-.zc-value-label { font-size: 11px; fill: var(--text); font-weight: 700; }
-.zc-w-label { font-size: 8.5px; fill: #fff; font-weight: 700; paint-order: stroke; stroke: #000; stroke-width: 2.5px; stroke-linejoin: round; }
-.zc-axis-label { font-size: 10px; fill: var(--muted); }
-.zc-mean-line { stroke: var(--muted); stroke-width: 1.6; stroke-dasharray: 3,3; }
-.zc-cat-line { stroke: #4a4a4a; stroke-width: 1; stroke-dasharray: 2,3; }
-.zc-threshold-line { stroke: #ff6a5a; stroke-width: 2.4; stroke-dasharray: 8,4; }
-.zc-mean-label { font-size: 10.5px; fill: var(--light); font-weight: 700; }
-.zc-threshold-label { font-size: 10.5px; fill: #ff6a5a; font-weight: 700; }
-.zc-legend-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
-.zc-legend-title { font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
-.zc-legend-spectrum { height: 8px; width: 260px; }
-.zc-legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 1px; width: 260px; margin-top: 4px; }
-.zc-caption { font-size: 10.5px; color: var(--muted); line-height: 1.6; margin-top: 16px; max-width: 760px; }
-
-@media (max-width: 700px) {
-  .zone-chart-section { padding: 0 16px 40px; }
-  .zc-frame { padding: 20px 14px 16px; }
-}
-
 @media (max-width: 700px) {
   .stats-bar { flex-wrap: wrap; gap: 20px; padding: 16px 20px; }
   .header { padding: 12px 16px; }
@@ -335,25 +296,6 @@ footer {
   <div class="empty-state" id="emptyState" style="display:none;">No objects match your search</div>
 </div>
 
-<!-- ZONE IMPACT CHART -->
-<div class="zone-chart-section" id="zoneChartSection">
-  <div class="section-title">Zone Impact — Case Study</div>
-  <div class="zc-subtitle" id="zcSubtitle">
-    How one low-chronity object pulls a zone's average through its own intervention threshold.
-  </div>
-  <div class="zc-frame">
-    <svg id="zcSvg" viewBox="0 0 860 520" style="width:100%;height:auto;display:block;"></svg>
-    <div class="zc-legend-row">
-      <div>
-        <div class="zc-legend-title">Chronity Index · Spectral Scale</div>
-        <div class="zc-legend-spectrum" style="background:linear-gradient(to right, #ff0000, #ff0000, #ff6300, #ffbe00, #f0ff00, #a3ff00, #4aff00, #00ff92);"></div>
-        <div class="zc-legend-labels"><span>0.00</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.00</span></div>
-      </div>
-      <div class="zc-caption" id="zcCaption"></div>
-    </div>
-  </div>
-</div>
-
 <!-- FOOTER -->
 <footer>
   <div class="footer-motto">Understanding before change</div>
@@ -399,7 +341,7 @@ function wavelengthToRGB(wl) {
 }
 
 function ciToHex(ci) {
-  const [r,g,b] = wavelengthToRGB(700 - ci*200);
+  const [r,g,b] = wavelengthToRGB(400 + ci*300);
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
@@ -483,7 +425,9 @@ function renderHull(objects) {
   const latLngs = coords.map(([ln,la])=>[la,ln]);
   const avgCI = objects.reduce((s,o)=>s+o.CI,0)/objects.length;
   const avgHex = ciToHex(avgCI);
-  const poly = L.polygon(latLngs,{fillOpacity:0.45,fillColor:`url(#${gradId})`,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
+  const poly = L.polygon(latLngs,{fillOpacity:0,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
+  const patch=()=>{const el=poly.getElement();if(el){el.setAttribute('fill',`url(#${gradId})`);el.setAttribute('fill-opacity','0.45');}};
+  poly.on('add',patch); requestAnimationFrame(patch);
   const center=turf.centroid(hull);
   const [cLn,cLa]=center.geometry.coordinates;
   L.marker([cLa,cLn],{
@@ -532,115 +476,6 @@ function renderMap(objects) {
   const withGPS=objects.filter(o=>o.lat&&o.lng);
   if(withGPS.length) map.fitBounds(L.latLngBounds(withGPS.map(o=>[o.lat,o.lng])),{padding:[60,60]});
 }
-
-// ── Zone impact chart (Zone 001 case study) ─────────────────────────────────
-// Renders a live SVG bar chart from the same registry data as the table above:
-// object CI values (bar height + colour, via the page's own ciToHex) against
-// a live-computed intervention threshold = 90% of the zone's own current
-// simple-mean CI. Recomputes on every data refresh, so it stays correct if
-// the underlying PASSPORT_REGISTRY values change.
-
-const ZONE_CHART_TARGET = 'ZN-ME-BJ-HN-001';
-
-function normaliseZoneId(raw) {
-  return (raw||'').trim().toUpperCase().replace(/[.·\s]/g,'-').replace(/-+/g,'-');
-}
-
-function svgEl(tag, attrs) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  for (const k in attrs) el.setAttribute(k, attrs[k]);
-  return el;
-}
-
-function renderZoneChart(objects) {
-  const svg = document.getElementById('zcSvg');
-  svg.innerHTML = '';
-
-  const zoneObjects = objects
-    .filter(o => normaliseZoneId(o.zn_id) === ZONE_CHART_TARGET)
-    .sort((a,b) => b.CI - a.CI);
-
-  const section = document.getElementById('zoneChartSection');
-  if (zoneObjects.length < 2) { section.style.display = 'none'; return; }
-  section.style.display = '';
-
-  const n = zoneObjects.length;
-  const mean = zoneObjects.reduce((s,o)=>s+o.CI,0) / n;
-  const threshold = mean * 0.90;
-  const flagged = zoneObjects.filter(o => o.CI < threshold);
-
-  // ── geometry (viewBox 860 x 480) ──
-  const W=860, H=520, mL=46, mR=176, mT=28, mB=160;
-  const plotW = W-mL-mR, plotH = H-mT-mB;
-  const yOf = ci => mT + (1-ci)*plotH;
-  const slot = plotW/n, barW = Math.min(64, slot*0.58);
-
-  // gridlines + y-axis labels
-  [0,0.25,0.50,0.75,1.00].forEach(v=>{
-    const y = yOf(v);
-    svg.appendChild(svgEl('line',{x1:mL,y1:y,x2:mL+plotW,y2:y,stroke:'#2a2a2a','stroke-width':1}));
-    const t = svgEl('text',{x:mL-10,y:y+3,'text-anchor':'end',class:'zc-axis-label'});
-    t.textContent = v.toFixed(2); svg.appendChild(t);
-  });
-
-  // CI category thresholds (Chronity Index scale) -- light, unobtrusive context
-  [0.30,0.50,0.70,0.85].forEach(v=>{
-    const y = yOf(v);
-    svg.appendChild(svgEl('line',{x1:mL,y1:y,x2:mL+plotW,y2:y,class:'zc-cat-line'}));
-  });
-
-  // bars
-  zoneObjects.forEach((o,i)=>{
-    const cx = mL + slot*i + slot/2;
-    const y = yOf(o.CI);
-    const isFlagged = o.CI < threshold;
-    const hex = ciToHex(o.CI);
-    svg.appendChild(svgEl('rect',{
-      x:cx-barW/2, y:y, width:barW, height:(mT+plotH)-y,
-      fill:hex, stroke:'none'
-    }));
-    const vt = svgEl('text',{x:cx,y:y-8,'text-anchor':'middle',class:'zc-value-label'});
-    vt.textContent = o.CI.toFixed(3); svg.appendChild(vt);
-
-    const nameLabel = svgEl('text',{
-      x:cx, y:mT+plotH+16, 'text-anchor':'end',
-      class:'zc-bar-name'+(isFlagged?' is-flagged':''),
-      transform:`rotate(-65 ${cx} ${mT+plotH+16})`
-    });
-    nameLabel.textContent = o.name || o.cp_id || '—';
-    svg.appendChild(nameLabel);
-  });
-
-  // mean + threshold lines (drawn after bars so they sit on top)
-  const meanY = yOf(mean);
-  svg.appendChild(svgEl('line',{x1:mL-8,y1:meanY,x2:mL+plotW+14,y2:meanY,class:'zc-mean-line'}));
-  const meanLbl = svgEl('text',{x:mL+plotW+20,y:meanY-4,class:'zc-mean-label'});
-  meanLbl.innerHTML = `<tspan x="${mL+plotW+20}" dy="0">Mean now</tspan><tspan x="${mL+plotW+20}" dy="13">${mean.toFixed(3)}</tspan>`;
-  svg.appendChild(meanLbl);
-
-  const thY = yOf(threshold);
-  svg.appendChild(svgEl('line',{x1:mL-8,y1:thY,x2:mL+plotW+14,y2:thY,class:'zc-threshold-line'}));
-  const thLbl = svgEl('text',{x:mL+plotW+20,y:thY+14,class:'zc-threshold-label'});
-  thLbl.innerHTML = `<tspan x="${mL+plotW+20}" dy="0">Threshold −10%</tspan><tspan x="${mL+plotW+20}" dy="13">${threshold.toFixed(3)}</tspan>`;
-  svg.appendChild(thLbl);
-
-  // live subtitle / caption text
-  document.getElementById('zcSubtitle').innerHTML =
-    `Zone <b>${ZONE_CHART_TARGET}</b> — ${n} measured objects. Mean CI today: <b>${mean.toFixed(3)}</b>. ` +
-    `Intervention threshold (\u221210% of mean): <b>${threshold.toFixed(3)}</b>.`;
-  document.getElementById('zcCaption').textContent = flagged.length
-    ? `${flagged.map(o=>o.name).join(', ')} ${flagged.length>1?'fall':'falls'} below the threshold — ` +
-      `${flagged.length>1?'these are':'this is'} exactly the kind of object TIA is designed to flag before it dilutes the average.`
-    : `All measured objects in this zone currently sit above the intervention threshold.`;
-}
-
-// Reveal the chart on scroll, once, the first time it enters the viewport
-const zoneChartObserver = new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting){ e.target.classList.add('is-visible'); zoneChartObserver.unobserve(e.target); }
-  });
-},{threshold:0.15});
-zoneChartObserver.observe(document.getElementById('zoneChartSection'));
 
 // ── Registry table ────────────────────────────────────────────────────────────
 
@@ -807,8 +642,8 @@ function tryRender() {
   document.getElementById('statusDot').style.background='#4CAF50';
   document.getElementById('statusText').textContent='Live';
 
-  const useRegistry = registryData && registryData.length ? registryData : null;
-  const useMap      = mapData && mapData.length ? mapData : null;
+  const useRegistry = registryData && registryData.length;
+  const useMap      = mapData && mapData.length;
 
   let objects;
   if(useRegistry || useMap) {
@@ -826,7 +661,6 @@ function tryRender() {
   updateStats(objects);
   renderMap(objects);
   renderTable(objects);
-  renderZoneChart(objects);
 }
 
 function loadAll() {
