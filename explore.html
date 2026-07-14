@@ -86,7 +86,7 @@ html, body {
 .legend-title { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
 .legend-spectrum {
   height: 10px;
-  background: linear-gradient(to right, #7B00D4, #0000FF, #00BFFF, #00FF00, #FFFF00, #FF8C00, #FF0000);
+  background: linear-gradient(to right, #ff0000, #ff0000, #ff6300, #ffbe00, #f0ff00, #a3ff00, #4aff00, #00ff92);
   margin-bottom: 5px;
 }
 .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
@@ -346,7 +346,7 @@ footer {
     <div class="zc-legend-row">
       <div>
         <div class="zc-legend-title">Chronity Index · Spectral Scale</div>
-        <div class="zc-legend-spectrum" style="background:linear-gradient(to right, #7B00D4, #0000FF, #00BFFF, #00FF00, #FFFF00, #FF8C00, #FF0000);"></div>
+        <div class="zc-legend-spectrum" style="background:linear-gradient(to right, #ff0000, #ff0000, #ff6300, #ffbe00, #f0ff00, #a3ff00, #4aff00, #00ff92);"></div>
         <div class="zc-legend-labels"><span>0.00</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.00</span></div>
       </div>
       <div class="zc-caption" id="zcCaption"></div>
@@ -399,7 +399,7 @@ function wavelengthToRGB(wl) {
 }
 
 function ciToHex(ci) {
-  const [r,g,b] = wavelengthToRGB(400 + ci*300);
+  const [r,g,b] = wavelengthToRGB(700 - ci*200);
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
@@ -483,9 +483,7 @@ function renderHull(objects) {
   const latLngs = coords.map(([ln,la])=>[la,ln]);
   const avgCI = objects.reduce((s,o)=>s+o.CI,0)/objects.length;
   const avgHex = ciToHex(avgCI);
-  const poly = L.polygon(latLngs,{fillOpacity:0,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
-  const patch=()=>{const el=poly.getElement();if(el){el.setAttribute('fill',`url(#${gradId})`);el.setAttribute('fill-opacity','0.45');}};
-  poly.on('add',patch); requestAnimationFrame(patch);
+  const poly = L.polygon(latLngs,{fillOpacity:0.45,fillColor:`url(#${gradId})`,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
   const center=turf.centroid(hull);
   const [cLn,cLa]=center.geometry.coordinates;
   L.marker([cLa,cLn],{
@@ -599,7 +597,7 @@ function renderZoneChart(objects) {
     const hex = ciToHex(o.CI);
     svg.appendChild(svgEl('rect',{
       x:cx-barW/2, y:y, width:barW, height:(mT+plotH)-y,
-      fill:hex, stroke:isFlagged?'#ff6a5a':'#000', 'stroke-width':isFlagged?2.6:1
+      fill:hex, stroke:'none'
     }));
     const vt = svgEl('text',{x:cx,y:y-8,'text-anchor':'middle',class:'zc-value-label'});
     vt.textContent = o.CI.toFixed(3); svg.appendChild(vt);
