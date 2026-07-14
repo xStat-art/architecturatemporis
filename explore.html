@@ -86,10 +86,15 @@ html, body {
 .legend-title { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
 .legend-spectrum {
   height: 10px;
-  background: linear-gradient(to right, #ff0000, #ff0000, #ff2100, #ff9b00, #ffff00, #a3ff00, #36ff00, #00ffff, #007bff);
   margin-bottom: 5px;
+  position: relative;
 }
-.legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+.legend-split-marker {
+  position: absolute; top: -2px; bottom: -2px; width: 1px;
+  background: rgba(255,255,255,0.75);
+}
+.legend-labels { position: relative; height: 12px; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+.legend-labels span { position: absolute; transform: translateX(-50%); }
 
 /* ── REGISTRY SECTION ── */
 .registry-section {
@@ -231,8 +236,9 @@ footer {
 .zc-threshold-label { font-size: 10.5px; fill: #ff6a5a; font-weight: 700; }
 .zc-legend-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
 .zc-legend-title { font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
-.zc-legend-spectrum { height: 8px; width: 260px; }
-.zc-legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 1px; width: 260px; margin-top: 4px; }
+.zc-legend-spectrum { height: 8px; width: 260px; position: relative; }
+.zc-legend-labels { position: relative; height: 12px; font-size: 9px; color: var(--muted); letter-spacing: 1px; width: 260px; margin-top: 4px; }
+.zc-legend-labels span { position: absolute; transform: translateX(-50%); }
 .zc-caption { font-size: 10.5px; color: var(--muted); line-height: 1.6; margin-top: 16px; max-width: 760px; }
 
 @media (max-width: 700px) {
@@ -307,9 +313,9 @@ footer {
 <div class="map-section">
   <div id="map"></div>
   <div class="map-legend">
-    <div class="legend-title">Chronity Index · Spectral Scale</div>
-    <div class="legend-spectrum"></div>
-    <div class="legend-labels"><span>0.00</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.00</span></div>
+    <div class="legend-title">Chronity Index (Weighted) · Spectral Scale</div>
+    <div class="legend-spectrum" id="legendSpectrum"><div class="legend-split-marker" id="legendSplitMarker"></div></div>
+    <div class="legend-labels" id="legendLabels"></div>
   </div>
 </div>
 
@@ -345,9 +351,9 @@ footer {
     <svg id="zcSvg" viewBox="0 0 860 520" style="width:100%;height:auto;display:block;"></svg>
     <div class="zc-legend-row">
       <div>
-        <div class="zc-legend-title">Chronity Index · Spectral Scale</div>
-        <div class="zc-legend-spectrum" style="background:linear-gradient(to right, #ff0000, #ff0000, #ff2100, #ff9b00, #ffff00, #a3ff00, #36ff00, #00ffff, #007bff);"></div>
-        <div class="zc-legend-labels"><span>0.00</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.00</span></div>
+        <div class="zc-legend-title">Chronity Index (Weighted) · Spectral Scale</div>
+        <div class="zc-legend-spectrum" id="zcLegendSpectrum"></div>
+        <div class="zc-legend-labels" id="zcLegendLabels"></div>
       </div>
       <div class="zc-caption" id="zcCaption"></div>
     </div>
@@ -375,6 +381,13 @@ const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNv
 // CI Map CSV (field measurements — has GPS)
 const MAP_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=67053185&single=true&output=csv';
 
+// ZONES CSV (real hand-drawn zone contours from Zone Editor — same source
+// ATRC_CI_Map.html uses. Without this, explore.html fell back to drawing a
+// convex hull around whatever points happened to exist, which silently
+// merges unrelated points from different areas into one fake "zone" the
+// moment there are 3+ of them nearby. Real Zone_ID-based geometry fixes that.
+const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1462679093&single=true&output=csv';
+
 // Demo fallback
 const DEMO_REGISTRY = [
   { cp_id:'CP-IT-VE-MB-002-0001', name:'Casa Zamprogno', architect:'Carlo Scarpa', year:'1971',
@@ -398,11 +411,27 @@ function wavelengthToRGB(wl) {
   return [Math.round(255*Math.pow(r*f,0.8)),Math.round(255*Math.pow(g*f,0.8)),Math.round(255*Math.pow(b*f,0.8))];
 }
 
-function ciToHex(value) {
-  // Piecewise spectral position: 0..1 maps to the first 80% of the spectrum,
-  // 1..1.5 (PSM-elevated, CI_weighted only) maps to the remaining 20%.
-  const posFraction = value <= 1 ? value * 0.8 : 0.8 + (value - 1) * 0.4;
-  const [r,g,b] = wavelengthToRGB(700 - posFraction*300);
+// Ported verbatim from ATRC_CI_Map.html: PSM (Protection Status Multiplier)
+// weights CI up to CI_weighted = CI × PSM, max 1.0 × PSM_MAX = 1.5. The
+// 0–1.0 range (PSM=1.0, no elevated status) gets the first SPECTRUM_SPLIT
+// (80%) of the colour spectrum; 1.0–1.5 (real PSM elevation) gets the
+// remaining 20% -- so a plain CI=1.0 object never eats the violet end,
+// which stays reserved for objects with genuine institutional status.
+const PSM_MAX = 1.5;
+const SPECTRUM_SPLIT = 0.8;
+
+function weightedToT(ciWeighted) {
+  const v = Math.max(0, ciWeighted);
+  if (v <= 1.0) return (v / 1.0) * SPECTRUM_SPLIT;
+  const span = PSM_MAX - 1.0;
+  const extra = Math.min(v, PSM_MAX) - 1.0;
+  return SPECTRUM_SPLIT + (span > 0 ? (extra / span) : 0) * (1 - SPECTRUM_SPLIT);
+}
+
+function ciToHex(ciWeighted) {
+  const t = weightedToT(ciWeighted);
+  const wl = 700 - t * 300;
+  const [r,g,b] = wavelengthToRGB(wl);
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
@@ -421,6 +450,34 @@ function ciCategoryColor(ci) {
   if(ci>=0.30) return '#C55A11';
   return '#C00000';
 }
+
+// Ported from ATRC_CI_Map.html: builds the legend gradient + labels from
+// weightedToT/ciToHex directly, so positions are always mathematically
+// exact (split exactly at SPECTRUM_SPLIT, where CI_weighted = 1.0) rather
+// than eyeballed in CSS.
+function buildLegend() {
+  const steps = 40;
+  const stops = [];
+  for (let i = 0; i <= steps; i++) {
+    const v = (i / steps) * PSM_MAX;
+    stops.push(`${ciToHex(v)} ${(weightedToT(v) * 100).toFixed(2)}%`);
+  }
+  const spectrumEl = document.getElementById('legendSpectrum');
+  if (spectrumEl) spectrumEl.style.background = `linear-gradient(to right, ${stops.join(', ')})`;
+
+  const splitEl = document.getElementById('legendSplitMarker');
+  if (splitEl) splitEl.style.left = (SPECTRUM_SPLIT * 100) + '%';
+
+  const labelValues = [0, 0.25, 0.50, 0.75, 1.00, 1.25, 1.50];
+  const labelsEl = document.getElementById('legendLabels');
+  if (labelsEl) {
+    labelsEl.innerHTML = labelValues.map(v => {
+      const left = (weightedToT(v) * 100).toFixed(2);
+      return `<span style="left:${left}%;">${v.toFixed(2)}</span>`;
+    }).join('');
+  }
+}
+buildLegend();
 
 function normaliseCpId(raw) {
   if(!raw||!raw.trim()) return '';
@@ -453,67 +510,235 @@ let markersLayer = L.layerGroup().addTo(map);
 let hullLayer    = L.layerGroup().addTo(map);
 let gradCounter  = 0;
 
-function buildGradient(objects) {
-  const defs = document.getElementById('gradient-defs');
-  const id   = 'eg-'+( ++gradCounter);
-  const lngs = objects.map(o=>o.lng);
-  const minL = Math.min(...lngs), maxL = Math.max(...lngs);
-  const rng  = maxL-minL||0.0001;
-  const sorted=[...objects].sort((a,b)=>a.lng-b.lng);
-  const g = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
-  g.setAttribute('id',id); g.setAttribute('x1','0%'); g.setAttribute('y1','0%');
-  g.setAttribute('x2','100%'); g.setAttribute('y2','0%');
-  g.setAttribute('gradientUnits','objectBoundingBox');
-  sorted.forEach(o=>{
-    const s=document.createElementNS('http://www.w3.org/2000/svg','stop');
-    const off=sorted.length===1?0.5:(o.lng-minL)/rng;
-    s.setAttribute('offset',(off*100).toFixed(1)+'%');
-    s.setAttribute('stop-color',ciToHex(o.CI_weighted));
-    s.setAttribute('stop-opacity','0.55');
-    g.appendChild(s);
-  });
-  defs.appendChild(g);
-  return id;
+// ── Real 2D gradient (IDW) — ported from ATRC_CI_Map.html, same math,
+// just interpolating raw CI (explore.html has no CSM weighting) ──────────────
+
+function computeIDWGrid(points, bounds, gridSize, power) {
+  power = power || 2;
+  const south = bounds.getSouth(), north = bounds.getNorth();
+  const west  = bounds.getWest(),  east  = bounds.getEast();
+  const grid = [];
+  for (let i = 0; i < gridSize; i++) {
+    const row = [];
+    const lat = south + (north - south) * (i / (gridSize - 1));
+    for (let j = 0; j < gridSize; j++) {
+      const lng = west + (east - west) * (j / (gridSize - 1));
+      let wSum = 0, vSum = 0, exact = null;
+      for (const p of points) {
+        const d = Math.hypot(p.lat - lat, p.lng - lng);
+        if (d < 1e-7) { exact = p.CI; break; }
+        const w = 1 / Math.pow(d, power);
+        wSum += w; vSum += w * p.CI;
+      }
+      row.push(exact !== null ? exact : (wSum ? vSum / wSum : null));
+    }
+    grid.push(row);
+  }
+  return grid;
 }
 
-function renderHull(objects) {
-  if(objects.length<3) return;
-  const pts = turf.featureCollection(objects.map(o=>turf.point([o.lng,o.lat])));
-  const hull = turf.convex(pts);
-  if(!hull) return;
-  const gradId = buildGradient(objects);
-  const coords = hull.geometry.coordinates[0];
-  const latLngs = coords.map(([ln,la])=>[la,ln]);
+function renderGradientCanvas(grid, gridSize, ringLngLat, bounds) {
+  const size = 900;
+  const raw = document.createElement('canvas');
+  raw.width = size; raw.height = size;
+  const rawCtx = raw.getContext('2d');
+  const cell = size / gridSize;
+
+  for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      const v = grid[i][j];
+      if (v === null) continue;
+      rawCtx.fillStyle = ciToHex(v);
+      const x = j * cell;
+      const y = size - (i + 1) * cell;
+      rawCtx.fillRect(x, y - 0.5, cell + 1, cell + 1);
+    }
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.filter = 'blur(6px)';
+  ctx.drawImage(raw, 0, 0);
+  ctx.filter = 'none';
+
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.beginPath();
+  ringLngLat.forEach(([lng, lat], idx) => {
+    const px = (lng - bounds.getWest())  / (bounds.getEast()  - bounds.getWest())  * size;
+    const py = size - (lat - bounds.getSouth()) / (bounds.getNorth() - bounds.getSouth()) * size;
+    idx === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  });
+  ctx.closePath();
+  ctx.fillStyle = '#000';
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  return canvas.toDataURL();
+}
+
+let drawnZones = {}; // Zone_ID -> {ring, priorCI, isCentral} from ZONES_CSV
+
+function loadZonesSheet(callback) {
+  Papa.parse(ZONES_CSV, {
+    download: true, header: true, skipEmptyLines: true,
+    complete(results) {
+      const zones = {};
+      results.data.forEach(row => {
+        const zoneId = (row['Zone_ID'] || '').trim();
+        if (!zoneId) return;
+        let ring = null;
+        try {
+          const geo = JSON.parse(row['Polygon_GeoJSON']);
+          ring = geo.coordinates[0].slice(0, -1).map(c => [c[1], c[0]]); // [lng,lat]->[lat,lng]
+        } catch(e) { ring = null; }
+        zones[zoneId] = {
+          ring,
+          priorCI: row['Prior_CI'] === '' || row['Prior_CI'] == null ? null : Number(row['Prior_CI']),
+          isCentral: String(row['Is_Central']).toUpperCase() === 'TRUE',
+        };
+      });
+      callback(zones);
+    },
+    error() { callback({}); }
+  });
+}
+
+// Порт из ATRC_CI_Map.html (v8.0) — декоративный (не CI-содержательный!)
+// цвет для зон без единого измерения, чтобы соседние нарисованные-но-
+// неизмеренные зоны визуально не сливались друг с другом на explore.html
+// так же, как раньше сливались на самой карте (см. коммент в
+// ATRC_CI_Map.html у decorativeZoneColor — тот же murmur3-подобный
+// финализатор, тот же принцип).
+function decorativeZoneColor(zoneId) {
+  let hash = 0;
+  for (let i = 0; i < zoneId.length; i++) {
+    hash = (hash * 31 + zoneId.charCodeAt(i)) >>> 0;
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x45d9f3b) >>> 0;
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x45d9f3b) >>> 0;
+  hash ^= hash >>> 16;
+  const hue = (hash >>> 0) % 360;
+  return `hsl(${hue}, 42%, 62%)`;
+}
+
+function renderZoneShape(zoneId, objects) {
+  const drawn = drawnZones[zoneId];
+
+  // ── STAGE 1 (порт из ATRC_CI_Map.html, 13 июля): ноль измерений — рисуем
+  // только если есть реальный нарисованный контур (drawn.ring); без него и
+  // без объектов строить нечего (convex hull не из чего собрать). ──
+  if (!objects.length) {
+    if (!drawn || !drawn.ring) return;
+    const latLngs = drawn.ring;
+    const lats = latLngs.map(p=>p[0]), lngs = latLngs.map(p=>p[1]);
+    const centerLat = (Math.min(...lats)+Math.max(...lats))/2;
+    const centerLng = (Math.min(...lngs)+Math.max(...lngs))/2;
+    const color = decorativeZoneColor(zoneId);
+    const priorCI = drawn.priorCI;
+    L.polygon(latLngs, {
+      fillColor: color, fillOpacity: drawn.isCentral ? 0.5 : 0.35,
+      color, weight: 2, opacity: 0.85, dashArray: '2 6'
+    }).addTo(hullLayer);
+    L.marker([centerLat, centerLng], {
+      icon: L.divIcon({
+        className: 'zone-label',
+        html: `<div style="text-align:center;background:rgba(20,20,20,0.82);border-radius:4px;padding:4px 10px;display:inline-block;">
+                 <div style="color:#fff;font-weight:700;font-size:9px;letter-spacing:1.5px;">${zoneId}${drawn.isCentral?' ★':''}</div>
+                 <div style="color:${color};font-weight:600;font-size:9px;letter-spacing:1px;margin-top:1px;">Not yet measured${priorCI!=null ? ' · Prior_CI '+priorCI.toFixed(3) : ''}</div>
+               </div>`,
+        iconAnchor:[40,16]}), interactive:false
+    }).addTo(hullLayer);
+    return;
+  }
+
   const avgCI = objects.reduce((s,o)=>s+o.CI_weighted,0)/objects.length;
   const avgHex = ciToHex(avgCI);
-  const poly = L.polygon(latLngs,{fillOpacity:0.45,fillColor:`url(#${gradId})`,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
-  const center=turf.centroid(hull);
-  const [cLn,cLa]=center.geometry.coordinates;
-  L.marker([cLa,cLn],{
+
+  let latLngs, centerLat, centerLng;
+  if(drawn && drawn.ring) {
+    // Real hand-drawn contour — the authoritative zone shape.
+    latLngs = drawn.ring;
+    const lats = latLngs.map(p=>p[0]), lngs = latLngs.map(p=>p[1]);
+    centerLat = (Math.min(...lats)+Math.max(...lats))/2;
+    centerLng = (Math.min(...lngs)+Math.max(...lngs))/2;
+  } else if(objects.length>=3) {
+    // Zone not drawn yet — temporary convex hull around its own points only
+    // (objects are already grouped by Zone_ID before this is called, so this
+    // never mixes points from unrelated areas).
+    const pts = turf.featureCollection(objects.map(o=>turf.point([o.lng,o.lat])));
+    const hull = turf.convex(pts);
+    if(!hull) return;
+    const coords = hull.geometry.coordinates[0];
+    latLngs = coords.map(([ln,la])=>[la,ln]);
+    const center = turf.centroid(hull);
+    [centerLng, centerLat] = center.geometry.coordinates;
+  } else {
+    return; // no real contour yet and too few points for an honest hull
+  }
+
+  const ringLngLat = latLngs.map(([lat,lng])=>[lng,lat]);
+  const bounds = L.latLngBounds(latLngs).pad(0.08);
+
+  if(objects.length>=3) {
+    // Real 2D IDW gradient, same math as ATRC_CI_Map.html
+    const gridSize = 128;
+    const grid = computeIDWGrid(
+      objects.map(o=>({lat:o.lat, lng:o.lng, CI:o.CI_weighted})),
+      bounds, gridSize, 2
+    );
+    const dataURL = renderGradientCanvas(grid, gridSize, ringLngLat, bounds);
+    L.imageOverlay(dataURL, bounds, { opacity: 0.55, interactive: false }).addTo(hullLayer);
+    L.polygon(latLngs,{fillOpacity:0,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
+  } else {
+    // Too few points for an honest gradient — flat average color, like the map's stage 2
+    L.polygon(latLngs,{fillColor:avgHex,fillOpacity:0.35,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
+  }
+
+  L.marker([centerLat,centerLng],{
     icon:L.divIcon({className:'zone-label',
-      html:`<div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;text-shadow:0 0 6px rgba(0,0,0,0.8);">CI_zone(weighted) ${avgCI.toFixed(3)}</div>`,
-      iconAnchor:[40,8]}),interactive:false}).addTo(hullLayer);
+      html:`<div style="text-align:center;background:rgba(20,20,20,0.82);border-radius:4px;padding:4px 10px;display:inline-block;">
+              <div style="color:#fff;font-weight:700;font-size:9px;letter-spacing:1.5px;">${zoneId}</div>
+              <div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;margin-top:1px;">CI_zone (w) ${avgCI.toFixed(3)}</div>
+            </div>`,
+      iconAnchor:[40,16]}),interactive:false}).addTo(hullLayer);
 }
 
-function renderMap(objects) {
+// v8.1: та же правка, что в ATRC_CI_Map.html — fitBounds раньше срабатывал
+// на КАЖДОЕ автообновление (каждые 60с), перечёркивая ручной пан/зум, пока
+// кто-то рассматривает конкретный город на карте. Теперь только на первой
+// загрузке страницы, см. didInitialFit в loadAll().
+//
+// v8.1 (порт из ATRC_CI_Map.html, обнаружено 13 июля): зоны без единого
+// измерения раньше вообще не попадали на карту — group-by-zone строился
+// только по object.zn_id, а нарисованные, но ещё не измеренные зоны (002-005)
+// не имеют ни одного объекта и поэтому никогда не участвовали в цикле ниже.
+// Теперь берём объединение zoneId из объектов И из drawnZones (ZONES_CSV) —
+// см. zoneIds ниже, как в renderZones() в ATRC_CI_Map.html.
+function renderMap(objects, fitBounds) {
+  if (fitBounds === undefined) fitBounds = true;
   markersLayer.clearLayers();
   hullLayer.clearLayers();
   document.getElementById('gradient-defs').innerHTML='';
   gradCounter=0;
-  if(!objects.length) return;
 
-  // Group by zone for hull
+  // Group by zone — each zone drawn once, using its real contour if available
   const zones={};
   objects.forEach(o=>{
     const z=o.zn_id||'default';
     if(!zones[z]) zones[z]=[];
     zones[z].push(o);
   });
-  Object.values(zones).forEach(grp=>{ if(grp.length>=3) renderHull(grp); });
+  const zoneIds = Array.from(new Set([...Object.keys(zones), ...Object.keys(drawnZones)]));
+  zoneIds.forEach(zoneId=>{ renderZoneShape(zoneId, zones[zoneId] || []); });
+
+  if (!objects.length && zoneIds.length === 0) return;
 
   objects.forEach(obj=>{
     if(!obj.lat||!obj.lng) return;
-    const hex=ciToHex(obj.CI);
+    const hex=ciToHex(obj.CI_weighted);
     const cpId=normaliseCpId(obj.cp_id||'');
     const passBtn=cpId
       ?`<a class="popup-btn" href="${PASSPORT_BASE}${cpId}" target="_blank" rel="noopener">View Chrono-Passport →</a>`
@@ -523,8 +748,8 @@ function renderMap(objects) {
     }).bindPopup(L.popup({maxWidth:260}).setContent(`
       <div class="popup-inner">
         <div class="popup-name">${obj.name||'Unknown object'}</div>
-        <div class="popup-ci-big" style="color:${hex}">${obj.CI.toFixed(3)}</div>
-        <div class="popup-cat-small">${ciCategory(obj.CI)}</div>
+        <div class="popup-ci-big" style="color:${hex}">${obj.CI_weighted.toFixed(3)}</div>
+        <div class="popup-cat-small">${ciCategory(obj.CI)}${Math.abs(obj.PSM-1)>1e-6?` · PSM ×${obj.PSM.toFixed(2)}`:''}</div>
         ${obj.location?`<div style="font-size:10px;color:#888;margin-bottom:2px;">${obj.location}</div>`:''}
         ${obj.architect?`<div style="font-size:10px;color:#888;">Arch. ${obj.architect}</div>`:''}
         ${cpId?`<div style="font-size:9px;color:#555;letter-spacing:.5px;margin-top:4px;">${cpId}</div>`:''}
@@ -532,16 +757,24 @@ function renderMap(objects) {
       </div>`)).addTo(markersLayer);
   });
 
-  const withGPS=objects.filter(o=>o.lat&&o.lng);
-  if(withGPS.length) map.fitBounds(L.latLngBounds(withGPS.map(o=>[o.lat,o.lng])),{padding:[60,60]});
+  if (fitBounds) {
+    const withGPS=objects.filter(o=>o.lat&&o.lng);
+    if (withGPS.length) {
+      map.fitBounds(L.latLngBounds(withGPS.map(o=>[o.lat,o.lng])),{padding:[60,60]});
+    } else if (hullLayer.getLayers().length > 0) {
+      // Нет ни одного измеренного объекта, но есть распланированные зоны
+      // (Stage 1) — подгоняем камеру под них, а не оставляем в дефолтном
+      // положении (было бы, например, на весь мир при zoom:4).
+      map.fitBounds(hullLayer.getBounds(), {padding:[60,60]});
+    }
+  }
 }
 
 // ── Zone impact chart (Zone 001 case study) ─────────────────────────────────
-// Renders a live SVG bar chart from the same registry data as the table above:
-// object CI values (bar height + colour, via the page's own ciToHex) against
-// a live-computed intervention threshold = 90% of the zone's own current
-// simple-mean CI. Recomputes on every data refresh, so it stays correct if
-// the underlying PASSPORT_REGISTRY values change.
+// Live SVG bar chart from the same registry data as the table above: object
+// CI_raw (bar height, determines category) coloured by CI_weighted (the
+// same rule as the map), against a live-computed intervention threshold =
+// 90% of the zone's own current simple-mean CI_raw.
 
 const ZONE_CHART_TARGET = 'ZN-ME-BJ-HN-001';
 
@@ -554,6 +787,26 @@ function svgEl(tag, attrs) {
   for (const k in attrs) el.setAttribute(k, attrs[k]);
   return el;
 }
+
+function buildZcLegend() {
+  const steps = 40;
+  const stops = [];
+  for (let i = 0; i <= steps; i++) {
+    const v = (i / steps) * PSM_MAX;
+    stops.push(`${ciToHex(v)} ${(weightedToT(v) * 100).toFixed(2)}%`);
+  }
+  const el = document.getElementById('zcLegendSpectrum');
+  if (el) el.style.background = `linear-gradient(to right, ${stops.join(', ')})`;
+  const labelValues = [0, 0.25, 0.50, 0.75, 1.00, 1.25, 1.50];
+  const labelsEl = document.getElementById('zcLegendLabels');
+  if (labelsEl) {
+    labelsEl.innerHTML = labelValues.map(v => {
+      const left = (weightedToT(v) * 100).toFixed(2);
+      return `<span style="left:${left}%;">${v.toFixed(2)}</span>`;
+    }).join('');
+  }
+}
+buildZcLegend();
 
 function renderZoneChart(objects) {
   const svg = document.getElementById('zcSvg');
@@ -572,13 +825,11 @@ function renderZoneChart(objects) {
   const threshold = mean * 0.90;
   const flagged = zoneObjects.filter(o => o.CI < threshold);
 
-  // ── geometry (viewBox 860 x 480) ──
   const W=860, H=520, mL=46, mR=176, mT=28, mB=160;
   const plotW = W-mL-mR, plotH = H-mT-mB;
   const yOf = ci => mT + (1-ci)*plotH;
   const slot = plotW/n, barW = Math.min(64, slot*0.58);
 
-  // gridlines + y-axis labels
   [0,0.25,0.50,0.75,1.00].forEach(v=>{
     const y = yOf(v);
     svg.appendChild(svgEl('line',{x1:mL,y1:y,x2:mL+plotW,y2:y,stroke:'#2a2a2a','stroke-width':1}));
@@ -586,13 +837,11 @@ function renderZoneChart(objects) {
     t.textContent = v.toFixed(2); svg.appendChild(t);
   });
 
-  // CI category thresholds (Chronity Index scale) -- light, unobtrusive context
   [0.30,0.50,0.70,0.85].forEach(v=>{
     const y = yOf(v);
     svg.appendChild(svgEl('line',{x1:mL,y1:y,x2:mL+plotW,y2:y,class:'zc-cat-line'}));
   });
 
-  // bars
   zoneObjects.forEach((o,i)=>{
     const cx = mL + slot*i + slot/2;
     const y = yOf(o.CI);
@@ -616,7 +865,6 @@ function renderZoneChart(objects) {
     svg.appendChild(nameLabel);
   });
 
-  // mean + threshold lines (drawn after bars so they sit on top)
   const meanY = yOf(mean);
   svg.appendChild(svgEl('line',{x1:mL-8,y1:meanY,x2:mL+plotW+14,y2:meanY,class:'zc-mean-line'}));
   const meanLbl = svgEl('text',{x:mL+plotW+20,y:meanY-4,class:'zc-mean-label'});
@@ -629,7 +877,6 @@ function renderZoneChart(objects) {
   thLbl.innerHTML = `<tspan x="${mL+plotW+20}" dy="0">Threshold −10%</tspan><tspan x="${mL+plotW+20}" dy="13">${threshold.toFixed(3)}</tspan>`;
   svg.appendChild(thLbl);
 
-  // live subtitle / caption text
   document.getElementById('zcSubtitle').innerHTML =
     `Zone <b>${ZONE_CHART_TARGET}</b> — ${n} measured objects. Mean CI today: <b>${mean.toFixed(3)}</b>. ` +
     `Intervention threshold (\u221210% of mean): <b>${threshold.toFixed(3)}</b>.`;
@@ -639,7 +886,6 @@ function renderZoneChart(objects) {
     : `All measured objects in this zone currently sit above the intervention threshold.`;
 }
 
-// Reveal the chart on scroll, once, the first time it enters the viewport
 const zoneChartObserver = new IntersectionObserver((entries)=>{
   entries.forEach(e=>{
     if(e.isIntersecting){ e.target.classList.add('is-visible'); zoneChartObserver.unobserve(e.target); }
@@ -738,7 +984,7 @@ function parseRegistryCSV(rows) {
     const lng = parseFloat(r['GPS_Lon_anchor']);
     return {
       cp_id:    cpId,
-      zn_id:    r['Zone_ID']||'',
+      zn_id:    (r['Zone_ID']||'').trim(),
       name:     r['Object_Name']||r['Object_name']||r['name']||'',
       // Архитектор/год постройки/охранный статус/наследие не собираются
       // формой на местности — этих колонок в живой таблице нет. Оставляем
@@ -751,15 +997,14 @@ function parseRegistryCSV(rows) {
       heritage: r['Heritage']||'',
       status:   r['Status']||'',
       CI: ci,
-      // PSM (Protection Status Multiplier): institutional status of THIS object only,
-      // never inherited from the zone (Non-Inheritance Rule). Defaults to 1.0 when the
-      // registry has no PSM_current for an object -- no institutional status assumed.
+      // PSM (Protection Status Multiplier): institutional status of THIS
+      // object only, never inherited from the zone (Non-Inheritance Rule).
+      // Defaults to 1.0 when the registry has no PSM_current for an object.
       PSM: (()=>{ const p = parseFloat(r['PSM_current']); return isNaN(p)||p<=0 ? 1.0 : p; })(),
-      get CI_weighted(){ return Math.round(this.CI * this.PSM * 1000) / 1000; },
       lat: isNaN(lat)?null:lat,
       lng: isNaN(lng)?null:lng,
     };
-  }).filter(Boolean);
+  }).map(o => o && ({...o, CI_weighted: Math.min(Math.round(o.CI*o.PSM*1000)/1000, PSM_MAX)})).filter(Boolean);
 }
 
 function parseMapCSV(rows) {
@@ -808,17 +1053,21 @@ function mergeData(registry, mapObjects) {
 let loadedCount = 0;
 let registryData = null;
 let mapData = null;
+let zonesReady = false;
+// v8.1: как и в ATRC_CI_Map.html — fitBounds только на самой первой
+// загрузке страницы, не на каждом 60-секундном автообновлении.
+let didInitialFit = false;
 
 function tryRender() {
   loadedCount++;
-  if(loadedCount < 2) return; // wait for both
+  if(loadedCount < 2 || !zonesReady) return; // wait for both CSVs + zones
 
   document.getElementById('loadingOverlay').style.display='none';
   document.getElementById('statusDot').style.background='#4CAF50';
   document.getElementById('statusText').textContent='Live';
 
-  const useRegistry = registryData && registryData.length ? registryData : null;
-  const useMap      = mapData && mapData.length ? mapData : null;
+  const useRegistry = (registryData && registryData.length) ? registryData : null;
+  const useMap      = (mapData && mapData.length) ? mapData : null;
 
   let objects;
   if(useRegistry || useMap) {
@@ -834,15 +1083,17 @@ function tryRender() {
   allObjects = objects;
 
   updateStats(objects);
-  renderMap(objects);
+  renderMap(objects, !didInitialFit);
   renderTable(objects);
   renderZoneChart(objects);
+  didInitialFit = true;
 }
 
 function loadAll() {
   loadedCount = 0;
   registryData = null;
   mapData = null;
+  zonesReady = false;
   document.getElementById('loadingOverlay').style.display='flex';
   document.getElementById('statusDot').style.background='var(--accent)';
   document.getElementById('statusText').textContent='Loading…';
@@ -858,10 +1109,15 @@ function loadAll() {
     complete(res){ mapData = parseMapCSV(res.data); tryRender(); },
     error(){       mapData = [];                    tryRender(); }
   });
+
+  loadZonesSheet(function(zones){ drawnZones = zones; zonesReady = true; tryRender(); });
 }
 
 loadAll();
-setInterval(loadAll, 60000);
+// v8.1: интервал увеличен с 60с до 5 минут — тот же аргумент, что в
+// ATRC_CI_Map.html (см. коммент там). explore.html не имеет редактора зон,
+// поэтому пропускать тик тут не нужно — просто реже дёргаем данные.
+setInterval(loadAll, 5 * 60 * 1000);
 </script>
 </body>
 </html>
