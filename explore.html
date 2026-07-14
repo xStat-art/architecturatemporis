@@ -126,7 +126,8 @@ html, body {
 .search-box:focus { border-color: var(--accent); }
 
 /* Table */
-.registry-table { width: 100%; border-collapse: collapse; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.registry-table { width: 100%; min-width: 600px; border-collapse: collapse; }
 .registry-table th {
   font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
   color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--border);
@@ -224,6 +225,8 @@ footer {
   border: 1px solid var(--border);
   padding: 28px 28px 20px;
 }
+.zc-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.zc-svg { width: 100%; height: auto; display: block; }
 .zc-bar-name { font-size: 9px; fill: var(--muted); }
 .zc-bar-name.is-flagged { fill: #ff8a75; font-weight: 700; }
 .zc-value-label { font-size: 11px; fill: var(--text); font-weight: 700; }
@@ -244,6 +247,7 @@ footer {
 @media (max-width: 700px) {
   .zone-chart-section { padding: 0 16px 40px; }
   .zc-frame { padding: 20px 14px 16px; }
+  .zc-svg { width: 860px; min-width: 860px; }
 }
 
 @media (max-width: 700px) {
@@ -253,6 +257,8 @@ footer {
   .registry-section { padding: 24px 16px; }
   #map { height: 360px; }
   .search-box { width: 100%; }
+  .map-legend { left: 12px; right: 12px; padding: 10px 12px; }
+  .legend-title { font-size: 8px; letter-spacing: 1.5px; white-space: normal; }
 }
 </style>
 </head>
@@ -325,6 +331,7 @@ footer {
     <div class="section-title">All Measured Objects</div>
     <input class="search-box" type="text" id="searchInput" placeholder="Search by name or architect…" oninput="filterTable()">
   </div>
+  <div class="table-scroll">
   <table class="registry-table">
     <thead>
       <tr>
@@ -338,6 +345,7 @@ footer {
     </thead>
     <tbody id="registryBody"></tbody>
   </table>
+  </div>
   <div class="empty-state" id="emptyState" style="display:none;">No objects match your search</div>
 </div>
 
@@ -348,7 +356,9 @@ footer {
     How one low-chronity object pulls a zone's average through its own intervention threshold.
   </div>
   <div class="zc-frame">
-    <svg id="zcSvg" viewBox="0 0 860 520" style="width:100%;height:auto;display:block;"></svg>
+    <div class="zc-scroll">
+      <svg id="zcSvg" viewBox="0 0 860 520" class="zc-svg"></svg>
+    </div>
     <div class="zc-legend-row">
       <div>
         <div class="zc-legend-title">Chronity Index (Weighted) · Spectral Scale</div>
