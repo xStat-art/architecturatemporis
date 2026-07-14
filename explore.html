@@ -840,16 +840,22 @@ function renderZoneChart(objects) {
   const yOf = ci => mT + (1-ci)*plotH;
   const slot = plotW/n, barW = Math.min(64, slot*0.58);
 
+  // Whole composition drawn at 95% with the freed 5% as extra margin
+  // inside the panel, instead of the drawing running edge-to-edge.
+  const SCALE = 0.95;
+  const g = svgEl('g', { transform: `translate(${W*(1-SCALE)/2},${H*(1-SCALE)/2}) scale(${SCALE})` });
+  svg.appendChild(g);
+
   [0,0.25,0.50,0.75,1.00].forEach(v=>{
     const y = yOf(v);
-    svg.appendChild(svgEl('line',{x1:mL,y1:y,x2:mL+plotW,y2:y,stroke:'#2a2a2a','stroke-width':1}));
+    g.appendChild(svgEl('line',{x1:mL,y1:y,x2:mL+plotW,y2:y,stroke:'#2a2a2a','stroke-width':1}));
     const t = svgEl('text',{x:mL-10,y:y+3,'text-anchor':'end',class:'zc-axis-label'});
-    t.textContent = v.toFixed(2); svg.appendChild(t);
+    t.textContent = v.toFixed(2); g.appendChild(t);
   });
 
   [0.30,0.50,0.70,0.85].forEach(v=>{
     const y = yOf(v);
-    svg.appendChild(svgEl('line',{x1:mL,y1:y,x2:mL+plotW,y2:y,class:'zc-cat-line'}));
+    g.appendChild(svgEl('line',{x1:mL,y1:y,x2:mL+plotW,y2:y,class:'zc-cat-line'}));
   });
 
   zoneObjects.forEach((o,i)=>{
@@ -857,14 +863,19 @@ function renderZoneChart(objects) {
     const y = yOf(o.CI);
     const isFlagged = o.CI < threshold;
     const hex = ciToHex(o.CI_weighted);
-    svg.appendChild(svgEl('rect',{
+    g.appendChild(svgEl('rect',{
       x:cx-barW/2, y:y, width:barW, height:(mT+plotH)-y,
       fill:hex, stroke:'none'
     }));
     const vt = svgEl('text',{x:cx,y:y-8,'text-anchor':'middle',class:'zc-value-label'});
-    vt.textContent = o.CI.toFixed(3); svg.appendChild(vt);
-    const wt = svgEl('text',{x:cx,y:y+14,'text-anchor':'middle',class:'zc-w-label'});
-    wt.textContent = 'w='+o.CI_weighted.toFixed(2); svg.appendChild(wt);
+    vt.textContent = o.CI.toFixed(3); g.appendChild(vt);
+
+    // w= label: bottom of the bar, rotated vertical (reads bottom-to-top),
+    // so it never collides with the mean/threshold lines further up.
+    const wy = (mT+plotH) - 8;
+    const wt = svgEl('text',{x:cx,y:wy,'text-anchor':'start',class:'zc-w-label',
+      transform:`rotate(-90 ${cx} ${wy})`});
+    wt.textContent = 'w='+o.CI_weighted.toFixed(2); g.appendChild(wt);
 
     const nameLabel = svgEl('text',{
       x:cx, y:mT+plotH+16, 'text-anchor':'end',
@@ -872,20 +883,20 @@ function renderZoneChart(objects) {
       transform:`rotate(-65 ${cx} ${mT+plotH+16})`
     });
     nameLabel.textContent = o.name || o.cp_id || '—';
-    svg.appendChild(nameLabel);
+    g.appendChild(nameLabel);
   });
 
   const meanY = yOf(mean);
-  svg.appendChild(svgEl('line',{x1:mL-8,y1:meanY,x2:mL+plotW+14,y2:meanY,class:'zc-mean-line'}));
+  g.appendChild(svgEl('line',{x1:mL-8,y1:meanY,x2:mL+plotW+14,y2:meanY,class:'zc-mean-line'}));
   const meanLbl = svgEl('text',{x:mL+plotW+20,y:meanY-4,class:'zc-mean-label'});
   meanLbl.innerHTML = `<tspan x="${mL+plotW+20}" dy="0">Mean now</tspan><tspan x="${mL+plotW+20}" dy="13">${mean.toFixed(3)}</tspan>`;
-  svg.appendChild(meanLbl);
+  g.appendChild(meanLbl);
 
   const thY = yOf(threshold);
-  svg.appendChild(svgEl('line',{x1:mL-8,y1:thY,x2:mL+plotW+14,y2:thY,class:'zc-threshold-line'}));
+  g.appendChild(svgEl('line',{x1:mL-8,y1:thY,x2:mL+plotW+14,y2:thY,class:'zc-threshold-line'}));
   const thLbl = svgEl('text',{x:mL+plotW+20,y:thY+14,class:'zc-threshold-label'});
   thLbl.innerHTML = `<tspan x="${mL+plotW+20}" dy="0">Threshold −10%</tspan><tspan x="${mL+plotW+20}" dy="13">${threshold.toFixed(3)}</tspan>`;
-  svg.appendChild(thLbl);
+  g.appendChild(thLbl);
 
   document.getElementById('zcSubtitle').innerHTML =
     `Zone <b>${ZONE_CHART_TARGET}</b> — ${n} measured objects. Mean CI today: <b>${mean.toFixed(3)}</b>. ` +
