@@ -398,8 +398,11 @@ function wavelengthToRGB(wl) {
   return [Math.round(255*Math.pow(r*f,0.8)),Math.round(255*Math.pow(g*f,0.8)),Math.round(255*Math.pow(b*f,0.8))];
 }
 
-function ciToHex(ci) {
-  const [r,g,b] = wavelengthToRGB(700 - ci*240);
+function ciToHex(value) {
+  // Piecewise spectral position: 0..1 maps to the first 80% of the spectrum,
+  // 1..1.5 (PSM-elevated, CI_weighted only) maps to the remaining 20%.
+  const posFraction = value <= 1 ? value * 0.8 : 0.8 + (value - 1) * 0.4;
+  const [r,g,b] = wavelengthToRGB(700 - posFraction*300);
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
@@ -465,7 +468,7 @@ function buildGradient(objects) {
     const s=document.createElementNS('http://www.w3.org/2000/svg','stop');
     const off=sorted.length===1?0.5:(o.lng-minL)/rng;
     s.setAttribute('offset',(off*100).toFixed(1)+'%');
-    s.setAttribute('stop-color',ciToHex(o.CI));
+    s.setAttribute('stop-color',ciToHex(o.CI_weighted));
     s.setAttribute('stop-opacity','0.55');
     g.appendChild(s);
   });
@@ -481,14 +484,14 @@ function renderHull(objects) {
   const gradId = buildGradient(objects);
   const coords = hull.geometry.coordinates[0];
   const latLngs = coords.map(([ln,la])=>[la,ln]);
-  const avgCI = objects.reduce((s,o)=>s+o.CI,0)/objects.length;
+  const avgCI = objects.reduce((s,o)=>s+o.CI_weighted,0)/objects.length;
   const avgHex = ciToHex(avgCI);
   const poly = L.polygon(latLngs,{fillOpacity:0.45,fillColor:`url(#${gradId})`,color:avgHex,weight:2,opacity:0.8,dashArray:'5 4'}).addTo(hullLayer);
   const center=turf.centroid(hull);
   const [cLn,cLa]=center.geometry.coordinates;
   L.marker([cLa,cLn],{
     icon:L.divIcon({className:'zone-label',
-      html:`<div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;text-shadow:0 0 6px rgba(0,0,0,0.8);">CI_zone ${avgCI.toFixed(3)}</div>`,
+      html:`<div style="color:${avgHex};font-weight:700;font-size:10px;letter-spacing:2px;text-shadow:0 0 6px rgba(0,0,0,0.8);">CI_zone(weighted) ${avgCI.toFixed(3)}</div>`,
       iconAnchor:[40,8]}),interactive:false}).addTo(hullLayer);
 }
 
@@ -594,13 +597,15 @@ function renderZoneChart(objects) {
     const cx = mL + slot*i + slot/2;
     const y = yOf(o.CI);
     const isFlagged = o.CI < threshold;
-    const hex = ciToHex(o.CI);
+    const hex = ciToHex(o.CI_weighted);
     svg.appendChild(svgEl('rect',{
       x:cx-barW/2, y:y, width:barW, height:(mT+plotH)-y,
       fill:hex, stroke:'none'
     }));
     const vt = svgEl('text',{x:cx,y:y-8,'text-anchor':'middle',class:'zc-value-label'});
     vt.textContent = o.CI.toFixed(3); svg.appendChild(vt);
+    const wt = svgEl('text',{x:cx,y:y+14,'text-anchor':'middle',class:'zc-w-label'});
+    wt.textContent = 'w='+o.CI_weighted.toFixed(2); svg.appendChild(wt);
 
     const nameLabel = svgEl('text',{
       x:cx, y:mT+plotH+16, 'text-anchor':'end',
@@ -746,6 +751,11 @@ function parseRegistryCSV(rows) {
       heritage: r['Heritage']||'',
       status:   r['Status']||'',
       CI: ci,
+      // PSM (Protection Status Multiplier): institutional status of THIS object only,
+      // never inherited from the zone (Non-Inheritance Rule). Defaults to 1.0 when the
+      // registry has no PSM_current for an object -- no institutional status assumed.
+      PSM: (()=>{ const p = parseFloat(r['PSM_current']); return isNaN(p)||p<=0 ? 1.0 : p; })(),
+      get CI_weighted(){ return Math.round(this.CI * this.PSM * 1000) / 1000; },
       lat: isNaN(lat)?null:lat,
       lng: isNaN(lng)?null:lng,
     };
