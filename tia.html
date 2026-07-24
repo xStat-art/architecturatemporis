@@ -54,6 +54,7 @@
   .nav-links a {
     font-size: 12px; color: var(--grey-3); text-decoration: none;
     letter-spacing: 1.5px; text-transform: uppercase; transition: color .2s;
+    white-space: nowrap;
   }
   .nav-links a:hover { color: var(--white); }
   .nav-links a.nav-cta {
@@ -61,7 +62,12 @@
     padding: 6px 14px; border-radius: 5px; letter-spacing: 1.5px;
   }
   .nav-links a.nav-cta:hover { background: var(--orange-bright); }
-  @media (max-width: 768px) { .nav-links { display: none; } }
+  /* only two short links here (unlike field-workspace.html's full main
+     nav) — they still fit on a phone, so they stay visible, just tighter */
+  @media (max-width: 480px) {
+    .nav-links { gap: 14px; }
+    .nav-links a { font-size: 10px; letter-spacing: 1px; }
+  }
 
   .inner { max-width: 1080px; margin: 0 auto; padding: 0 48px; }
 
@@ -107,13 +113,31 @@
   .chart-wrap {
     padding: 20px 0 80px;
   }
+  .chart-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .chart-frame {
     max-width: 800px;
+    min-width: 620px;   /* below this the 8-12px internal text becomes illegible if scaled down further — scroll instead of shrink */
     margin: 0 auto;
   }
   .chart-frame > div {
     width: 100%;
     aspect-ratio: 760 / 610;
+  }
+
+  @media (max-width: 660px) {
+    .chart-scroll::after {
+      content: "→ scroll to see the full chart";
+      display: block;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--grey-3);
+      text-transform: uppercase;
+      margin-top: 10px;
+    }
   }
 
   .note {
@@ -177,8 +201,10 @@
 
 <div class="chart-wrap">
   <div class="inner">
-    <div class="chart-frame">
-      <div id="tiaChart"></div>
+    <div class="chart-scroll">
+      <div class="chart-frame">
+        <div id="tiaChart"></div>
+      </div>
     </div>
     <div class="note">
       <strong>About this view:</strong> the coloured block is the zone's real, current chronity range and mean, over all measured objects. The faint block behind it is the same statistic recomputed over the remaining objects only, with the flagged outlier excluded — a real number, not an estimate. The step on the left shows the outlier's own chronity, at its own true height. Data currently shown is <code>ZN·ME·BJ·HN·001</code>'s pilot measurement set; wiring this to the live ZONES/PASSPORT_REGISTRY sheet is next on the list.
