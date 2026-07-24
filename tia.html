@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIA — Temporis Impact Assessment · ATRC</title>
+<meta name="description" content="ATRC TIA viewer: shows how an outlier object's low chronity pulls down a zone's overall reading, current state vs. a hypothetical without it.">
+<meta name="author" content="Sergei Tatarnikov">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #0A0A0A;
+    --dark:    #111111;
+    --white:   #F8F8F6;
+    --off-white: #EFEFEC;
+    --grey-1:  #1C1C1C;
+    --grey-2:  #303030;
+    --grey-3:  #6A6A6A;
+    --grey-4:  #A0A0A0;
+    --grey-5:  #D8D8D8;
+    --orange:  #C8650A;
+    --orange-bright: #E8791A;
+    --font-display: 'Arial Black','Helvetica Neue',Arial,sans-serif;
+    --font-body:    Arial,'Helvetica Neue',sans-serif;
+    --font-mono:    'Courier New',Courier,monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background: var(--dark);
+    color: var(--white);
+  }
+
+  /* ── NAV (matches field-workspace.html) ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: var(--dark);
+    border-bottom: 1px solid var(--grey-2);
+    padding: 0 48px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: var(--font-body); font-size: 13px; font-weight: bold;
+    letter-spacing: 3px; color: var(--white); text-decoration: none;
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; }
+  .nav-links a {
+    font-size: 12px; color: var(--grey-3); text-decoration: none;
+    letter-spacing: 1.5px; text-transform: uppercase; transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--white); }
+  .nav-links a.nav-cta {
+    background: var(--orange); color: var(--white);
+    padding: 6px 14px; border-radius: 5px; letter-spacing: 1.5px;
+  }
+  .nav-links a.nav-cta:hover { background: var(--orange-bright); }
+  @media (max-width: 768px) { .nav-links { display: none; } }
+
+  .inner { max-width: 1080px; margin: 0 auto; padding: 0 48px; }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 140px 0 40px;
+  }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 4px; color: var(--grey-3);
+    text-transform: uppercase; margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 4vw, 42px);
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+  .hero p {
+    max-width: 640px;
+    font-size: 15px;
+    color: var(--grey-4);
+  }
+  .zone-picker {
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .zone-picker label {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--grey-3);
+  }
+  .zone-picker select {
+    background: var(--grey-1);
+    border: 1px solid var(--grey-2);
+    color: var(--white);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+
+  /* ── CHART ── */
+  .chart-wrap {
+    padding: 20px 0 80px;
+  }
+  .chart-frame {
+    background: #000;
+    border: 1px solid var(--grey-2);
+    border-radius: 10px;
+    overflow: hidden;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .chart-frame > div {
+    width: 100%;
+    aspect-ratio: 760 / 610;
+  }
+
+  .note {
+    max-width: 800px;
+    margin: 32px auto 0;
+    padding: 20px 24px;
+    background: var(--grey-1);
+    border-left: 3px solid var(--orange);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--grey-4);
+    line-height: 1.7;
+  }
+  .note strong { color: var(--white); }
+  .note code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--grey-4);
+    background: var(--black);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  footer {
+    border-top: 1px solid var(--grey-2);
+    padding: 32px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--grey-3); flex-wrap: wrap; gap: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .inner { padding: 0 24px; }
+    nav { padding: 0 24px; }
+    footer { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="field-workspace.html" class="nav-logo">ATRC</a>
+  <ul class="nav-links">
+    <li><a href="field-workspace.html">← Field Workspace</a></li>
+    <li><a href="explore.html">Explore</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="inner">
+    <p class="eyebrow">Architectura Temporis Research Centre · Field Workspace</p>
+    <h1>TIA — Temporis Impact Assessment</h1>
+    <p>Shows how one flagged outlier — an object whose chronity falls well below the zone's own norm — pulls the zone's overall reading down. Current state vs. a hypothetical without it, side by side, built from the same measured data behind every zone passport.</p>
+    <div class="zone-picker">
+      <label for="zoneSelect">Zone</label>
+      <select id="zoneSelect">
+        <option value="hn001">Herceg Novi Old Town · ZN·ME·BJ·HN·001</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="chart-wrap">
+  <div class="inner">
+    <div class="chart-frame">
+      <div id="tiaChart"></div>
+    </div>
+    <div class="note">
+      <strong>About this view:</strong> the coloured block is the zone's real, current chronity range and mean, over all measured objects. The faint block behind it is the same statistic recomputed over the remaining objects only, with the flagged outlier excluded — a real number, not an estimate. The step on the left shows the outlier's own chronity, at its own true height. Data currently shown is <code>ZN·ME·BJ·HN·001</code>'s pilot measurement set; wiring this to the live ZONES/PASSPORT_REGISTRY sheet is next on the list.
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div>Architectura Temporis Research Centre (ATRC) · Herceg Novi, Montenegro · Est. 2024</div>
+  <div>Understanding before change</div>
+</footer>
+
+<script type="module">
+  import { renderTIABar, computeZoneStats } from './tia-bar.js';
+
+  // Zone 001 pilot measurement set — same nine objects as
+  // ATRC_CI_Field_Data · 2026, Object_Name / CI_current / PSM_current.
+  // TODO: replace with a live fetch from the ZONES/PASSPORT_REGISTRY
+  // sheet (same source explore.html already reads) once this view moves
+  // off the pilot dataset.
+  const ZONES = {
+    hn001: {
+      zoneName: 'HERCEG NOVI',
+      zoneIdLabel: 'ZN·ME·BJ·HN·001',
+      objects: [
+        { name: 'Bellavista',                 ciRaw: 0.853, psm: 1.2 },
+        { name: 'Marka Vojnovica',             ciRaw: 0.834, psm: 1.2 },
+        { name: 'St. Jeronim',                 ciRaw: 0.856, psm: 1.2 },
+        { name: 'Forte Mare Fortress',         ciRaw: 0.894, psm: 1.5 },
+        { name: 'Kanli Kula Fortress',         ciRaw: 0.975, psm: 1.2 },
+        { name: 'Marka Cara Street',           ciRaw: 0.746, psm: 1.2 },
+        { name: 'Žuta kuća',                   ciRaw: 0.384, psm: 1.0 },
+        { name: 'Clock Tower',                 ciRaw: 0.746, psm: 1.2 },
+        { name: 'Stepeniste Kralja Tvrtka I',  ciRaw: 0.814, psm: 1.2 },
+      ],
+    },
+  };
+
+  function renderZone(key) {
+    const zone = ZONES[key];
+    const stats = computeZoneStats(zone.objects);
+    renderTIABar('tiaChart', {
+      zoneName: zone.zoneName,
+      zoneIdLabel: zone.zoneIdLabel,
+      ...stats,
+    });
+  }
+
+  document.getElementById('zoneSelect').addEventListener('change', e => renderZone(e.target.value));
+  renderZone('hn001');
+</script>
+</body>
+</html>
