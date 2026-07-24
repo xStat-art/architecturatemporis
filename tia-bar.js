@@ -303,7 +303,7 @@ function buildSVG(uid, data) {
 
   return `<svg viewBox="0 0 ${vbW} ${vbH}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
     <defs>${defsOut.join('')}</defs>
-    <rect width="${vbW}" height="${vbH}" fill="#000"/>
+    <rect width="${vbW}" height="${vbH}" fill="#111111"/>
     <text x="${BAR_GEOMETRY.titleX}" y="${BAR_GEOMETRY.titleY}" font-size="39.685" fill="#e5e5e5" font-family="Arial, sans-serif">TIA</text>
     <text x="${BAR_GEOMETRY.titleX}" y="${BAR_GEOMETRY.subtitleY}" font-size="17.0079" fill="#fff" font-family="Arial, sans-serif">Temporis Impact Assessment</text>
     <text x="${zoneNameCx.toFixed(2)}" y="${BAR_GEOMETRY.zoneNameY}" text-anchor="middle" font-size="17.0079" fill="#fff" font-family="Arial, sans-serif">${zoneName}</text>
