@@ -223,6 +223,29 @@ const TRANSLATIONS = {
   'field.toast.copyManually':     { en: 'Select and copy manually', sr: 'Izaberite i kopirajte ručno' },
 
   'field.marker.object':          { en: 'Object', sr: 'Objekat' },
+
+  // ── gps.html ──
+  'gps.status.requesting':   { en: 'Requesting location...', sr: 'Traženje lokacije...' },
+  'gps.status.found':        { en: 'Location found', sr: 'Lokacija pronađena' },
+  'gps.status.error':        { en: 'Error', sr: 'Greška' },
+  'gps.coordsLabel':         { en: 'GPS Coordinates', sr: 'GPS koordinate' },
+  'gps.coords.waiting':      { en: 'Waiting for GPS...', sr: 'Čekanje GPS-a...' },
+  'gps.accuracy':            { en: 'Accuracy: \u00b1{acc} m', sr: 'Tačnost: \u00b1{acc} m' },
+  'gps.btnCopy':              { en: '\ud83d\udccb &nbsp; Copy Coordinates', sr: '\ud83d\udccb &nbsp; Kopiraj koordinate' },
+  'gps.btnCopied':            { en: '\u2713 Copied!', sr: '\u2713 Kopirano!' },
+  'gps.btnRefresh':           { en: '\u21bb &nbsp; Refresh', sr: '\u21bb &nbsp; Osveži' },
+  'gps.instruction.title':    { en: 'How to use:', sr: 'Kako se koristi:' },
+  'gps.instruction.step1':    { en: 'Copy coordinates above', sr: 'Kopirajte koordinate iznad' },
+  'gps.instruction.step2':    { en: 'Open the ATRC form', sr: 'Otvorite ATRC formular' },
+  'gps.instruction.step3pre': { en: 'Paste into ', sr: 'Nalepite u polje ' },
+  'gps.instruction.step3strong': { en: 'GPS coordinates', sr: 'GPS koordinate' },
+  'gps.instruction.step3post':   { en: ' field', sr: '' },
+  'gps.formLink':             { en: '\u2192 Open ATRC Field Form', sr: '\u2192 Otvori ATRC terenski formular' },
+  'gps.err.notSupported':     { en: 'Geolocation not supported by this browser.', sr: 'Ovaj pregledač ne podržava geolokaciju.' },
+  'gps.err.generic':          { en: 'Location error.', sr: 'Greška lokacije.' },
+  'gps.err.permission':       { en: 'Permission denied. Allow location access in browser settings.', sr: 'Pristup odbijen. Dozvolite pristup lokaciji u podešavanjima pregledača.' },
+  'gps.err.unavailable':      { en: 'Location unavailable. Try outdoors.', sr: 'Lokacija nedostupna. Pokušajte napolju.' },
+  'gps.err.timeout':          { en: 'Timeout. Try again.', sr: 'Isteklo vreme. Pokušajte ponovo.' },
 };
 
 /**

@@ -23,17 +23,36 @@
   .logo {
     font-size: 10px;
     letter-spacing: 3px;
-    color: #aaaaaa;      /* было #555 */
+    color: #555;
     text-transform: uppercase;
     margin-bottom: 48px;
   }
 
   .logo span { color: #c55a11; }
 
+  .lang-toggle {
+    position: fixed;
+    top: 14px; right: 14px;
+    display: flex; gap: 4px;
+    z-index: 50;
+  }
+  .lang-toggle-btn {
+    font-family: Arial, sans-serif;
+    font-size: 10px; font-weight: bold; letter-spacing: 1px;
+    color: #555;
+    background: transparent;
+    border: 1px solid #2e2e2e;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lang-toggle-btn.active { color: #fff; background: #1a1a1a; border-color: #555; }
+
   .status {
     font-size: 11px;
     letter-spacing: 2px;
-    color: #aaaaaa;      /* было #555 */
+    color: #555;
     text-transform: uppercase;
     margin-bottom: 24px;
     min-height: 16px;
@@ -41,7 +60,7 @@
 
   .coords-box {
     background: #1a1a1a;
-    border: 1px solid #444444;   /* было #2e2e2e */
+    border: 1px solid #2e2e2e;
     padding: 32px 24px;
     width: 100%;
     max-width: 340px;
@@ -52,7 +71,7 @@
   .coords-label {
     font-size: 9px;
     letter-spacing: 3px;
-    color: #aaaaaa;      /* было #555 */
+    color: #555;
     text-transform: uppercase;
     margin-bottom: 16px;
   }
@@ -60,7 +79,7 @@
   .coords-value {
     font-size: 28px;
     font-weight: 700;
-    color: #ffffff;
+    color: #fff;
     letter-spacing: -0.5px;
     line-height: 1.3;
     word-break: break-all;
@@ -70,12 +89,12 @@
     justify-content: center;
   }
 
-  .coords-value.loading { color: #888888; font-size: 14px; font-weight: 400; letter-spacing: 2px; }  /* было #333 */
-  .coords-value.error   { color: #e04040; font-size: 13px; font-weight: 400; }  /* было #c00000 */
+  .coords-value.loading { color: #333; font-size: 14px; font-weight: 400; letter-spacing: 2px; }
+  .coords-value.error   { color: #c00000; font-size: 13px; font-weight: 400; }
 
   .accuracy {
     font-size: 10px;
-    color: #888888;      /* было #444 */
+    color: #444;
     letter-spacing: 1px;
     margin-top: 12px;
     min-height: 14px;
@@ -88,9 +107,9 @@
     font-size: 11px;
     letter-spacing: 3px;
     text-transform: uppercase;
-    border: 1px solid #666666;   /* было #333 */
+    border: 1px solid #333;
     background: transparent;
-    color: #cccccc;              /* было #888 */
+    color: #888;
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: 12px;
@@ -104,7 +123,7 @@
   }
 
   .btn-copy:disabled {
-    opacity: 0.35;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 
@@ -115,39 +134,39 @@
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    border: 1px solid #444444;   /* было #222 */
+    border: 1px solid #222;
     background: transparent;
-    color: #888888;              /* было #444 */
+    color: #444;
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: 48px;
   }
 
-  .btn-refresh:active { color: #cccccc; border-color: #666; }
+  .btn-refresh:active { color: #888; border-color: #444; }
 
   .instruction {
     font-size: 11px;
-    color: #888888;      /* было #333 */
+    color: #333;
     line-height: 1.8;
     max-width: 280px;
     letter-spacing: 0.3px;
   }
 
-  .instruction strong { color: #cccccc; }  /* было #555 */
+  .instruction strong { color: #555; }
 
   .form-link {
     margin-top: 32px;
     font-size: 10px;
     letter-spacing: 2px;
-    color: #c55a11;
+    color: #333;
     text-decoration: none;
     text-transform: uppercase;
-    border-bottom: 1px solid #c55a11;
+    border-bottom: 1px solid #222;
     padding-bottom: 2px;
-    transition: color 0.2s, border-color 0.2s;
+    transition: color 0.2s;
   }
 
-  .form-link:active { color: #e06820; border-color: #e06820; }
+  .form-link:active { color: #c55a11; border-color: #c55a11; }
 
   .dot {
     display: inline-block;
@@ -167,50 +186,94 @@
 </head>
 <body>
 
+<div class="lang-toggle">
+  <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
+  <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
+</div>
+
 <div class="logo">AT<span>RC</span> · GPS Locator</div>
 
 <div class="status" id="status">
-  <span class="dot"></span>Requesting location...
+  <span class="dot"></span><span id="statusText"></span>
 </div>
 
 <div class="coords-box">
-  <div class="coords-label">GPS Coordinates</div>
-  <div class="coords-value loading" id="coords">Waiting for GPS...</div>
+  <div class="coords-label" data-i18n="gps.coordsLabel">GPS Coordinates</div>
+  <div class="coords-value loading" id="coords" data-i18n="gps.coords.waiting">Waiting for GPS...</div>
   <div class="accuracy" id="accuracy"></div>
 </div>
 
-<button class="btn-copy" id="btnCopy" onclick="copyCoords()" disabled>
+<button class="btn-copy" id="btnCopy" onclick="copyCoords()" disabled data-i18n="gps.btnCopy">
   📋 &nbsp; Copy Coordinates
 </button>
 
-<button class="btn-refresh" onclick="getLocation()">
+<button class="btn-refresh" onclick="getLocation()" data-i18n="gps.btnRefresh">
   ↻ &nbsp; Refresh
 </button>
 
 <div class="instruction">
-  <strong>How to use:</strong><br>
-  1. Copy coordinates above<br>
-  2. Open the ATRC form<br>
-  3. Paste into <strong>GPS coordinates</strong> field
+  <strong data-i18n="gps.instruction.title">How to use:</strong><br>
+  1. <span data-i18n="gps.instruction.step1">Copy coordinates above</span><br>
+  2. <span data-i18n="gps.instruction.step2">Open the ATRC form</span><br>
+  3. <span data-i18n="gps.instruction.step3pre">Paste into </span><strong data-i18n="gps.instruction.step3strong">GPS coordinates</strong><span data-i18n="gps.instruction.step3post"> field</span>
 </div>
 
-<a class="form-link" href="https://forms.gle/B29DyntFByrk24xD8" target="_blank">
+<a class="form-link" href="https://forms.gle/B29DyntFByrk24xD8" target="_blank" data-i18n="gps.formLink">
   → Open ATRC Field Form
 </a>
 
+<script src="i18n.js"></script>
 <script>
 let currentCoords = null;
 
+// Icon (pulsing dot / check / cross) is managed separately from the
+// translated text — the original swapped the whole innerHTML including
+// the icon, so this keeps that behaviour while letting the text itself
+// come from t(). lastGpsStatus is cached so a language switch mid-session
+// can re-render whatever's currently showing, same pattern as field.html.
+let lastGpsStatus = { icon: 'dot', key: 'gps.status.requesting', color: '' };
+
+function setGpsStatus(icon, key, color) {
+  lastGpsStatus = { icon: icon, key: key, color: color || '' };
+  const statusEl = document.getElementById('status');
+  const iconHtml = icon === 'dot' ? '<span class="dot"></span>' : (icon === 'check' ? '\u2713 &nbsp;' : '\u2715 &nbsp;');
+  statusEl.innerHTML = iconHtml + '<span id="statusText">' + t(key) + '</span>';
+  statusEl.style.color = color || '';
+}
+
+// coords/error display also alternates between raw DATA (coordinates —
+// never translated) and translated prose (waiting/error messages) — same
+// two-kind-of-content split as field.html's gpsValue, and for the same
+// reason: language switch needs to know which kind is currently showing.
+let coordsState = { type: 'waiting' }; // 'waiting' | 'coords' | 'error'
+
+function renderCoordsWaiting() {
+  coordsState = { type: 'waiting' };
+  const el = document.getElementById('coords');
+  el.className = 'coords-value loading';
+  el.textContent = t('gps.coords.waiting');
+}
+function renderCoordsValue(text) {
+  coordsState = { type: 'coords', text: text };
+  const el = document.getElementById('coords');
+  el.className = 'coords-value';
+  el.textContent = text;
+}
+function renderCoordsError(key) {
+  coordsState = { type: 'error', key: key };
+  const el = document.getElementById('coords');
+  el.className = 'coords-value error';
+  el.textContent = t(key);
+}
+
 function getLocation() {
-  document.getElementById('status').innerHTML = '<span class="dot"></span>Requesting location...';
-  document.getElementById('status').style.color = '';
-  document.getElementById('coords').className = 'coords-value loading';
-  document.getElementById('coords').textContent = 'Waiting for GPS...';
+  setGpsStatus('dot', 'gps.status.requesting');
+  renderCoordsWaiting();
   document.getElementById('accuracy').textContent = '';
   document.getElementById('btnCopy').disabled = true;
 
   if (!navigator.geolocation) {
-    showError('Geolocation not supported by this browser.');
+    showError('gps.err.notSupported');
     return;
   }
 
@@ -222,19 +285,17 @@ function getLocation() {
 
       currentCoords = `${lat}, ${lng}`;
 
-      document.getElementById('coords').className = 'coords-value';
-      document.getElementById('coords').textContent = currentCoords;
-      document.getElementById('accuracy').textContent = `Accuracy: ±${acc} m`;
+      renderCoordsValue(currentCoords);
+      document.getElementById('accuracy').textContent = t('gps.accuracy', { acc: acc });
       document.getElementById('btnCopy').disabled = false;
-      document.getElementById('status').innerHTML = '✓ &nbsp;Location found';
-      document.getElementById('status').style.color = '#4CAF50';
+      setGpsStatus('check', 'gps.status.found', '#4CAF50');
     },
     function(err) {
-      let msg = 'Location error.';
-      if (err.code === 1) msg = 'Permission denied. Allow location access in browser settings.';
-      if (err.code === 2) msg = 'Location unavailable. Try outdoors.';
-      if (err.code === 3) msg = 'Timeout. Try again.';
-      showError(msg);
+      let msgKey = 'gps.err.generic';
+      if (err.code === 1) msgKey = 'gps.err.permission';
+      if (err.code === 2) msgKey = 'gps.err.unavailable';
+      if (err.code === 3) msgKey = 'gps.err.timeout';
+      showError(msgKey);
     },
     {
       enableHighAccuracy: true,
@@ -244,11 +305,9 @@ function getLocation() {
   );
 }
 
-function showError(msg) {
-  document.getElementById('coords').className = 'coords-value error';
-  document.getElementById('coords').textContent = msg;
-  document.getElementById('status').innerHTML = '✕ &nbsp;Error';
-  document.getElementById('status').style.color = '#e04040';
+function showError(msgKey) {
+  renderCoordsError(msgKey);
+  setGpsStatus('cross', 'gps.status.error', '#c00000');
 }
 
 function copyCoords() {
@@ -277,16 +336,26 @@ function fallbackCopy() {
 
 function showCopied() {
   const btn = document.getElementById('btnCopy');
-  btn.textContent = '✓ Copied!';
+  btn.textContent = t('gps.btnCopied');
   btn.classList.add('copied');
   setTimeout(() => {
-    btn.textContent = '📋   Copy Coordinates';
+    btn.innerHTML = t('gps.btnCopy');
     btn.classList.remove('copied');
   }, 2000);
 }
 
 // Auto-start
 getLocation();
+
+// Same reasoning as field.html: a language switch mid-session should
+// update whatever's already on screen (status, coords placeholder/error),
+// not just the next GPS update.
+document.addEventListener('atrc:langchange', function() {
+  setGpsStatus(lastGpsStatus.icon, lastGpsStatus.key, lastGpsStatus.color);
+  if (coordsState.type === 'waiting') renderCoordsWaiting();
+  else if (coordsState.type === 'error') renderCoordsError(coordsState.key);
+  // 'coords' type needs no action — it's raw data, not translated
+});
 </script>
 </body>
 </html>
