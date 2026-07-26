@@ -246,6 +246,45 @@ const TRANSLATIONS = {
   'gps.err.permission':       { en: 'Permission denied. Allow location access in browser settings.', sr: 'Pristup odbijen. Dozvolite pristup lokaciji u podešavanjima pregledača.' },
   'gps.err.unavailable':      { en: 'Location unavailable. Try outdoors.', sr: 'Lokacija nedostupna. Pokušajte napolju.' },
   'gps.err.timeout':          { en: 'Timeout. Try again.', sr: 'Isteklo vreme. Pokušajte ponovo.' },
+
+  // ── registry.html ──
+  // Table itself (column headers, per-row status/audit-count text) stays
+  // English throughout, same rule as everywhere else — it's data, not
+  // instructional prose. CI category names in the filter dropdown also
+  // stay English, matching the CI Scale on field.html.
+  'registry.nav.methodology': { en: 'Methodology', sr: 'Metodologija' },
+  'registry.nav.research':    { en: 'Research', sr: 'Istraživanje' },
+  'registry.nav.contact':     { en: 'Contact', sr: 'Kontakt' },
+  'registry.title':           { en: 'Global Index of Measured Places', sr: 'Globalni indeks izmerenih mesta' },
+  'registry.subtitle':        { en: 'Every entry is a verified field measurement. CI computed from physical evidence — materials, acoustics, spatial integrity.', sr: 'Svaki unos je proverena terenska mera. CI se računa na osnovu fizičkih dokaza — materijala, akustike, prostornog integriteta.' },
+  'registry.stat.objects':    { en: 'Objects', sr: 'Objekti' },
+  'registry.stat.countries':  { en: 'Countries', sr: 'Zemlje' },
+  'registry.stat.cities':     { en: 'Cities', sr: 'Gradovi' },
+  'registry.stat.avgCi':      { en: 'Avg CI', sr: 'Prosečan CI' },
+  'registry.filter.search':      { en: 'Search', sr: 'Pretraga' },
+  'registry.filter.searchPh':    { en: 'Object name, CP·ID, zone…', sr: 'Naziv objekta, CP·ID, zona…' },
+  'registry.filter.country':     { en: 'Country', sr: 'Zemlja' },
+  'registry.filter.allCountries':{ en: 'All countries', sr: 'Sve zemlje' },
+  'registry.filter.city':        { en: 'City', sr: 'Grad' },
+  'registry.filter.allCities':   { en: 'All cities', sr: 'Svi gradovi' },
+  'registry.filter.ciCategory':  { en: 'CI Category', sr: 'CI kategorija' },
+  'registry.filter.allCategories': { en: 'All categories', sr: 'Sve kategorije' },
+  'registry.filter.zone':        { en: 'Zone', sr: 'Zona' },
+  'registry.filter.allZones':    { en: 'All zones', sr: 'Sve zone' },
+  'registry.btnReset':           { en: 'Reset', sr: 'Resetuj' },
+  'registry.loading':            { en: 'Loading…', sr: 'Učitavanje…' },
+  'registry.loadingRegistry':    { en: 'Loading registry…', sr: 'Učitavanje registra…' },
+  'registry.errorTitle':         { en: 'Could not load registry data', sr: 'Nije moguće učitati podatke registra' },
+  'registry.errorSub':           { en: 'Check connection or try again later', sr: 'Proverite konekciju ili pokušajte kasnije' },
+  'registry.sort.ci':            { en: 'Sort by CI', sr: 'Sortiraj po CI' },
+  'registry.sort.year':          { en: 'Year', sr: 'Godina' },
+  'registry.sort.name':          { en: 'Name', sr: 'Naziv' },
+  'registry.emptyTitle':         { en: 'No objects match the current filters', sr: 'Nijedan objekat ne odgovara trenutnim filterima' },
+  'registry.emptySub':           { en: 'Try widening your search', sr: 'Pokušajte da proširite pretragu' },
+  'registry.footerRight':        { en: 'Registry auto-updates from field measurements', sr: 'Registar se automatski ažurira na osnovu terenskih merenja' },
+  'registry.resultsCount.zero':   { en: '0 objects', sr: '0 objekata' },
+  'registry.resultsCount.one':    { en: '1 object', sr: '1 objekat' },
+  'registry.resultsCount.many':   { en: '{n} objects', sr: '{n} objekata' },
 };
 
 /**
@@ -297,6 +336,12 @@ function applyLanguage(lang) {
     // this is safe.
     el.innerHTML = entry[lang] || entry.en;
   });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const entry = TRANSLATIONS[key];
+    if (!entry) return;
+    el.setAttribute('placeholder', entry[lang] || entry.en);
+  });
   document.querySelectorAll('.lang-toggle-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });
@@ -316,6 +361,18 @@ function initLangToggle() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  applyLanguage(detectLanguage());
+  const lang = detectLanguage();
+  applyLanguage(lang);
   initLangToggle();
+  // Same event manual switches dispatch — without this, any element that
+  // gets its real content set by JS *before* DOMContentLoaded fires (GPS
+  // status, results count, etc.) gets silently clobbered back to its
+  // static placeholder text right here, and nothing ever fixes it unless
+  // the person happens to also toggle the language manually afterward.
+  // Found this exact bug in field.html's status text and registry.html's
+  // results count while testing — this single fix covers every page that
+  // registers an atrc:langchange listener, current and future, rather
+  // than requiring each page to carefully avoid data-i18n on any element
+  // that's also dynamically managed.
+  document.dispatchEvent(new CustomEvent('atrc:langchange', { detail: { lang: lang } }));
 });

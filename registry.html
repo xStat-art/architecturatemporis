@@ -82,6 +82,21 @@
   .nav-links a:hover,
   .nav-links a.active { color: var(--text); }
 
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-toggle-btn {
+    font-family: var(--mono);
+    font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+  .lang-toggle-btn:hover { color: var(--text); border-color: var(--text-dim); }
+  .lang-toggle-btn.active { color: var(--text); background: var(--bg3); border-color: var(--text-dim); }
+
   /* ── HEADER ── */
   .page-header {
     padding: 48px 32px 32px;
@@ -497,63 +512,67 @@
     ARCHITECTURA<span>·</span>TEMPORIS
   </a>
   <ul class="nav-links">
-    <li><a href="https://architecturatemporis.com/#methodology">Methodology</a></li>
-    <li><a href="https://architecturatemporis.com/#research">Research</a></li>
+    <li><a href="https://architecturatemporis.com/#methodology" data-i18n="registry.nav.methodology">Methodology</a></li>
+    <li><a href="https://architecturatemporis.com/#research" data-i18n="registry.nav.research">Research</a></li>
     <li><a href="registry.html" class="active">Registry</a></li>
     <li><a href="https://architecturatemporis.com/ATRC_CI_Map.html">Map</a></li>
-    <li><a href="https://architecturatemporis.com/#contact">Contact</a></li>
+    <li><a href="https://architecturatemporis.com/#contact" data-i18n="registry.nav.contact">Contact</a></li>
   </ul>
+  <div class="lang-toggle">
+    <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
+    <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
+  </div>
 </nav>
 
 <!-- HEADER -->
 <header class="page-header">
   <div class="page-eyebrow">ATRC · Chrono-Passport Registry</div>
-  <h1 class="page-title">Global Index of Measured Places</h1>
-  <p class="page-subtitle">Every entry is a verified field measurement. CI computed from physical evidence — materials, acoustics, spatial integrity.</p>
+  <h1 class="page-title" data-i18n="registry.title">Global Index of Measured Places</h1>
+  <p class="page-subtitle" data-i18n="registry.subtitle">Every entry is a verified field measurement. CI computed from physical evidence — materials, acoustics, spatial integrity.</p>
 </header>
 
 <!-- STATS -->
 <div class="stats-bar" id="statsBar">
   <div class="stat">
     <span class="stat-value" id="statTotal">—</span>
-    <span class="stat-label">Objects</span>
+    <span class="stat-label" data-i18n="registry.stat.objects">Objects</span>
   </div>
   <div class="stat">
     <span class="stat-value" id="statCountries">—</span>
-    <span class="stat-label">Countries</span>
+    <span class="stat-label" data-i18n="registry.stat.countries">Countries</span>
   </div>
   <div class="stat">
     <span class="stat-value" id="statCities">—</span>
-    <span class="stat-label">Cities</span>
+    <span class="stat-label" data-i18n="registry.stat.cities">Cities</span>
   </div>
   <div class="stat">
     <span class="stat-value" id="statAvgCI">—</span>
-    <span class="stat-label">Avg CI</span>
+    <span class="stat-label" data-i18n="registry.stat.avgCi">Avg CI</span>
   </div>
 </div>
 
 <!-- FILTERS -->
 <div class="filters-row">
   <div class="filter-group">
-    <span class="filter-label">Search</span>
-    <input class="filter-search" type="text" id="filterSearch" placeholder="Object name, CP·ID, zone…">
+    <span class="filter-label" data-i18n="registry.filter.search">Search</span>
+    <input class="filter-search" type="text" id="filterSearch" data-i18n-placeholder="registry.filter.searchPh" placeholder="Object name, CP·ID, zone…">
   </div>
   <div class="filter-group">
-    <span class="filter-label">Country</span>
+    <span class="filter-label" data-i18n="registry.filter.country">Country</span>
     <select id="filterCountry">
-      <option value="">All countries</option>
+      <option value="" data-i18n="registry.filter.allCountries">All countries</option>
     </select>
   </div>
   <div class="filter-group">
-    <span class="filter-label">City</span>
+    <span class="filter-label" data-i18n="registry.filter.city">City</span>
     <select id="filterCity">
-      <option value="">All cities</option>
+      <option value="" data-i18n="registry.filter.allCities">All cities</option>
     </select>
   </div>
   <div class="filter-group">
-    <span class="filter-label">CI Category</span>
+    <span class="filter-label" data-i18n="registry.filter.ciCategory">CI Category</span>
     <select id="filterCI">
-      <option value="">All categories</option>
+      <option value="" data-i18n="registry.filter.allCategories">All categories</option>
       <option value="deep">⬛ Deep Chronity (0.85–1.00)</option>
       <option value="high">🟫 High Chronity (0.70–0.85)</option>
       <option value="moderate">🟨 Moderate (0.50–0.70)</option>
@@ -562,32 +581,32 @@
     </select>
   </div>
   <div class="filter-group">
-    <span class="filter-label">Zone</span>
+    <span class="filter-label" data-i18n="registry.filter.zone">Zone</span>
     <select id="filterZone">
-      <option value="">All zones</option>
+      <option value="" data-i18n="registry.filter.allZones">All zones</option>
     </select>
   </div>
-  <button class="btn-reset" id="btnReset">Reset</button>
+  <button class="btn-reset" id="btnReset" data-i18n="registry.btnReset">Reset</button>
 </div>
 
 <!-- RESULTS INFO -->
 <div class="results-info">
   <span id="resultsCount">Loading…</span>
   <div class="sort-controls">
-    <button class="sort-btn active" id="sortCI" data-col="ci">Sort by CI</button>
-    <button class="sort-btn" id="sortYear" data-col="year">Year</button>
-    <button class="sort-btn" id="sortName" data-col="name">Name</button>
+    <button class="sort-btn active" id="sortCI" data-col="ci" data-i18n="registry.sort.ci">Sort by CI</button>
+    <button class="sort-btn" id="sortYear" data-col="year" data-i18n="registry.sort.year">Year</button>
+    <button class="sort-btn" id="sortName" data-col="name" data-i18n="registry.sort.name">Name</button>
   </div>
 </div>
 
 <!-- TABLE -->
 <div class="table-wrap">
   <div class="loading-state" id="loadingState">
-    <div class="loading-text">Loading registry…</div>
+    <div class="loading-text" data-i18n="registry.loadingRegistry">Loading registry…</div>
   </div>
   <div class="error-state" id="errorState">
-    <div class="error-text">Could not load registry data</div>
-    <div class="error-sub">Check connection or try again later</div>
+    <div class="error-text" data-i18n="registry.errorTitle">Could not load registry data</div>
+    <div class="error-sub" data-i18n="registry.errorSub">Check connection or try again later</div>
   </div>
   <table id="registryTable" style="display:none">
     <thead>
@@ -605,21 +624,22 @@
   </table>
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">◻</div>
-    <div class="empty-title">No objects match the current filters</div>
-    <div class="empty-sub">Try widening your search</div>
+    <div class="empty-title" data-i18n="registry.emptyTitle">No objects match the current filters</div>
+    <div class="empty-sub" data-i18n="registry.emptySub">Try widening your search</div>
   </div>
 </div>
 
 <footer>
   <div class="footer-left">
-    ATRC · <span>Understanding before change</span>
+    ATRC · <span data-i18n="footer.motto">Understanding before change</span>
   </div>
   <div class="footer-right">
     <a href="https://architecturatemporis.com" style="color:inherit;text-decoration:none;">architecturatemporis.com</a>
-    &nbsp;·&nbsp; Registry auto-updates from field measurements
+    &nbsp;·&nbsp; <span data-i18n="registry.footerRight">Registry auto-updates from field measurements</span>
   </div>
 </footer>
 
+<script src="i18n.js"></script>
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
@@ -696,11 +716,12 @@ function renderTable(records) {
   const table = document.getElementById('registryTable');
 
   tbody.innerHTML = '';
+  lastRecordCount = records.length;
 
   if (records.length === 0) {
     table.style.display = 'none';
     empty.classList.add('visible');
-    document.getElementById('resultsCount').textContent = '0 objects';
+    renderResultsCount(0);
     return;
   }
 
@@ -753,8 +774,19 @@ function renderTable(records) {
     tbody.appendChild(tr);
   });
 
-  document.getElementById('resultsCount').textContent =
-    `${records.length} object${records.length !== 1 ? 's' : ''}`;
+  renderResultsCount(records.length);
+}
+
+// Table rows above stay English always (data, not prose) — only this
+// summary line is translated. Cached so a language switch mid-session
+// updates it without re-fetching/re-rendering the whole table.
+let lastRecordCount = 0;
+function renderResultsCount(n) {
+  lastRecordCount = n;
+  const el = document.getElementById('resultsCount');
+  if (n === 0) el.textContent = t('registry.resultsCount.zero');
+  else if (n === 1) el.textContent = t('registry.resultsCount.one');
+  else el.textContent = t('registry.resultsCount.many', { n: n });
 }
 
 // Extract country code from CP_ID
@@ -951,7 +983,7 @@ document.querySelectorAll('.sort-btn').forEach(btn => {
 document.getElementById('filterCountry').addEventListener('change', function() {
   const selected = this.value;
   const cityEl = document.getElementById('filterCity');
-  cityEl.innerHTML = '<option value="">All cities</option>';
+  cityEl.innerHTML = '<option value="">' + t('registry.filter.allCities') + '</option>';
   const cities = [...new Set(
     allRecords
       .filter(r => !selected || extractCountryCity(r.CP_ID).country === selected)
@@ -967,6 +999,12 @@ document.getElementById('filterCountry').addEventListener('change', function() {
 });
 
 init();
+
+// Same reasoning as field.html/gps.html: re-render whatever's currently
+// on screen when the language is switched, not just future updates.
+document.addEventListener('atrc:langchange', function() {
+  renderResultsCount(lastRecordCount);
+});
 </script>
 </body>
 </html>
