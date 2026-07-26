@@ -153,7 +153,97 @@ const TRANSLATIONS = {
     en: "the coloured block is the zone's real, current chronity range and mean, over all measured objects. The faint block behind it is the same statistic recomputed over the remaining objects only, with the flagged outlier excluded — a real number, not an estimate. The step on the left shows the outlier's own chronity, at its own true height. Data currently shown is <code>ZN·ME·BJ·HN·001</code>'s pilot measurement set; wiring this to the live ZONES/PASSPORT_REGISTRY sheet is next on the list.",
     sr: 'obojeni blok je stvarni, trenutni raspon hroniteta zone i njegova srednja vrednost, preko svih izmerenih objekata. Bledi blok iza njega je ista statistika izračunata samo nad preostalim objektima, bez označenog izuzetka — stvarna vrednost, ne procena. Stepenik levo pokazuje stvarni hronitet samog izuzetka, na njegovoj pravoj visini. Trenutno prikazani podaci su pilot skup merenja za <code>ZN·ME·BJ·HN·001</code>; povezivanje sa live ZONES/PASSPORT_REGISTRY tabelom je sledeće na listi.',
   },
+
+  // ── field.html: static UI chrome ──
+  // CI Scale category names (Deep Chronity/High/Moderate/Low/No Chronity)
+  // deliberately stay English, same as the ring/bar chart's own category
+  // labels elsewhere on the site — they're data-classification terms, not
+  // instructional prose.
+  'field.subtitle':        { en: 'CI Field Data Collection', sr: 'Prikupljanje terenskih CI podataka' },
+  'field.gpsLabel':         { en: 'GPS Coordinates', sr: 'GPS koordinate' },
+  'field.zoneLabel':        { en: 'Zone', sr: 'Zona' },
+  'field.btnCreateZone':    { en: '+ Create new zone here', sr: '+ Napravi novu zonu ovde' },
+  'field.btnLaunch':        { en: '→ Open Field Form', sr: '→ Otvori terenski formular' },
+  'field.formFallbackLink': { en: '↗ Trouble loading? Open form in new tab instead', sr: '↗ Problem sa učitavanjem? Otvori formular u novoj kartici' },
+  'field.btnGetGps':        { en: '↻ Get GPS', sr: '↻ Preuzmi GPS' },
+  'field.btnCopy':          { en: '⎘ Copy', sr: '⎘ Kopiraj' },
+  'field.btnCheckStatus':   { en: '✓ Check my last submission', sr: '✓ Proveri moju poslednju prijavu' },
+  'field.viewCiMap':        { en: '↗ View CI Map', sr: '↗ Pogledaj CI mapu' },
+  'field.scaleTitle':       { en: 'CI Scale', sr: 'CI skala' },
+  'field.footer':           { en: 'Understanding before change · ATRC 2026', sr: 'Razumevanje pre promene · ATRC 2026' },
+
+  // ── field.html: dynamic status/error text, called via t(key, vars) from
+  // the page's own JS rather than applied automatically to static markup —
+  // these change too often (on every GPS fix) to live as data-i18n
+  // elements. {placeholders} are substituted at call time; coordinates,
+  // zone IDs, and CI numbers inside them stay as raw data either way. ──
+  'field.status.tapToStart':   { en: 'Tap to get location', sr: 'Dodirnite za lokaciju' },
+  'field.status.gpsNotSupported': { en: 'GPS not supported', sr: 'GPS nije podržan' },
+  'field.status.detecting':    { en: 'Detecting location…', sr: 'Određivanje lokacije…' },
+  'field.status.good':         { en: 'Good · ±{acc} m', sr: 'Dobro · ±{acc} m' },
+  'field.status.improving':    { en: 'Improving… ±{acc} m', sr: 'Poboljšava se… ±{acc} m' },
+  'field.status.searching':    { en: 'Searching… ±{acc} m', sr: 'Traženje… ±{acc} m' },
+  'field.status.error':        { en: 'Error', sr: 'Greška' },
+
+  'field.gps.searching':       { en: 'Searching…', sr: 'Traženje…' },
+  'field.gps.accuracy':        { en: 'Accuracy: ±{acc} m', sr: 'Tačnost: ±{acc} m' },
+  'field.gps.errNotSupported': { en: 'Geolocation not supported by this browser.', sr: 'Ovaj pregledač ne podržava geolokaciju.' },
+  'field.gps.errPermission':   { en: 'Permission denied — allow location in browser', sr: 'Pristup odbijen — dozvolite lokaciju u pregledaču' },
+  'field.gps.errUnavailable':  { en: 'Position unavailable — go outside', sr: 'Pozicija nedostupna — izađite napolje' },
+  'field.gps.errTimeout':      { en: 'Timeout — tap Get GPS again', sr: 'Isteklo vreme — ponovo dodirnite Preuzmi GPS' },
+  'field.gps.errGeneric':      { en: 'Location error', sr: 'Greška lokacije' },
+
+  'field.zone.loading':        { en: 'Loading zones…', sr: 'Učitavanje zona…' },
+  'field.zone.waitingGps':     { en: 'Waiting for GPS…', sr: 'Čekanje GPS-a…' },
+  'field.zone.detected':       { en: '{zoneId} ✓', sr: '{zoneId} ✓' },
+  'field.zone.manual':         { en: '{zoneId} (manual)', sr: '{zoneId} (ručno)' },
+  'field.zone.outside':        { en: 'Outside known zones — pick manually below, or create a new zone', sr: 'Van poznatih zona — izaberite ručno ispod, ili napravite novu zonu' },
+  'field.zone.selectManually': { en: '— select zone manually —', sr: '— izaberite zonu ručno —' },
+  'field.zone.refreshing':     { en: 'Refreshing zone list…', sr: 'Osvežavanje liste zona…' },
+
+  'field.createZone.notConfigured': { en: 'Web App URL not configured yet', sr: 'Web App URL još nije podešen' },
+  'field.createZone.checking':      { en: 'Checking with server (local list may be a few minutes stale)…', sr: 'Provera na serveru (lokalna lista može biti zastarela nekoliko minuta)…' },
+  'field.createZone.foundOnServer': { en: '✓ Found on server: {zoneId} (local list was just outdated)', sr: '✓ Pronađeno na serveru: {zoneId} (lokalna lista je bila zastarela)' },
+  'field.createZone.openingEditor': { en: 'Opening zone editor in a new tab… draw & sync the zone there, then come back here.', sr: 'Otvaranje uređivača zona u novoj kartici… nacrtajte i sinhronizujte zonu tamo, pa se vratite ovde.' },
+  'field.createZone.networkError':  { en: 'Network error checking server — try again, or open the map editor directly.', sr: 'Greška mreže pri proveri servera — pokušajte ponovo, ili otvorite uređivač mape direktno.' },
+
+  'field.status.submittedChecking': { en: 'Submitted — checking…', sr: 'Poslato — proveravam…' },
+  'field.status.checking':          { en: 'Checking…', sr: 'Proveravam…' },
+  'field.status.notConfigured':     { en: 'Web App URL not configured yet', sr: 'Web App URL još nije podešen' },
+  'field.status.anomalyFlag':       { en: '⚠ {name} — {flag}', sr: '⚠ {name} — {flag}' },
+  'field.status.addedOk':           { en: '✓ {name} added, CI {ci}', sr: '✓ {name} dodato, CI {ci}' },
+  'field.status.notConfirmedYet':   { en: 'Submitted, but not confirmed yet — tap "Check my last submission" in a moment', sr: 'Poslato, ali još nije potvrđeno — dodirnite "Proveri moju poslednju prijavu" za koji trenutak' },
+  'field.status.retryNetworkError': { en: 'Network error — tap "Check my last submission" to retry', sr: 'Greška mreže — dodirnite "Proveri moju poslednju prijavu" da pokušate ponovo' },
+  'field.status.errorPrefix':       { en: '✗ {error}', sr: '✗ {error}' },
+  'field.status.notFound5min':      { en: 'No submission found in the last 5 min', sr: 'Nijedna prijava nije pronađena u poslednjih 5 min' },
+  'field.status.retryError':        { en: 'Network error — try again', sr: 'Greška mreže — pokušajte ponovo' },
+
+  'field.toast.getGpsFirst':      { en: 'Get GPS first', sr: 'Prvo preuzmite GPS' },
+  'field.toast.copied':           { en: '✓ Copied: {text}', sr: '✓ Kopirano: {text}' },
+  'field.toast.copyManually':     { en: 'Select and copy manually', sr: 'Izaberite i kopirajte ručno' },
+
+  'field.marker.object':          { en: 'Object', sr: 'Objekat' },
 };
+
+/**
+ * t(key, vars) — for JS-driven text that changes too often to live as a
+ * static data-i18n element (GPS status, error messages, etc.). Looks up
+ * the CURRENT language automatically; call this fresh every time you set
+ * a message, don't cache the result.
+ *
+ * Usage: t('field.status.good', { acc: 12 }) -> "Good · ±12 m" (or the
+ * Serbian equivalent), substituting {acc} etc. from the vars object.
+ */
+function t(key, vars) {
+  const entry = TRANSLATIONS[key];
+  if (!entry) return key;
+  const lang = document.documentElement.getAttribute('lang') || 'en';
+  let str = entry[lang] || entry.en;
+  if (vars) {
+    Object.keys(vars).forEach(k => { str = str.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); });
+  }
+  return str;
+}
 
 function detectLanguage() {
   const saved = localStorage.getItem('atrc-lang');
@@ -162,7 +252,18 @@ function detectLanguage() {
   return nav.startsWith('sr') ? 'sr' : 'en';
 }
 
+// Set immediately, synchronously, at script-load time — not deferred to
+// DOMContentLoaded. document.documentElement always exists (even before
+// <body> is parsed), and t() reads this attribute to pick a language, so
+// it needs to be correct from the very first call. field.html in
+// particular calls getLocation() -> setStatus() -> t() synchronously at
+// load, before DOMContentLoaded fires; if this were set later, that very
+// first status message would always show in English regardless of the
+// detected language.
+document.documentElement.setAttribute('lang', detectLanguage());
+
 function applyLanguage(lang) {
+  document.documentElement.setAttribute('lang', lang);
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     const entry = TRANSLATIONS[key];
@@ -173,7 +274,6 @@ function applyLanguage(lang) {
     // this is safe.
     el.innerHTML = entry[lang] || entry.en;
   });
-  document.documentElement.setAttribute('lang', lang);
   document.querySelectorAll('.lang-toggle-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });
@@ -183,6 +283,7 @@ function setLanguage(lang) {
   if (!LANGS.includes(lang)) return;
   localStorage.setItem('atrc-lang', lang);
   applyLanguage(lang);
+  document.dispatchEvent(new CustomEvent('atrc:langchange', { detail: { lang: lang } }));
 }
 
 function initLangToggle() {

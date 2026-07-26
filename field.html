@@ -33,6 +33,25 @@
   }
   .logo span { color: #c55a11; }
 
+  .lang-toggle {
+    position: fixed;
+    top: 14px; right: 14px;
+    display: flex; gap: 4px;
+    z-index: 50;
+  }
+  .lang-toggle-btn {
+    font-family: Arial, sans-serif;
+    font-size: 10px; font-weight: bold; letter-spacing: 1px;
+    color: #555;
+    background: transparent;
+    border: 1px solid #2e2e2e;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lang-toggle-btn.active { color: #fff; background: #1a1a1a; border-color: #555; }
+
   .subtitle {
     font-size: 9px;
     letter-spacing: 2px;
@@ -270,47 +289,52 @@
 </head>
 <body>
 
+<div class="lang-toggle">
+  <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
+  <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
+</div>
+
 <div class="logo">AT<span>RC</span></div>
-<div class="subtitle">CI Field Data Collection</div>
+<div class="subtitle" data-i18n="field.subtitle">CI Field Data Collection</div>
 
 <div class="status">
   <div class="dot idle" id="dot"></div>
-  <span id="statusText">Tap to get location</span>
+  <span id="statusText" data-i18n="field.status.tapToStart">Tap to get location</span>
 </div>
 
 <div class="gps-box">
-  <div class="gps-label">GPS Coordinates</div>
+  <div class="gps-label" data-i18n="field.gpsLabel">GPS Coordinates</div>
   <div class="gps-value dim" id="gpsValue">—</div>
   <div class="gps-accuracy" id="gpsAccuracy"></div>
 </div>
 
 <div class="gps-box" id="zoneBox">
-  <div class="gps-label">Zone</div>
-  <div class="gps-value dim" id="zoneValue">Loading zones…</div>
+  <div class="gps-label" data-i18n="field.zoneLabel">Zone</div>
+  <div class="gps-value dim" id="zoneValue" data-i18n="field.zone.loading">Loading zones…</div>
   <select class="btn-sec" id="zoneFallback" style="display:none; width:100%; margin-top:10px; padding:12px; font-family:Arial, sans-serif;"></select>
-  <button class="btn-sec" id="btnCreateZone" style="display:none; width:100%; margin-top:10px; padding:12px;" onclick="offerCreateZone()">+ Create new zone here</button>
+  <button class="btn-sec" id="btnCreateZone" data-i18n="field.btnCreateZone" style="display:none; width:100%; margin-top:10px; padding:12px;" onclick="offerCreateZone()">+ Create new zone here</button>
   <div class="gps-accuracy" id="createZoneStatus" style="text-align:center; margin-top:8px; min-height:14px;"></div>
 </div>
 
-<button class="btn-launch disabled" id="btnLaunch" type="button" onclick="openEmbeddedForm()">→ Open Field Form</button>
+<button class="btn-launch disabled" id="btnLaunch" type="button" data-i18n="field.btnLaunch" onclick="openEmbeddedForm()">→ Open Field Form</button>
 
 <div id="formEmbedBox" style="display:none; margin-bottom:12px;">
   <iframe id="formFrame" style="width:100%; height:65vh; border:1px solid #2e2e2e; background:#fff; display:block;"></iframe>
-  <a id="formFallbackLink" href="#" target="_blank" class="map-link" style="margin-top:8px; margin-bottom:0;">↗ Trouble loading? Open form in new tab instead</a>
+  <a id="formFallbackLink" href="#" target="_blank" class="map-link" data-i18n="field.formFallbackLink" style="margin-top:8px; margin-bottom:0;">↗ Trouble loading? Open form in new tab instead</a>
 </div>
 
 <div class="btn-row">
-  <button class="btn-sec" onclick="getLocation()">↻ Get GPS</button>
-  <button class="btn-sec" onclick="copyCoords()">⎘ Copy</button>
+  <button class="btn-sec" data-i18n="field.btnGetGps" onclick="getLocation()">↻ Get GPS</button>
+  <button class="btn-sec" data-i18n="field.btnCopy" onclick="copyCoords()">⎘ Copy</button>
 </div>
 
-<button class="btn-launch" id="btnCheckStatus" style="background:#1a1a1a; border:1px solid #333; margin-top:0;" onclick="checkLatestStatus()">✓ Check my last submission</button>
+<button class="btn-launch" id="btnCheckStatus" data-i18n="field.btnCheckStatus" style="background:#1a1a1a; border:1px solid #333; margin-top:0;" onclick="checkLatestStatus()">✓ Check my last submission</button>
 <div class="gps-accuracy" id="statusCheckResult" style="text-align:center; margin-bottom:10px; min-height:32px;"></div>
 <div id="confirmMap" style="height:220px; margin-bottom:22px; border:1px solid #2e2e2e; display:none;"></div>
 
-<a class="map-link" href="https://xstat-art.github.io/architecturatemporis/ATRC_CI_Map.html" target="_blank">↗ View CI Map</a>
+<a class="map-link" href="https://xstat-art.github.io/architecturatemporis/ATRC_CI_Map.html" target="_blank" data-i18n="field.viewCiMap">↗ View CI Map</a>
 
-<div class="scale-title">CI Scale</div>
+<div class="scale-title" data-i18n="field.scaleTitle">CI Scale</div>
 
 <div class="scale-row">
   <div class="scale-bar" style="background:#5f00ff"></div>
@@ -338,10 +362,11 @@
   <div class="scale-ci">0.00–0.30</div>
 </div>
 
-<footer>Understanding before change · ATRC 2026</footer>
+<footer data-i18n="field.footer">Understanding before change · ATRC 2026</footer>
 
 <div class="toast" id="toast"></div>
 
+<script src="i18n.js"></script>
 <script>
 const FORM_BASE = 'https://docs.google.com/forms/d/e/1FAIpQLSe45pgFLqXMaagHHn7W34oeogulfu9Z_dF9iKYa12eX1qlK8w/viewform';
 const GPS_ENTRY = 'entry.1075279085';
@@ -469,16 +494,16 @@ let zoneCreationTabOpened = false;
 
 function offerCreateZone() {
   if (savedLat === null || savedLng === null) {
-    showToast('Get GPS first');
+    showToast(t('field.toast.getGpsFirst'));
     return;
   }
   const statusEl = document.getElementById('createZoneStatus');
   if (!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_') === 0) {
-    statusEl.textContent = 'Web App URL not configured yet';
+    statusEl.textContent = t('field.createZone.notConfigured');
     return;
   }
 
-  statusEl.textContent = 'Checking with server (local list may be a few minutes stale)…';
+  statusEl.textContent = t('field.createZone.checking');
   const url = WEBAPP_URL + '?action=findZoneForPoint'
     + '&secret=' + encodeURIComponent(API_SECRET)
     + '&lat=' + encodeURIComponent(savedLat)
@@ -489,16 +514,16 @@ function offerCreateZone() {
       // Зона на самом деле уже существует — просто локальный CSV отстал.
       detectedZoneId = data.zoneId;
       updateZoneDisplay();
-      statusEl.textContent = '✓ Found on server: ' + data.zoneId + ' (local list was just outdated)';
+      statusEl.textContent = t('field.createZone.foundOnServer', { zoneId: data.zoneId });
       return;
     }
     // Действительно новая территория — открываем редактор карты.
-    statusEl.textContent = 'Opening zone editor in a new tab… draw & sync the zone there, then come back here.';
+    statusEl.textContent = t('field.createZone.openingEditor');
     const editorUrl = MAP_EDITOR_URL + '?lat=' + encodeURIComponent(savedLat) + '&lng=' + encodeURIComponent(savedLng);
     window.open(editorUrl, '_blank');
     zoneCreationTabOpened = true;
   }).catch(function() {
-    statusEl.textContent = 'Network error checking server — try again, or open the map editor directly.';
+    statusEl.textContent = t('field.createZone.networkError');
   });
 }
 
@@ -509,23 +534,23 @@ function updateZoneDisplay() {
   const activeZone = detectedZoneId || manualZoneId;
 
   if (!zonesLoaded) {
-    el.className = 'gps-value dim'; el.textContent = 'Loading zones…';
+    el.className = 'gps-value dim'; el.textContent = t('field.zone.loading');
     sel.style.display = 'none';
     createBtn.style.display = 'none';
   } else if (detectedZoneId) {
-    el.className = 'gps-value'; el.textContent = detectedZoneId + ' ✓';
+    el.className = 'gps-value'; el.textContent = t('field.zone.detected', { zoneId: detectedZoneId });
     sel.style.display = 'none';
     createBtn.style.display = 'none';
   } else if (savedLat === null) {
-    el.className = 'gps-value dim'; el.textContent = 'Waiting for GPS…';
+    el.className = 'gps-value dim'; el.textContent = t('field.zone.waitingGps');
     sel.style.display = 'none';
     createBtn.style.display = 'none';
   } else if (manualZoneId) {
-    el.className = 'gps-value'; el.textContent = manualZoneId + ' (manual)';
+    el.className = 'gps-value'; el.textContent = t('field.zone.manual', { zoneId: manualZoneId });
     sel.style.display = 'block';
     createBtn.style.display = 'none';
   } else {
-    el.className = 'gps-value error-state'; el.textContent = 'Outside known zones — pick manually below, or create a new zone';
+    el.className = 'gps-value error-state'; el.textContent = t('field.zone.outside');
     sel.style.display = 'block';
     // v8.0: Сценарий Б — точка вне ВСЕХ известных зон (не только текущего
     // города). Показываем опцию создать зону на месте, а не только выбор
@@ -559,23 +584,23 @@ let lastCheckedTimestamp = null; // не дёргаем карту повтор�
 function checkLatestStatus() {
   const el = document.getElementById('statusCheckResult');
   if (!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_') === 0) {
-    el.textContent = 'Web App URL not configured yet';
+    el.textContent = t('field.status.notConfigured');
     return;
   }
-  el.textContent = 'Checking…';
+  el.textContent = t('field.status.checking');
   const url = WEBAPP_URL + '?action=latestStatus&secret=' + encodeURIComponent(API_SECRET) + '&sinceMinutes=5';
   fetch(url).then(function(r) { return r.json(); }).then(function(data) {
-    if (!data.ok) { el.textContent = '✗ ' + (data.error || 'Error'); return; }
-    if (!data.found) { el.textContent = 'No submission found in the last 5 min'; return; }
+    if (!data.ok) { el.textContent = t('field.status.errorPrefix', { error: data.error || t('field.status.error') }); return; }
+    if (!data.found) { el.textContent = t('field.status.notFound5min'); return; }
 
     if (data.anomalyFlag) {
-      el.textContent = '⚠ ' + data.objectName + ' — ' + data.anomalyFlag;
+      el.textContent = t('field.status.anomalyFlag', { name: data.objectName, flag: data.anomalyFlag });
     } else {
-      el.textContent = '✓ ' + data.objectName + ' added, CI ' + data.ci;
+      el.textContent = t('field.status.addedOk', { name: data.objectName, ci: data.ci });
     }
 
     renderConfirmMap(data);
-  }).catch(function() { el.textContent = 'Network error — try again'; });
+  }).catch(function() { el.textContent = t('field.status.retryError'); });
 }
 
 // Рисует/обновляет мини-карту: полигон зоны (если геометрия уже загружена
@@ -611,7 +636,7 @@ function renderConfirmMap(data) {
     radius: 9, color: '#fff', weight: 2, fillColor: markerColor, fillOpacity: 1
   }).addTo(confirmMapInstance);
   confirmMarker.bindTooltip(
-    (data.objectName || 'Object') + (data.anomalyFlag ? ' — ' + data.anomalyFlag : ' — CI ' + data.ci),
+    (data.objectName || t('field.marker.object')) + (data.anomalyFlag ? ' — ' + data.anomalyFlag : ' — CI ' + data.ci),
     { permanent: false }
   );
 
@@ -717,7 +742,7 @@ function onFormSubmitted() {
   document.getElementById('formEmbedBox').style.display = 'none';
   iframe.src = 'about:blank';
 
-  document.getElementById('statusCheckResult').textContent = 'Submitted — checking…';
+  document.getElementById('statusCheckResult').textContent = t('field.status.submittedChecking');
   document.getElementById('confirmMap').style.display = 'none';
 
   resetForNextMeasurement();
@@ -732,16 +757,16 @@ function onFormSubmitted() {
 function checkLatestStatusWithRetry(attempt) {
   const el = document.getElementById('statusCheckResult');
   if (!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_') === 0) {
-    el.textContent = 'Web App URL not configured yet';
+    el.textContent = t('field.status.notConfigured');
     return;
   }
   const url = WEBAPP_URL + '?action=latestStatus&secret=' + encodeURIComponent(API_SECRET) + '&sinceMinutes=5';
   fetch(url).then(function(r) { return r.json(); }).then(function(data) {
     if (data.ok && data.found) {
       if (data.anomalyFlag) {
-        el.textContent = '⚠ ' + data.objectName + ' — ' + data.anomalyFlag;
+        el.textContent = t('field.status.anomalyFlag', { name: data.objectName, flag: data.anomalyFlag });
       } else {
-        el.textContent = '✓ ' + data.objectName + ' added, CI ' + data.ci;
+        el.textContent = t('field.status.addedOk', { name: data.objectName, ci: data.ci });
       }
       renderConfirmMap(data);
       return;
@@ -749,13 +774,13 @@ function checkLatestStatusWithRetry(attempt) {
     if (attempt < 4) {
       setTimeout(function() { checkLatestStatusWithRetry(attempt + 1); }, 1200);
     } else {
-      el.textContent = 'Submitted, but not confirmed yet — tap "Check my last submission" in a moment';
+      el.textContent = t('field.status.notConfirmedYet');
     }
   }).catch(function() {
     if (attempt < 4) {
       setTimeout(function() { checkLatestStatusWithRetry(attempt + 1); }, 1200);
     } else {
-      el.textContent = 'Network error — tap "Check my last submission" to retry';
+      el.textContent = t('field.status.retryNetworkError');
     }
   });
 }
@@ -772,8 +797,7 @@ function resetForNextMeasurement() {
   manualZoneId = null;
   pendingFormUrl = null;
 
-  document.getElementById('gpsValue').className = 'gps-value dim';
-  document.getElementById('gpsValue').textContent = '—';
+  setGpsValueCoords(null); // null -> the dim "—" placeholder, see setGpsValueCoords
   document.getElementById('gpsAccuracy').textContent = '';
   document.getElementById('zoneFallback').value = '';
   updateZoneDisplay();
@@ -783,14 +807,13 @@ function resetForNextMeasurement() {
 
 function getLocation() {
   if (!navigator.geolocation) {
-    setStatus('red', 'GPS not supported');
-    showGpsError('Geolocation not supported by this browser.');
+    setStatus('red', 'field.status.gpsNotSupported');
+    showGpsError('field.gps.errNotSupported');
     return;
   }
 
-  setStatus('orange', 'Detecting location…');
-  document.getElementById('gpsValue').className = 'gps-value dim';
-  document.getElementById('gpsValue').textContent = 'Searching…';
+  setStatus('orange', 'field.status.detecting');
+  setGpsValueText('field.gps.searching', null, 'gps-value dim');
   document.getElementById('gpsAccuracy').textContent = '';
   document.getElementById('btnLaunch').className = 'btn-launch disabled';
 
@@ -807,11 +830,8 @@ function getLocation() {
       savedLng = lng;
       savedAccuracy = acc;
 
-      const coords = lat + ', ' + lng;
-      const el = document.getElementById('gpsValue');
-      el.className = 'gps-value';
-      el.textContent = coords;
-      document.getElementById('gpsAccuracy').textContent = 'Accuracy: ±' + acc + ' m';
+      setGpsValueCoords(lat + ', ' + lng);
+      document.getElementById('gpsAccuracy').textContent = t('field.gps.accuracy', { acc: acc });
 
       detectZone();       // теперь, когда есть координаты, пробуем определить зону
       refreshLaunchButton();
@@ -830,51 +850,81 @@ function getLocation() {
       // отправляется именно та точка, где исследователь стоит В МОМЕНТ
       // тапа по кнопке, а не первая случайно пойманная.
       if (acc <= 20) {
-        setStatus('green', 'Good · ±' + acc + ' m');
+        setStatus('green', 'field.status.good', { acc: acc });
       } else if (acc <= 60) {
-        setStatus('orange', 'Improving… ±' + acc + ' m');
+        setStatus('orange', 'field.status.improving', { acc: acc });
       } else {
-        setStatus('orange', 'Searching… ±' + acc + ' m');
+        setStatus('orange', 'field.status.searching', { acc: acc });
       }
     },
     function(err) {
-      const msgs = {
-        1: 'Permission denied — allow location in browser',
-        2: 'Position unavailable — go outside',
-        3: 'Timeout — tap Get GPS again'
+      const msgKeys = {
+        1: 'field.gps.errPermission',
+        2: 'field.gps.errUnavailable',
+        3: 'field.gps.errTimeout'
       };
-      const msg = msgs[err.code] || 'Location error';
-      setStatus('red', 'Error');
-      showGpsError(msg);
+      const msgKey = msgKeys[err.code] || 'field.gps.errGeneric';
+      setStatus('red', 'field.status.error');
+      showGpsError(msgKey);
     },
     { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
   );
 }
 
-function showGpsError(msg) {
+// gpsValue alternates between two very different kinds of content: raw
+// coordinates (data — never translated) and placeholder/error prose
+// (translated). Tracking which one is currently showing, and with what
+// key, is what lets a language switch re-render whatever's on screen
+// right now instead of only affecting the NEXT update.
+let gpsValueState = { type: 'coords', coords: null };
+
+function setGpsValueText(key, vars, className) {
+  gpsValueState = { type: 'text', key: key, vars: vars, className: className };
   const el = document.getElementById('gpsValue');
-  el.className = 'gps-value error-state';
-  el.textContent = msg;
+  el.className = className;
+  el.textContent = t(key, vars);
+}
+function setGpsValueCoords(coords) {
+  gpsValueState = { type: 'coords', coords: coords };
+  const el = document.getElementById('gpsValue');
+  if (coords === null) {
+    el.className = 'gps-value dim';
+    el.textContent = '—';
+  } else {
+    el.className = 'gps-value';
+    el.textContent = coords;
+  }
 }
 
-function setStatus(color, text) {
+function showGpsError(key, vars) {
+  setGpsValueText(key, vars, 'gps-value error-state');
+}
+
+// setStatus/showGpsError both take a translation KEY (not pre-formatted
+// text) specifically so re-rendering after a language switch is just
+// "call it again with the same key" — see the atrc:langchange listener
+// near the bottom of this script.
+let lastStatusColor = 'idle', lastStatusKey = 'field.status.tapToStart', lastStatusVars = null;
+
+function setStatus(color, key, vars) {
+  lastStatusColor = color; lastStatusKey = key; lastStatusVars = vars;
   const dot = document.getElementById('dot');
   dot.className = 'dot';
   if (color === 'green')  dot.className = 'dot green';
   if (color === 'red')    dot.className = 'dot red';
   // orange = default animation
-  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusText').textContent = t(key, vars);
 }
 
 function copyCoords() {
   if (!savedLat || !savedLng) {
-    showToast('Get GPS first');
+    showToast(t('field.toast.getGpsFirst'));
     return;
   }
   const text = savedLat + ', ' + savedLng;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text)
-      .then(function() { showToast('✓ Copied: ' + text); })
+      .then(function() { showToast(t('field.toast.copied', { text: text })); })
       .catch(function() { fallbackCopy(text); });
   } else {
     fallbackCopy(text);
@@ -888,16 +938,16 @@ function fallbackCopy(text) {
   ta.style.opacity = '0';
   document.body.appendChild(ta);
   ta.focus(); ta.select();
-  try { document.execCommand('copy'); showToast('✓ Copied: ' + text); }
-  catch(e) { showToast('Select and copy manually'); }
+  try { document.execCommand('copy'); showToast(t('field.toast.copied', { text: text })); }
+  catch(e) { showToast(t('field.toast.copyManually')); }
   document.body.removeChild(ta);
 }
 
 function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show';
-  setTimeout(function() { t.className = 'toast'; }, 3000);
+  var toastEl = document.getElementById('toast');
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show';
+  setTimeout(function() { toastEl.className = 'toast'; }, 3000);
 }
 
 // Стартуем определение GPS СРАЗУ при открытии страницы, без ожидания
@@ -909,6 +959,21 @@ function showToast(msg) {
 // стартует мгновенно без единого лишнего тапа.
 getLocation();
 loadZones();
+
+// Switching language mid-session should update whatever's ALREADY on
+// screen, not just the next GPS/status update — otherwise a student who
+// taps SR after the page has been open for a minute keeps seeing English
+// status text until the next GPS tick. Re-render from the cached
+// key/state each of these functions already tracks (see setStatus /
+// setGpsValueText / setGpsValueCoords / updateZoneDisplay above).
+document.addEventListener('atrc:langchange', function() {
+  setStatus(lastStatusColor, lastStatusKey, lastStatusVars);
+  if (gpsValueState.type === 'text') {
+    setGpsValueText(gpsValueState.key, gpsValueState.vars, gpsValueState.className);
+  }
+  // coords-type gpsValue needs no action — it's raw data, not translated
+  updateZoneDisplay();
+});
 
 // v7.16: слежение GPS теперь останавливается внутри openEmbeddedForm()
 // (тот же момент, когда исследователь реально открывает форму — уже стоит
@@ -940,7 +1005,7 @@ function maybeAutoCheck() {
   // что снова спросит СЕРВЕР напрямую (findZoneForPoint), в обход кэша CSV.
   if (zoneCreationTabOpened) {
     zoneCreationTabOpened = false;
-    document.getElementById('createZoneStatus').textContent = 'Refreshing zone list…';
+    document.getElementById('createZoneStatus').textContent = t('field.zone.refreshing');
     zonesLoaded = false;
     zones = {};
     loadZones();
