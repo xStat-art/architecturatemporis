@@ -62,6 +62,7 @@
   }
   .nav-links a.nav-cta:hover { background: var(--orange-bright); }
   @media (max-width: 768px) { .nav-links { display: none; } }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
 
   /* ── MOBILE NAV TOGGLE ── */
   .nav-toggle {
@@ -265,7 +266,11 @@
   }
   .lang-toggle-btn:hover { color: var(--white); border-color: var(--grey-3); }
   .lang-toggle-btn.active { color: var(--white); background: var(--grey-2); border-color: var(--grey-3); }
-  .lang-toggle-mobile { margin-top: 20px; }
+
+  @media (max-width: 380px) {
+    .lang-toggle-btn { font-size: 10px; padding: 3px 7px; }
+    .nav-right { gap: 10px; }
+  }
 
   @media (max-width: 600px) {
     .inner { padding: 0 24px; }
@@ -289,14 +294,16 @@
     <li><a href="index.html#contact" data-i18n="nav.contact">Contact</a></li>
     <li><a href="explore.html" data-i18n="nav.explore">Explore</a></li>
     <li><a href="field-workspace.html" class="nav-cta" data-i18n="nav.fieldWorkspace">Field Workspace</a></li>
-    <li class="lang-toggle">
+  </ul>
+  <div class="nav-right">
+    <div class="lang-toggle">
       <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
       <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
-    </li>
-  </ul>
-  <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
-    <span></span><span></span><span></span>
-  </button>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>
 
 <div class="mobile-menu" id="mobileMenu">
@@ -315,10 +322,6 @@
     <a href="gps.html" class="mobile-secondary" data-i18n="mnav.gpsLocator">GPS Locator</a>
     <a href="registry.html" class="mobile-secondary" data-i18n="mnav.registry">Passport Registry</a>
     <a href="tia.html" class="mobile-secondary" data-i18n="mnav.tia">TIA Viewer</a>
-    <div class="lang-toggle lang-toggle-mobile">
-      <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
-      <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
-    </div>
   </nav>
 </div>
 
