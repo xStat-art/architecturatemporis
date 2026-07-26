@@ -138,6 +138,21 @@ const TRANSLATIONS = {
   // ── language toggle itself ──
   'lang.toggle.en': { en: 'EN', sr: 'EN' },
   'lang.toggle.sr': { en: 'SR', sr: 'SR' },
+
+  // ── tia.html: explanatory prose around the chart (the chart itself and
+  // its own labels stay English always — see chat) ──
+  'tia.nav.back':    { en: '\u2190 Field Workspace', sr: '\u2190 Terenski alati' },
+  'tia.eyebrow':     { en: 'Architectura Temporis Research Centre · Field Workspace', sr: 'Architectura Temporis Research Centre · Terenski alati' },
+  'tia.hero.p': {
+    en: "Shows how one flagged outlier — an object whose chronity falls well below the zone's own norm — pulls the zone's overall reading down. Current state vs. a hypothetical without it, side by side, built from the same measured data behind every zone passport.",
+    sr: 'Prikazuje kako jedan označen izuzetak — objekat čiji je hronitet znatno ispod norme zone — snižava ukupnu vrednost zone. Trenutno stanje naspram hipotetičkog bez njega, jedno pored drugog, zasnovano na istim izmerenim podacima iza svakog pasoša zone.',
+  },
+  'tia.zonePicker.label': { en: 'Zone', sr: 'Zona' },
+  'tia.note.label': { en: 'About this view:', sr: 'O ovom prikazu:' },
+  'tia.note.body': {
+    en: "the coloured block is the zone's real, current chronity range and mean, over all measured objects. The faint block behind it is the same statistic recomputed over the remaining objects only, with the flagged outlier excluded — a real number, not an estimate. The step on the left shows the outlier's own chronity, at its own true height. Data currently shown is <code>ZN·ME·BJ·HN·001</code>'s pilot measurement set; wiring this to the live ZONES/PASSPORT_REGISTRY sheet is next on the list.",
+    sr: 'obojeni blok je stvarni, trenutni raspon hroniteta zone i njegova srednja vrednost, preko svih izmerenih objekata. Bledi blok iza njega je ista statistika izračunata samo nad preostalim objektima, bez označenog izuzetka — stvarna vrednost, ne procena. Stepenik levo pokazuje stvarni hronitet samog izuzetka, na njegovoj pravoj visini. Trenutno prikazani podaci su pilot skup merenja za <code>ZN·ME·BJ·HN·001</code>; povezivanje sa live ZONES/PASSPORT_REGISTRY tabelom je sledeće na listi.',
+  },
 };
 
 function detectLanguage() {

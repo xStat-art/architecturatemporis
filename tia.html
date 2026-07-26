@@ -69,6 +69,21 @@
     .nav-links a { font-size: 10px; letter-spacing: 1px; }
   }
 
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-toggle-btn {
+    font-family: var(--font-body);
+    font-size: 11px; font-weight: bold; letter-spacing: 1px;
+    color: var(--grey-3);
+    background: transparent;
+    border: 1px solid var(--grey-2);
+    border-radius: 4px;
+    padding: 4px 9px;
+    cursor: pointer;
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .lang-toggle-btn:hover { color: var(--white); border-color: var(--grey-3); }
+  .lang-toggle-btn.active { color: var(--white); background: var(--grey-2); border-color: var(--grey-3); }
+
   .inner { max-width: 1080px; margin: 0 auto; padding: 0 48px; }
 
   /* ── HERO ── */
@@ -176,22 +191,27 @@
 </style>
 </head>
 <body>
+<script src="i18n.js" defer></script>
 
 <nav>
   <a href="field-workspace.html" class="nav-logo">ATRC</a>
   <ul class="nav-links">
-    <li><a href="field-workspace.html">← Field Workspace</a></li>
-    <li><a href="explore.html">Explore</a></li>
+    <li><a href="field-workspace.html" data-i18n="tia.nav.back">← Field Workspace</a></li>
+    <li><a href="explore.html" data-i18n="nav.explore">Explore</a></li>
   </ul>
+  <div class="lang-toggle">
+    <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
+    <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
+  </div>
 </nav>
 
 <div class="hero">
   <div class="inner">
-    <p class="eyebrow">Architectura Temporis Research Centre · Field Workspace</p>
+    <p class="eyebrow" data-i18n="tia.eyebrow">Architectura Temporis Research Centre · Field Workspace</p>
     <h1>TIA — Temporis Impact Assessment</h1>
-    <p>Shows how one flagged outlier — an object whose chronity falls well below the zone's own norm — pulls the zone's overall reading down. Current state vs. a hypothetical without it, side by side, built from the same measured data behind every zone passport.</p>
+    <p data-i18n="tia.hero.p">Shows how one flagged outlier — an object whose chronity falls well below the zone's own norm — pulls the zone's overall reading down. Current state vs. a hypothetical without it, side by side, built from the same measured data behind every zone passport.</p>
     <div class="zone-picker">
-      <label for="zoneSelect">Zone</label>
+      <label for="zoneSelect" data-i18n="tia.zonePicker.label">Zone</label>
       <select id="zoneSelect">
         <option value="hn001">Herceg Novi Old Town · ZN·ME·BJ·HN·001</option>
       </select>
@@ -207,14 +227,14 @@
       </div>
     </div>
     <div class="note">
-      <strong>About this view:</strong> the coloured block is the zone's real, current chronity range and mean, over all measured objects. The faint block behind it is the same statistic recomputed over the remaining objects only, with the flagged outlier excluded — a real number, not an estimate. The step on the left shows the outlier's own chronity, at its own true height. Data currently shown is <code>ZN·ME·BJ·HN·001</code>'s pilot measurement set; wiring this to the live ZONES/PASSPORT_REGISTRY sheet is next on the list.
+      <strong data-i18n="tia.note.label">About this view:</strong> <span data-i18n="tia.note.body">the coloured block is the zone's real, current chronity range and mean, over all measured objects. The faint block behind it is the same statistic recomputed over the remaining objects only, with the flagged outlier excluded — a real number, not an estimate. The step on the left shows the outlier's own chronity, at its own true height. Data currently shown is <code>ZN·ME·BJ·HN·001</code>'s pilot measurement set; wiring this to the live ZONES/PASSPORT_REGISTRY sheet is next on the list.</span>
     </div>
   </div>
 </div>
 
 <footer>
-  <div>Architectura Temporis Research Centre (ATRC) · Herceg Novi, Montenegro · Est. 2024</div>
-  <div>Understanding before change</div>
+  <div data-i18n="footer.org">Architectura Temporis Research Centre (ATRC) · Herceg Novi, Montenegro · Est. 2024</div>
+  <div data-i18n="footer.motto">Understanding before change</div>
 </footer>
 
 <script type="module">
