@@ -250,6 +250,23 @@
     font-size: 12px; color: var(--grey-3); flex-wrap: wrap; gap: 12px;
   }
 
+  /* ── language toggle ── */
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-toggle-btn {
+    font-family: var(--font-body);
+    font-size: 11px; font-weight: bold; letter-spacing: 1px;
+    color: var(--grey-3);
+    background: transparent;
+    border: 1px solid var(--grey-2);
+    border-radius: 4px;
+    padding: 4px 9px;
+    cursor: pointer;
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .lang-toggle-btn:hover { color: var(--white); border-color: var(--grey-3); }
+  .lang-toggle-btn.active { color: var(--white); background: var(--grey-2); border-color: var(--grey-3); }
+  .lang-toggle-mobile { margin-top: 20px; }
+
   @media (max-width: 600px) {
     .inner { padding: 0 24px; }
     nav { padding: 0 24px; }
@@ -258,19 +275,24 @@
 </style>
 </head>
 <body>
+<script src="i18n.js" defer></script>
 
 <nav>
   <a href="index.html#hero" class="nav-logo">ATRC</a>
   <ul class="nav-links">
-    <li><a href="index.html#problem">Problem</a></li>
-    <li><a href="index.html#ci">Methodology</a></li>
-    <li><a href="index.html#acap">ACAP</a></li>
-    <li><a href="index.html#research">Research</a></li>
-    <li><a href="index.html#atu">ATU</a></li>
-    <li><a href="index.html#roadmap">Roadmap</a></li>
-    <li><a href="index.html#contact">Contact</a></li>
-    <li><a href="explore.html">Explore</a></li>
-    <li><a href="field-workspace.html" class="nav-cta">Field Workspace</a></li>
+    <li><a href="index.html#problem" data-i18n="nav.problem">Problem</a></li>
+    <li><a href="index.html#ci" data-i18n="nav.methodology">Methodology</a></li>
+    <li><a href="index.html#acap" data-i18n="nav.acap">ACAP</a></li>
+    <li><a href="index.html#research" data-i18n="nav.research">Research</a></li>
+    <li><a href="index.html#atu" data-i18n="nav.atu">ATU</a></li>
+    <li><a href="index.html#roadmap" data-i18n="nav.roadmap">Roadmap</a></li>
+    <li><a href="index.html#contact" data-i18n="nav.contact">Contact</a></li>
+    <li><a href="explore.html" data-i18n="nav.explore">Explore</a></li>
+    <li><a href="field-workspace.html" class="nav-cta" data-i18n="nav.fieldWorkspace">Field Workspace</a></li>
+    <li class="lang-toggle">
+      <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
+      <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
+    </li>
   </ul>
   <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
     <span></span><span></span><span></span>
@@ -279,73 +301,77 @@
 
 <div class="mobile-menu" id="mobileMenu">
   <nav class="mobile-links">
-    <a href="index.html#hero">Home</a>
-    <a href="index.html#problem">Problem</a>
-    <a href="index.html#ci">Methodology</a>
-    <a href="index.html#acap">ACAP</a>
-    <a href="index.html#research">Research</a>
-    <a href="index.html#atu">ATU</a>
-    <a href="index.html#roadmap">Roadmap</a>
-    <a href="index.html#contact">Contact</a>
-    <a href="explore.html" class="mobile-secondary">Explore — public data</a>
-    <a href="field.html" class="mobile-secondary">Field Launcher</a>
-    <a href="ATRC_CI_Map.html" class="mobile-secondary">Zone Editor</a>
-    <a href="gps.html" class="mobile-secondary">GPS Locator</a>
-    <a href="registry.html" class="mobile-secondary">Passport Registry</a>
-    <a href="tia.html" class="mobile-secondary">TIA Viewer</a>
+    <a href="index.html#hero" data-i18n="mnav.home">Home</a>
+    <a href="index.html#problem" data-i18n="nav.problem">Problem</a>
+    <a href="index.html#ci" data-i18n="nav.methodology">Methodology</a>
+    <a href="index.html#acap" data-i18n="nav.acap">ACAP</a>
+    <a href="index.html#research" data-i18n="nav.research">Research</a>
+    <a href="index.html#atu" data-i18n="nav.atu">ATU</a>
+    <a href="index.html#roadmap" data-i18n="nav.roadmap">Roadmap</a>
+    <a href="index.html#contact" data-i18n="nav.contact">Contact</a>
+    <a href="explore.html" class="mobile-secondary" data-i18n="mnav.explore">Explore — public data</a>
+    <a href="field.html" class="mobile-secondary" data-i18n="mnav.fieldLauncher">Field Launcher</a>
+    <a href="ATRC_CI_Map.html" class="mobile-secondary" data-i18n="mnav.zoneEditor">Zone Editor</a>
+    <a href="gps.html" class="mobile-secondary" data-i18n="mnav.gpsLocator">GPS Locator</a>
+    <a href="registry.html" class="mobile-secondary" data-i18n="mnav.registry">Passport Registry</a>
+    <a href="tia.html" class="mobile-secondary" data-i18n="mnav.tia">TIA Viewer</a>
+    <div class="lang-toggle lang-toggle-mobile">
+      <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
+      <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
+    </div>
   </nav>
 </div>
 
 <div class="hero">
   <div class="inner">
-    <p class="eyebrow">Architectura Temporis Research Centre · Internal tools</p>
-    <h1>Field Workspace</h1>
-    <p>Tools for measuring, mapping, and managing Chronity Zones in the field. Built for researchers collecting AT v5.0 data — GPS capture, zone drawing, live spectral mapping, and the full passport registry.</p>
+    <p class="eyebrow" data-i18n="hero.eyebrow">Architectura Temporis Research Centre · Internal tools</p>
+    <h1 data-i18n="hero.h1">Field Workspace</h1>
+    <p data-i18n="hero.p">Tools for measuring, mapping, and managing Chronity Zones in the field. Built for researchers collecting AT v5.0 data — GPS capture, zone drawing, live spectral mapping, and the full passport registry.</p>
   </div>
 </div>
 
 <div class="section-wrap">
   <div class="inner">
-    <div class="sec-hdr"><span class="sec-num">01</span><span class="sec-label">Field Tools</span></div>
+    <div class="sec-hdr"><span class="sec-num">01</span><span class="sec-label" data-i18n="sec.fieldTools">Field Tools</span></div>
 
     <div class="grid">
 
       <a href="field.html" class="card">
-        <span class="status beta">v2 · Live</span>
+        <span class="status beta" data-i18n="card.fieldLauncher.status">v2 · Live</span>
         <h3>Field Launcher</h3>
-        <p>Live GPS map for fieldwork. Highlights the Chronity Zone you're standing in, flags nearby dominants within ~10m, and tells you whether you're auditing an existing object or registering a new one.</p>
+        <p data-i18n="card.fieldLauncher.desc">Live GPS map for fieldwork. Highlights the Chronity Zone you're standing in, flags nearby dominants within ~10m, and tells you whether you're auditing an existing object or registering a new one.</p>
         <div class="data-row"><code>watchPosition</code><code>zones.geojson</code><code>PASSPORT_REGISTRY</code></div>
-        <span class="open">Open Field Launcher</span>
+        <span class="open" data-i18n="card.fieldLauncher.open">Open Field Launcher</span>
       </a>
 
       <a href="ATRC_CI_Map.html?edit=1" class="card">
-        <span class="status beta">v2 · Live</span>
+        <span class="status beta" data-i18n="card.zoneEditor.status">v2 · Live</span>
         <h3>Zone Editor</h3>
-        <p>Draw Chronity Zone contours directly on the map by physical boundaries — walls, roads, coastline. Built into the Spectral CI Map: open it, click "✎ Edit Zones" in the top right. Vertices snap to real OSM streets/walls automatically and save straight to the ZONES sheet.</p>
+        <p data-i18n="card.zoneEditor.desc">Draw Chronity Zone contours directly on the map by physical boundaries — walls, roads, coastline. Built into the Spectral CI Map: open it, click "✎ Edit Zones" in the top right. Vertices snap to real OSM streets/walls automatically and save straight to the ZONES sheet.</p>
         <div class="data-row"><code>saves to ZONES sheet</code></div>
-        <span class="open">Open Spectral CI Map → Edit Zones</span>
+        <span class="open" data-i18n="card.zoneEditor.open">Open Spectral CI Map → Edit Zones</span>
       </a>
 
       <a href="gps.html" class="card">
-        <span class="status live">v1 · Live</span>
+        <span class="status live" data-i18n="card.gpsLocator.status">v1 · Live</span>
         <h3>GPS Locator</h3>
-        <p>Simple GPS readout for the field — auto-updates as you move, with quick links to the field form and the Spectral CI Map.</p>
-        <span class="open">Open GPS Locator</span>
+        <p data-i18n="card.gpsLocator.desc">Simple GPS readout for the field — auto-updates as you move, with quick links to the field form and the Spectral CI Map.</p>
+        <span class="open" data-i18n="card.gpsLocator.open">Open GPS Locator</span>
       </a>
 
       <a href="registry.html" class="card">
-        <span class="status live">Live</span>
+        <span class="status live" data-i18n="card.registry.status">Live</span>
         <h3>Passport Registry</h3>
-        <p>Full catalog of Chrono-Passports — filter by country, city, CI category and zone, search by name or architect, click through to any passport. The working lookup table behind every field session.</p>
-        <span class="open">Open Registry</span>
+        <p data-i18n="card.registry.desc">Full catalog of Chrono-Passports — filter by country, city, CI category and zone, search by name or architect, click through to any passport. The working lookup table behind every field session.</p>
+        <span class="open" data-i18n="card.registry.open">Open Registry</span>
       </a>
 
       <a href="tia.html" class="card">
-        <span class="status live">v1 · Live</span>
+        <span class="status live" data-i18n="card.tia.status">v1 · Live</span>
         <h3>TIA — Temporis Impact Assessment</h3>
-        <p>Shows how one flagged outlier — an object whose chronity falls well below the zone's own norm — pulls the zone's overall reading down. Current state vs. a hypothetical without it, side by side.</p>
+        <p data-i18n="card.tia.desc">Shows how one flagged outlier — an object whose chronity falls well below the zone's own norm — pulls the zone's overall reading down. Current state vs. a hypothetical without it, side by side.</p>
         <div class="data-row"><code>computeZoneStats</code></div>
-        <span class="open">Open TIA Viewer</span>
+        <span class="open" data-i18n="card.tia.open">Open TIA Viewer</span>
       </a>
 
     </div>
@@ -354,42 +380,42 @@
 
 <div class="section-wrap" style="border-top: 1px solid var(--grey-2); padding-top: 64px;">
   <div class="inner">
-    <div class="sec-hdr"><span class="sec-num">02</span><span class="sec-label">Public Data</span></div>
+    <div class="sec-hdr"><span class="sec-num">02</span><span class="sec-label" data-i18n="sec.publicData">Public Data</span></div>
 
     <div class="grid">
 
       <a href="explore.html" class="card">
-        <span class="status live">Live</span>
+        <span class="status live" data-i18n="card.explore.status">Live</span>
         <h3>Explore</h3>
-        <p>Public data portal — live statistics, full spectral CI map, and a searchable table of every measured object. Auto-refreshes every 60 seconds.</p>
-        <span class="open">Open Explore</span>
+        <p data-i18n="card.explore.desc">Public data portal — live statistics, full spectral CI map, and a searchable table of every measured object. Auto-refreshes every 60 seconds.</p>
+        <span class="open" data-i18n="card.explore.open">Open Explore</span>
       </a>
 
       <a href="ATRC_CI_Map.html" class="card">
-        <span class="status beta">v2 · IDW</span>
+        <span class="status beta" data-i18n="card.ciMap.status">v2 · IDW</span>
         <h3>Spectral CI Map</h3>
-        <p>Standalone spectral visualization — CI mapped to visible wavelength, with IDW gradient fill across zone contours.</p>
-        <span class="open">Open CI Map</span>
+        <p data-i18n="card.ciMap.desc">Standalone spectral visualization — CI mapped to visible wavelength, with IDW gradient fill across zone contours.</p>
+        <span class="open" data-i18n="card.ciMap.open">Open CI Map</span>
       </a>
 
       <a href="https://forms.gle/B29DyntFByrk24xD8" class="card" target="_blank" rel="noopener">
-        <span class="status live">Form</span>
+        <span class="status live" data-i18n="card.form.status">Form</span>
         <h3>Field Data Form</h3>
-        <p>22-question Google Form for recording field measurements. Submissions feed the Apps Script pipeline and update the registry automatically.</p>
-        <span class="open">Open Form</span>
+        <p data-i18n="card.form.desc">22-question Google Form for recording field measurements. Submissions feed the Apps Script pipeline and update the registry automatically.</p>
+        <span class="open" data-i18n="card.form.open">Open Form</span>
       </a>
 
     </div>
 
     <div class="note">
-      <strong>Internal note:</strong> this hub is the central entry point for the field toolkit while the number of Chronity Zones stays small enough to manage manually. As the registry scales, consider moving this into the planned PWA (<code>atrc-field</code>) as the primary field interface.
+      <strong data-i18n="note.label">Internal note:</strong> <span data-i18n="note.body">this hub is the central entry point for the field toolkit while the number of Chronity Zones stays small enough to manage manually. As the registry scales, consider moving this into the planned PWA (<code>atrc-field</code>) as the primary field interface.</span>
     </div>
   </div>
 </div>
 
 <footer>
-  <div>Architectura Temporis Research Centre (ATRC) · Herceg Novi, Montenegro · Est. 2024</div>
-  <div>Understanding before change</div>
+  <div data-i18n="footer.org">Architectura Temporis Research Centre (ATRC) · Herceg Novi, Montenegro · Est. 2024</div>
+  <div data-i18n="footer.motto">Understanding before change</div>
 </footer>
 
 <script>
