@@ -79,6 +79,21 @@
 
   .btn-refresh:hover { border-color: #c55a11; color: #c55a11; }
 
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-toggle-btn {
+    font-family: Arial, sans-serif;
+    font-size: 10px; font-weight: bold; letter-spacing: 1px;
+    color: #9a958c;
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+  .lang-toggle-btn:hover { color: #f2f0ec; border-color: #9a958c; }
+  .lang-toggle-btn.active { color: #f2f0ec; background: #1c1c1c; border-color: #9a958c; }
+
   .status-dot {
     width: 8px; height: 8px;
     border-radius: 50%;
@@ -572,105 +587,109 @@
 <div class="header">
   <div class="header-left">
     <div class="logo">AT<span>RC</span></div>
-    <div class="title">Spectral CI Map</div>
+    <div class="title" data-i18n="map.title">Spectral CI Map</div>
   </div>
   <div class="header-right">
-    <a class="btn-edit-toggle" href="field.html" style="text-decoration:none; display:inline-block;">← Field</a>
+    <a class="btn-edit-toggle" href="field.html" style="text-decoration:none; display:inline-block;" data-i18n="map.backToField">← Field</a>
     <div class="status-dot" id="statusDot"></div>
-    <button class="btn-edit-toggle" id="editToggleBtn" onclick="toggleEditMode()">✎ Edit Zones</button>
-    <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
+    <button class="btn-edit-toggle" id="editToggleBtn" onclick="toggleEditMode()" data-i18n="map.editZones">✎ Edit Zones</button>
+    <button class="btn-refresh" onclick="loadData()" data-i18n="map.refresh">↻ Refresh</button>
+    <div class="lang-toggle">
+      <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
+      <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
+    </div>
   </div>
 </div>
 
 <!-- EDIT MODE BANNER -->
-<div id="editModeBanner"><span class="dot"></span> Click on the map to add vertices</div>
+<div id="editModeBanner"><span class="dot"></span> <span data-i18n="map.editBanner">Click on the map to add vertices</span></div>
 
 <!-- ZONE EDITOR SIDEBAR (hidden by default, toggled from header) -->
 <div id="editorSidebar">
   <div class="es-head">
     <div>
       <div class="brand">ATRC</div>
-      <h1>Edit Zones</h1>
+      <h1 data-i18n="map.editZonesTitle">Edit Zones</h1>
     </div>
     <button class="es-close" onclick="toggleEditMode()">✕</button>
   </div>
 
   <div class="es-section es-draw-controls">
-    <h2>Draw contour</h2>
-    <div class="ehint">Trace the zone by physical boundaries (fortress wall, road, terrain, coastline) — not administrative borders. Existing measured objects (colored dots) are shown on the map — draw around them. After "Finish contour", vertices within a few meters of a real OSM street/wall line snap to it automatically, then vertices near an already-drawn neighboring zone snap to that zone's edge too — so adjacent zones share a clean border instead of a gap or overlap.</div>
-    <div class="evcount">Vertices: <b id="vcount">0</b></div>
+    <h2 data-i18n="map.drawContour">Draw contour</h2>
+    <div class="ehint" data-i18n="map.drawHint">Trace the zone by physical boundaries (fortress wall, road, terrain, coastline) — not administrative borders. Existing measured objects (colored dots) are shown on the map — draw around them. After "Finish contour", vertices within a few meters of a real OSM street/wall line snap to it automatically, then vertices near an already-drawn neighboring zone snap to that zone's edge too — so adjacent zones share a clean border instead of a gap or overlap.</div>
+    <div class="evcount"><span data-i18n="map.vertices">Vertices:</span> <b id="vcount">0</b></div>
     <div class="status-bar" id="geoDetectNote"></div>
     <div class="ebtn-row">
-      <button class="ebtn primary" id="startBtn" style="flex:1">Start drawing</button>
-      <button class="ebtn ghost" id="undoBtn" style="flex:1" disabled>Undo point</button>
+      <button class="ebtn primary" id="startBtn" style="flex:1" data-i18n="map.startDrawing">Start drawing</button>
+      <button class="ebtn ghost" id="undoBtn" style="flex:1" disabled data-i18n="map.undoPoint">Undo point</button>
     </div>
-    <button class="ebtn" id="finishBtn" disabled>Finish contour</button>
-    <button class="ebtn ghost" id="cancelBtn" style="display:none">Cancel drawing</button>
+    <button class="ebtn" id="finishBtn" disabled data-i18n="map.finishContour">Finish contour</button>
+    <button class="ebtn ghost" id="cancelBtn" style="display:none" data-i18n="map.cancelDrawing">Cancel drawing</button>
     <div class="status-bar" id="snapStatus"></div>
   </div>
 
   <div class="es-section">
-    <h2>Edit existing saved zone</h2>
-    <div class="ehint">These are zones already stored in the ZONES sheet. Editing loads the real saved contour into the drawer above — fix it (e.g. re-run OSM snapping after this session's update) and save under the same Zone ID to overwrite.</div>
+    <h2 data-i18n="map.editExisting">Edit existing saved zone</h2>
+    <div class="ehint" data-i18n="map.editExistingHint">These are zones already stored in the ZONES sheet. Editing loads the real saved contour into the drawer above — fix it (e.g. re-run OSM snapping after this session's update) and save under the same Zone ID to overwrite.</div>
     <select id="savedZoneCityFilter" style="width:100%; margin-bottom:8px; padding:8px; font-family:Arial, sans-serif;">
-      <option value="">All cities</option>
+      <option value="" data-i18n="map.allCities">All cities</option>
     </select>
     <div class="zone-list" id="savedZoneList">
-      <div class="empty">Loading…</div>
+      <div class="empty" data-i18n="map.loadingEllipsis">Loading…</div>
     </div>
   </div>
 
   <div class="es-section" id="metaSection" style="display:none">
-    <h2>Zone details</h2>
-    <label>Region code (established coastal division)</label>
+    <h2 data-i18n="map.zoneDetails">Zone details</h2>
+    <label data-i18n="map.regionCode">Region code (established coastal division)</label>
     <select id="znRegion">
       <option value="BJ">BJ — Boka Kotorska</option>
       <option value="BR">BR — Budvanska rivijera</option>
       <option value="BA">BA — Barsko primorje</option>
       <option value="UL">UL — Ulcinjska rivijera</option>
     </select>
-    <label>City code (e.g. HN, KO, PR, RI)</label>
+    <label data-i18n="map.cityCode">City code (e.g. HN, KO, PR, RI)</label>
     <input type="text" id="znCity" placeholder="HN">
     <div class="status-bar" id="cityMismatchWarning"></div>
     <label class="checkbox-row" id="mismatchAckRow" style="display:none">
       <input type="checkbox" id="mismatchAck">
-      <span>I've checked — this location and City code are correct. Save anyway.</span>
+      <span data-i18n="map.mismatchAck">I've checked — this location and City code are correct. Save anyway.</span>
     </label>
-    <label>Zone ID (ZN·ME·{region}·{city}·###)</label>
+    <label data-i18n="map.zoneIdLabel">Zone ID (ZN·ME·{region}·{city}·###)</label>
     <input type="text" id="znId" placeholder="ZN-ME-BJ-HN-003">
-    <label>Display name</label>
-    <input type="text" id="znName" placeholder="e.g. Herceg Novi — Stari Grad">
-    <label>CI_zone (optional, can be filled later)</label>
+    <label data-i18n="map.displayName">Display name</label>
+    <input type="text" id="znName" data-i18n-placeholder="map.displayNamePh" placeholder="e.g. Herceg Novi — Stari Grad">
+    <label data-i18n="map.ciZoneLabel">CI_zone (optional, can be filled later)</label>
     <input type="number" id="znCi" step="0.001" min="0" max="1" placeholder="0.000">
     <div class="checkbox-row">
       <input type="checkbox" id="znCentral">
-      <label for="znCentral">This is the central/historic core zone (one per city — reserves ···001)</label>
+      <label for="znCentral" data-i18n="map.centralCheckbox">This is the central/historic core zone (one per city — reserves ···001)</label>
     </div>
-    <div class="ehint">The central zone anchors Prior_CI for all other zones in the same city. Number ···001 is reserved for it — non-central zones always start at ···002, even if created first. <b>This checkbox only changes the number — it does NOT detect or change which city/region the zone belongs to.</b> Set City code above correctly first.</div>
-    <label>UNESCO status</label>
+    <div class="ehint" data-i18n="map.centralHint">The central zone anchors Prior_CI for all other zones in the same city. Number ···001 is reserved for it — non-central zones always start at ···002, even if created first. <b>This checkbox only changes the number — it does NOT detect or change which city/region the zone belongs to.</b> Set City code above correctly first.</div>
+    <label data-i18n="map.unescoStatus">UNESCO status</label>
     <select id="znUnesco">
       <option value="none">none</option>
       <option value="buffer">buffer</option>
       <option value="core">core</option>
     </select>
     <div class="ebtn-row">
-      <button class="ebtn primary" id="saveZoneBtn" style="flex:1">Save zone</button>
-      <button class="ebtn ghost" id="discardZoneBtn" style="flex:1">Discard</button>
+      <button class="ebtn primary" id="saveZoneBtn" style="flex:1" data-i18n="map.saveZone">Save zone</button>
+      <button class="ebtn ghost" id="discardZoneBtn" style="flex:1" data-i18n="map.discard">Discard</button>
     </div>
   </div>
 
   <div class="zone-list" id="zoneList">
-    <div class="empty">No zones drawn yet this session</div>
+    <div class="empty" data-i18n="map.noZonesSession">No zones drawn yet this session</div>
   </div>
 
   <div class="es-section">
-    <h2>Sync to live registry</h2>
-    <div class="ehint">Sends all zones above directly to the ZONES sheet.</div>
-    <button class="ebtn primary" id="syncBtn" disabled>⬆ Save all zones to sheet</button>
+    <h2 data-i18n="map.syncRegistry">Sync to live registry</h2>
+    <div class="ehint" data-i18n="map.syncHint">Sends all zones above directly to the ZONES sheet.</div>
+    <button class="ebtn primary" id="syncBtn" disabled data-i18n="map.syncBtn">⬆ Save all zones to sheet</button>
     <div class="status-bar" id="syncStatus"></div>
 
-    <button class="ebtn ghost" id="recalcBtn" style="margin-top:14px;">↻ Recalculate zone assignments</button>
-    <div class="ehint">Run after editing a boundary — fixes Zone_ID on existing objects whose GPS now falls in a different zone.</div>
+    <button class="ebtn ghost" id="recalcBtn" style="margin-top:14px;" data-i18n="map.recalcBtn">↻ Recalculate zone assignments</button>
+    <div class="ehint" data-i18n="map.recalcHint">Run after editing a boundary — fixes Zone_ID on existing objects whose GPS now falls in a different zone.</div>
     <div class="status-bar" id="recalcStatus"></div>
   </div>
 </div>
@@ -680,48 +699,48 @@
 
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-text">Loading field data</div>
+  <div class="loading-text" data-i18n="map.loadingFieldData">Loading field data</div>
   <div class="loading-bar"></div>
 </div>
 
 <!-- STATS PANEL -->
 <div class="stats" id="statsPanel" style="display:none;">
-  <div class="stats-title">Zone Summary <span class="stats-chevron">▾</span></div>
+  <div class="stats-title"><span data-i18n="map.zoneSummary">Zone Summary</span> <span class="stats-chevron">▾</span></div>
   <div class="stats-row stats-row-primary">
     <div class="stats-label">CI_zone (w)</div>
     <div class="stats-value" id="statCI">—</div>
   </div>
   <div class="stats-row">
-    <div class="stats-label">Category</div>
+    <div class="stats-label" data-i18n="map.category">Category</div>
     <div class="stats-value" style="font-size:11px;color:#888;" id="statCat">—</div>
   </div>
   <div class="stats-row">
-    <div class="stats-label" style="font-size:9px;color:#aaa;">weighted by PSM</div>
+    <div class="stats-label" style="font-size:9px;color:#aaa;" data-i18n="map.weightedByPsm">weighted by PSM</div>
   </div>
   <hr class="stats-divider">
   <div class="stats-row">
-    <div class="stats-label">Objects</div>
+    <div class="stats-label" data-i18n="map.objects">Objects</div>
     <div class="stats-value" id="statCount" style="font-size:18px;">—</div>
   </div>
   <div class="stats-row">
-    <div class="stats-label">Min CI (w)</div>
+    <div class="stats-label" data-i18n="map.minCi">Min CI (w)</div>
     <div class="stats-value" id="statMin" style="font-size:14px;color:#888;">—</div>
   </div>
   <div class="stats-row">
-    <div class="stats-label">Max CI (w)</div>
+    <div class="stats-label" data-i18n="map.maxCi">Max CI (w)</div>
     <div class="stats-value" id="statMax" style="font-size:14px;color:#888;">—</div>
   </div>
 </div>
 
 <!-- LEGEND -->
 <div class="legend">
-  <div class="legend-title">Chronity Index (weighted) · Spectral Scale <span class="legend-chevron">▾</span></div>
+  <div class="legend-title"><span data-i18n="map.legendTitle">Chronity Index (weighted) · Spectral Scale</span> <span class="legend-chevron">▾</span></div>
   <div class="legend-spectrum-wrap">
     <div class="legend-spectrum" id="legendSpectrum"></div>
     <div class="legend-split-marker" id="legendSplitMarker"></div>
   </div>
   <div class="legend-labels" id="legendLabels"></div>
-  <div class="legend-split-note">← CI × PSM=1.0 · 1.0–1.5 = PSM &gt; 1.0 (national/UNESCO) →</div>
+  <div class="legend-split-note" data-i18n="map.legendSplitNote">← CI × PSM=1.0 · 1.0–1.5 = PSM &gt; 1.0 (national/UNESCO) →</div>
   <div class="legend-items">
     <div class="legend-item">
       <div class="legend-dot" style="background:#5f00ff;"></div>
@@ -746,6 +765,7 @@
   </div>
 </div>
 
+<script src="i18n.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // CONFIG — замени на свой Spreadsheet ID
@@ -1627,14 +1647,14 @@ function onMapClickEd(e){
     detectedCity = detectCityFromPoint(e.latlng.lat, e.latlng.lng);
     if (detectedCity) {
       const muniName = validateMunicipalityCode(detectedCity.countryCode, detectedCity.municipalityCode);
-      const muniNote = muniName ? ` · ${muniName} Municipality` : '';
+      const muniNote = muniName ? t('map.geo.muniSuffix', { muni: muniName }) : '';
       if (!detectedCity.seeded) {
-        setEdStatus('geoDetectNote', 'ok', `📍 Detected: ${detectedCity.cityCode}${muniNote} (${detectedCity.distKm.toFixed(1)} km from its other zones)`);
+        setEdStatus('geoDetectNote', 'ok', t('map.geo.detected', { city: detectedCity.cityCode, muni: muniNote, km: detectedCity.distKm.toFixed(1) }));
       } else {
-        setEdStatus('geoDetectNote', 'ok', `📍 Detected: ${detectedCity.cityCode}${muniNote} — planned settlement, no zones drawn there yet (${detectedCity.distKm.toFixed(1)} km from its approximate center)`);
+        setEdStatus('geoDetectNote', 'ok', t('map.geo.detectedPlanned', { city: detectedCity.cityCode, muni: muniNote, km: detectedCity.distKm.toFixed(1) }));
       }
     } else {
-      setEdStatus('geoDetectNote', 'busy', `📍 No known/planned settlement within ${CITY_AUTO_DETECT_RADIUS_KM} km — new area, City code must be entered manually.`);
+      setEdStatus('geoDetectNote', 'busy', t('map.geo.notDetected', { km: CITY_AUTO_DETECT_RADIUS_KM }));
       lookupPlaceNameFallback(e.latlng.lat, e.latlng.lng); // v8.1: best-effort реверс-геокодинг, см. функцию ниже
     }
   }
@@ -1848,8 +1868,7 @@ function checkCityMismatch() {
   const [lat, lng] = ringCentroid(currentPoints.map(p => [p[0], p[1]]));
   const distKm = haversineKm(lat, lng, known.lat, known.lng);
   if (distKm > CITY_MISMATCH_THRESHOLD_KM) {
-    setEdStatus('cityMismatchWarning', 'err',
-      `⚠ This contour is ~${distKm.toFixed(1)} km from other "${cityCode}" zones. Double-check the city code above — did the location change?`);
+    setEdStatus('cityMismatchWarning', 'err', t('map.mismatch.warning', { km: distKm.toFixed(1), city: cityCode }));
   } else {
     el.className = 'status-bar';
   }
@@ -1966,7 +1985,7 @@ async function finishDrawingEd(){
   if(drawLayer) map.removeLayer(drawLayer);
   drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1, dashArray:'3 3' }).addTo(map);
 
-  setEdStatus('snapStatus', 'busy', 'Snapping contour to OSM streets/walls…');
+  setEdStatus('snapStatus', 'busy', t('map.snap.busy'));
 
   try {
     const originalCount = currentPoints.length;
@@ -1980,16 +1999,16 @@ async function finishDrawingEd(){
     drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
 
     if (snappedCount > 0) {
-      const addedNote = addedCount > 0 ? ` +${addedCount} curve points added` : '';
-      setEdStatus('snapStatus', 'ok', `✓ ${snappedCount} of ${originalCount} vertices snapped to OSM lines (≤${OSM_SNAP_TOLERANCE_M}m).${addedNote}`);
+      const addedNote = addedCount > 0 ? t('map.snap.curvePointsAdded', { n: addedCount }) : '';
+      setEdStatus('snapStatus', 'ok', t('map.snap.ok', { snapped: snappedCount, total: originalCount, tol: OSM_SNAP_TOLERANCE_M, added: addedNote }));
     } else {
-      setEdStatus('snapStatus', 'ok', `No OSM lines found within ${OSM_SNAP_TOLERANCE_M}m — contour kept exactly as drawn.`);
+      setEdStatus('snapStatus', 'ok', t('map.snap.none', { tol: OSM_SNAP_TOLERANCE_M }));
     }
   } catch (err) {
     console.log('OSM snap error, keeping manual contour unaffected:', err);
     map.removeLayer(drawLayer);
     drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
-    setEdStatus('snapStatus', 'err', `✗ OSM snap unavailable (${err.message}) — contour kept exactly as drawn, nothing lost.`);
+    setEdStatus('snapStatus', 'err', t('map.snap.err', { err: err.message }));
   }
 
   // v8.0: второй проход — привязка к границам уже нарисованных/сохранённых
@@ -2006,7 +2025,7 @@ async function finishDrawingEd(){
     map.removeLayer(drawLayer);
     drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
     const prevMsg = document.getElementById('snapStatus').textContent;
-    setEdStatus('snapStatus', 'ok', `${prevMsg} · +${zoneSnapResult.snappedCount} vertices aligned to neighboring zone edges (≤${ZONE_SNAP_TOLERANCE_M}m).`);
+    setEdStatus('snapStatus', 'ok', prevMsg + t('map.snap.zoneEdgeAppend', { n: zoneSnapResult.snappedCount, tol: ZONE_SNAP_TOLERANCE_M }));
   }
 
   if(pendingEditMeta){
@@ -2055,9 +2074,9 @@ function saveZoneEd(){
   const ci = parseFloat(document.getElementById('znCi').value);
   const isCentral = document.getElementById('znCentral').checked;
   const unescoStatus = document.getElementById('znUnesco').value;
-  if(!cityCode){ alert('City code is required (e.g. HN, KT)'); return; }
-  if(!znId){ alert('Zone ID is required'); return; }
-  if(currentPoints.length < 3){ alert('Draw at least 3 vertices first'); return; }
+  if(!cityCode){ alert(t('map.alert.cityRequired')); return; }
+  if(!znId){ alert(t('map.alert.zoneIdRequired')); return; }
+  if(currentPoints.length < 3){ alert(t('map.alert.needThreeVertices')); return; }
 
   // v8.1: та же подстраховка, что и для коллизии ID ниже — если контур
   // геометрически далеко от других зон с этим кодом города (см.
@@ -2070,7 +2089,7 @@ function saveZoneEd(){
       const [lat, lng] = ringCentroid(currentPoints.map(p => [p[0], p[1]]));
       const distKm = haversineKm(lat, lng, known.lat, known.lng);
       if (distKm > CITY_MISMATCH_THRESHOLD_KM && !document.getElementById('mismatchAck').checked) {
-        alert(`This contour is ~${distKm.toFixed(1)} km from other "${cityCode}" zones.\n\nTick the confirmation checkbox above if the location is really correct, or fix the City code.`);
+        alert(t('map.alert.farFromOtherZones', { km: distKm.toFixed(1), city: cityCode }));
         return;
       }
     }
@@ -2081,11 +2100,11 @@ function saveZoneEd(){
   // изменён вручную после автоподстановки.
   const idNumberTail = znId.split('·').pop();
   if (isCentral && idNumberTail !== '001') {
-    alert(`Central zone must use number ···001 (got ···${idNumberTail}). Fix the Zone ID or uncheck "central".`);
+    alert(t('map.alert.centralMustBe001', { num: idNumberTail }));
     return;
   }
   if (!isCentral && idNumberTail === '001') {
-    alert(`···001 is reserved for the central/historic core zone. Check "central" above, or change the Zone ID number.`);
+    alert(t('map.alert.reserved001'));
     return;
   }
 
@@ -2105,21 +2124,15 @@ function saveZoneEd(){
   // обычного потока (например, программно или через Enter в поле формы).
   if (creatingNewZone && lastDrawnZones[znId] && !document.getElementById('mismatchAck').checked) {
     const existing = lastDrawnZones[znId];
-    const priorNote = existing.priorCI != null ? ` (Prior_CI ${existing.priorCI.toFixed(3)})` : '';
-    alert(
-      `"${znId}" already exists in the saved ZONES sheet${priorNote}.\n\n` +
-      `Saving here will OVERWRITE its contour geometry the next time you sync — ` +
-      `even if it's a measured/central zone with real field data.\n\n` +
-      `Tick the confirmation checkbox above if you really intend to update that exact zone's boundary, ` +
-      `or fix the City code / Zone ID first.`
-    );
+    const priorNote = existing.priorCI != null ? t('map.priorNote', { ci: existing.priorCI.toFixed(3) }) : '';
+    alert(t('map.alert.overwriteWarning', { znId: znId, priorNote: priorNote }));
     return;
   }
 
   if(isCentral){
     const otherCentral = editZones.find(z => z.zn_id !== znId && (z.cityCode||'').toUpperCase() === cityCode && z.isCentral);
     if(otherCentral){
-      if(!confirm(`"${otherCentral.name}" is currently marked central for ${cityCode} in this session. Make "${name}" central instead?`)) return;
+      if(!confirm(t('map.confirm.replaceCentral', { other: otherCentral.name, city: cityCode, name: name }))) return;
       otherCentral.isCentral = false;
     }
   }
@@ -2175,7 +2188,7 @@ function renderEditZoneList(){
   const zoneList = document.getElementById('zoneList');
   const syncBtn = document.getElementById('syncBtn');
   if(!editZones.length){
-    zoneList.innerHTML = '<div class="empty">No zones drawn yet this session</div>';
+    zoneList.innerHTML = '<div class="empty">' + t('map.noZonesSession') + '</div>';
     syncBtn.disabled = true;
     return;
   }
@@ -2191,21 +2204,21 @@ function renderEditZoneList(){
       // CSV на несколько минут — см. пометки про кэш в других местах кода).
       // Показываем это явно, вместо Edit/Delete, чтобы не читалось как дубль.
       card.innerHTML = `
-        <div class="zc-name">${z.name}${z.isCentral?'<span class="badge-central">★ central</span>':''}<span class="badge-prior">✓ synced</span></div>
-        <div class="zc-id">${z.zn_id} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? ' · UNESCO: '+z.unescoStatus : ''}</div>
-        <div class="zc-meta" style="font-style:italic;">Already saved — will appear in "Edit existing saved zone" above once Google's CSV cache refreshes (usually a few minutes).</div>
+        <div class="zc-name">${z.name}${z.isCentral?'<span class="badge-central">'+t('map.badge.central')+'</span>':''}<span class="badge-prior">${t('map.badge.synced')}</span></div>
+        <div class="zc-id">${z.zn_id} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? t('map.card.unescoPrefix', { status: z.unescoStatus }) : ''}</div>
+        <div class="zc-meta" style="font-style:italic;">${t('map.card.alreadySaved')}</div>
         <div class="zc-actions">
-          <button data-action="focus" data-id="${z.id}">Focus</button>
+          <button data-action="focus" data-id="${z.id}">${t('map.btn.focus')}</button>
         </div>`;
     } else {
       card.innerHTML = `
-        <div class="zc-name">${z.name}${z.isCentral?'<span class="badge-central">★ central</span>':''}</div>
-        <div class="zc-id">${z.zn_id} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? ' · UNESCO: '+z.unescoStatus : ''}</div>
-        <div class="zc-meta">${z.ring.length-1} vertices · CI_zone: ${z.ci!=null ? z.ci.toFixed(3) : '—'}</div>
+        <div class="zc-name">${z.name}${z.isCentral?'<span class="badge-central">'+t('map.badge.central')+'</span>':''}</div>
+        <div class="zc-id">${z.zn_id} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? t('map.card.unescoPrefix', { status: z.unescoStatus }) : ''}</div>
+        <div class="zc-meta">${t('map.card.vertices', { n: z.ring.length-1, ci: (z.ci!=null ? z.ci.toFixed(3) : '—') })}</div>
         <div class="zc-actions">
-          <button data-action="focus" data-id="${z.id}">Focus</button>
-          <button data-action="edit" data-id="${z.id}">Edit</button>
-          <button data-action="delete" data-id="${z.id}" class="danger">Delete</button>
+          <button data-action="focus" data-id="${z.id}">${t('map.btn.focus')}</button>
+          <button data-action="edit" data-id="${z.id}">${t('map.btn.edit')}</button>
+          <button data-action="delete" data-id="${z.id}" class="danger">${t('map.btn.delete')}</button>
         </div>`;
     }
     zoneList.appendChild(card);
@@ -2217,7 +2230,7 @@ function renderEditZoneList(){
       if(!zone) return;
       if(btn.dataset.action === 'focus'){ map.fitBounds(zone.layer.getBounds().pad(0.2)); zone.layer.openPopup(); }
       else if(btn.dataset.action === 'delete'){
-        if(confirm(`Delete zone "${zone.name}"?`)){ map.removeLayer(zone.layer); editZones = editZones.filter(z=>z.id!==id); renderEditZoneList(); }
+        if(confirm(t('map.confirm.deleteZone', { name: zone.name }))){ map.removeLayer(zone.layer); editZones = editZones.filter(z=>z.id!==id); renderEditZoneList(); }
       } else if(btn.dataset.action === 'edit'){ editZoneEd(id); }
     });
   });
@@ -2226,7 +2239,7 @@ function renderEditZoneList(){
 function editZoneEd(id){
   const zone = editZones.find(z=>z.id===id);
   if(!zone) return;
-  if(drawing){ alert('Finish or cancel the current drawing first.'); return; }
+  if(drawing){ alert(t('map.alert.finishFirst')); return; }
   map.removeLayer(zone.layer);
   editZones = editZones.filter(z=>z.id!==id);
   renderEditZoneList();
@@ -2282,8 +2295,8 @@ function renderSavedZoneList(){
   if(!el) return;
   const ids = Object.keys(lastDrawnZones);
   if(!ids.length){
-    el.innerHTML = '<div class="empty">No saved zones loaded yet</div>';
-    if (filterEl) filterEl.innerHTML = '<option value="">All cities</option>';
+    el.innerHTML = '<div class="empty">' + t('map.emptyNoSavedYet') + '</div>';
+    if (filterEl) filterEl.innerHTML = '<option value="">' + t('map.allCities') + '</option>';
     return;
   }
 
@@ -2291,7 +2304,7 @@ function renderSavedZoneList(){
   // всё ещё существует среди актуальных данных.
   const cities = Array.from(new Set(ids.map(zid => lastDrawnZones[zid].cityCode || '—'))).sort();
   if (filterEl) {
-    filterEl.innerHTML = '<option value="">All cities</option>' +
+    filterEl.innerHTML = '<option value="">' + t('map.allCities') + '</option>' +
       cities.map(c => `<option value="${c}">${c}</option>`).join('');
     filterEl.value = cities.includes(savedZoneCityFilterValue) ? savedZoneCityFilterValue : '';
   }
@@ -2305,7 +2318,7 @@ function renderSavedZoneList(){
 
   const groupCities = Object.keys(grouped).sort();
   if (!groupCities.length) {
-    el.innerHTML = '<div class="empty">No saved zones for this city</div>';
+    el.innerHTML = '<div class="empty">' + t('map.emptyNoSavedForCity') + '</div>';
     return;
   }
 
@@ -2317,7 +2330,7 @@ function renderSavedZoneList(){
     if (!savedZoneCityFilterValue) {
       const header = document.createElement('div');
       header.className = 'zone-city-header';
-      header.textContent = cityCode + ' · ' + grouped[cityCode].length + ' zone' + (grouped[cityCode].length > 1 ? 's' : '');
+      header.textContent = cityCode + ' · ' + t('map.zoneCountSuffix', { n: grouped[cityCode].length, s: grouped[cityCode].length > 1 ? 's' : '' });
       el.appendChild(header);
     }
     grouped[cityCode].sort().forEach(zid => {
@@ -2326,11 +2339,11 @@ function renderSavedZoneList(){
       const card = document.createElement('div');
       card.className = 'zone-card';
       card.innerHTML = `
-        <div class="zc-name">${z.name || zid}${z.isCentral?'<span class="badge-central">★ central</span>':''}</div>
-        <div class="zc-id">${zid} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? ' · UNESCO: '+z.unescoStatus : ''}</div>
-        <div class="zc-meta">${hasGeometry ? (z.ring.length + ' vertices (saved)') : 'no saved geometry (Polygon_GeoJSON empty/unparseable)'}</div>
+        <div class="zc-name">${z.name || zid}${z.isCentral?'<span class="badge-central">'+t('map.badge.central')+'</span>':''}</div>
+        <div class="zc-id">${zid} · ${z.regionCode||'—'} · ${z.cityCode||'—'}${z.unescoStatus && z.unescoStatus!=='none' ? t('map.card.unescoPrefix', { status: z.unescoStatus }) : ''}</div>
+        <div class="zc-meta">${hasGeometry ? t('map.card.verticesSaved', { n: z.ring.length }) : t('map.card.noSavedGeometry')}</div>
         <div class="zc-actions">
-          <button data-zid="${zid}" ${hasGeometry ? '' : 'disabled'}>Edit saved contour</button>
+          <button data-zid="${zid}" ${hasGeometry ? '' : 'disabled'}>${t('map.btn.editSavedContour')}</button>
         </div>`;
       el.appendChild(card);
     });
@@ -2343,10 +2356,10 @@ function renderSavedZoneList(){
 function loadSavedZoneForEditing(zoneId){
   const zone = lastDrawnZones[zoneId];
   if(!zone || !zone.ring || zone.ring.length < 3){
-    alert('No saved geometry found for this zone — it may predate geometry sync, or its Polygon_GeoJSON failed to parse.');
+    alert(t('map.alert.noSavedGeometry'));
     return;
   }
-  if(drawing){ alert('Finish or cancel the current drawing first.'); return; }
+  if(drawing){ alert(t('map.alert.finishFirst')); return; }
 
   currentPoints = zone.ring.map(p => [p[0], p[1]]); // уже [lat,lng], копия на всякий случай
   drawing = true;
@@ -2375,7 +2388,7 @@ async function syncZonesToSheet(){
   if(!editZones.length) return;
   const syncBtn = document.getElementById('syncBtn');
   syncBtn.disabled = true;
-  setEdStatus('syncStatus', 'busy', `Sending ${editZones.length} zone(s) to the sheet…`);
+  setEdStatus('syncStatus', 'busy', t('map.sync.sending', { n: editZones.length }));
 
   const payload = {
     secret: API_SECRET,
@@ -2393,37 +2406,37 @@ async function syncZonesToSheet(){
     if(data.ok){
       editZones.forEach(z => z.synced = true);
       renderEditZoneList();
-      const priorLines = (data.results||[]).map(r => `${r.zoneId}: ${r.priorCI!=null ? 'Prior_CI '+r.priorCI : 'central / no prior'}`).join(' · ');
-      setEdStatus('syncStatus', 'ok', `✓ Saved ${data.saved} zone(s). ${priorLines}`);
+      const priorLines = (data.results||[]).map(r => t('map.sync.priorLine', { zoneId: r.zoneId, value: r.priorCI!=null ? t('map.sync.priorCiValue', { ci: r.priorCI }) : t('map.sync.noPrior') })).join(' · ');
+      setEdStatus('syncStatus', 'ok', t('map.sync.saved', { n: data.saved, priorLines: priorLines }));
       loadData(); // refresh live map with newly saved zones
     } else {
-      setEdStatus('syncStatus', 'err', `✗ ${data.error}`);
+      setEdStatus('syncStatus', 'err', t('map.sync.err', { error: data.error }));
     }
   } catch(err) {
-    setEdStatus('syncStatus', 'err', `✗ Network error: ${err.message}`);
+    setEdStatus('syncStatus', 'err', t('map.sync.networkErr', { error: err.message }));
   } finally {
     syncBtn.disabled = false;
   }
 }
 
 async function recalculateZoneAssignments(){
-  if(!confirm('Recalculate Zone_ID for every existing object in PASSPORT_REGISTRY against the zone boundaries currently saved in the sheet?')) return;
+  if(!confirm(t('map.confirm.recalcAll'))) return;
   const recalcBtn = document.getElementById('recalcBtn');
   recalcBtn.disabled = true;
-  setEdStatus('recalcStatus', 'busy', 'Recalculating…');
+  setEdStatus('recalcStatus', 'busy', t('map.recalc.busy'));
   try {
     const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify({ secret: API_SECRET, action: 'recalculateZones' }) });
     const data = await res.json();
     if(data.ok){
-      if(data.changed === 0){ setEdStatus('recalcStatus', 'ok', '✓ No changes needed.'); }
+      if(data.changed === 0){ setEdStatus('recalcStatus', 'ok', t('map.recalc.noChanges')); }
       else {
         const lines = data.changes.map(c => `${c.cpId}: ${c.from} → ${c.to}`).join('<br>');
-        setEdStatus('recalcStatus', 'ok', `✓ Updated ${data.changed} object(s):<br>${lines}`);
+        setEdStatus('recalcStatus', 'ok', t('map.recalc.updated', { n: data.changed, lines: lines }));
         loadData();
       }
-    } else { setEdStatus('recalcStatus', 'err', `✗ ${data.error}`); }
+    } else { setEdStatus('recalcStatus', 'err', t('map.recalc.err', { error: data.error })); }
   } catch(err) {
-    setEdStatus('recalcStatus', 'err', `✗ Network error: ${err.message}`);
+    setEdStatus('recalcStatus', 'err', t('map.recalc.networkErr', { error: err.message }));
   } finally {
     recalcBtn.disabled = false;
   }
