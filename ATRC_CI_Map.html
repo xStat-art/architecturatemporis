@@ -1323,7 +1323,15 @@ function updateZoneLabelScale() {
   const zoom = map.getZoom();
   const raw = 1 + (zoom - ZONE_LABEL_BASE_ZOOM) * 0.14;
   const scale = Math.max(ZONE_LABEL_MIN_SCALE, Math.min(ZONE_LABEL_MAX_SCALE, raw));
-  document.querySelectorAll('.zone-label, .zone-label-prior').forEach(el => {
+  // v8.3: НЕ трогаем сам .zone-label/.zone-label-prior — это внешний div,
+  // которым управляет Leaflet через свой собственный CSS transform
+  // (translate3d, ставит маркер в нужную точку карты). Если перезаписать
+  // style.transform на этом же элементе, позиционирование Leaflet
+  // затирается, и все подписи схлопываются в одну точку (обнаружено на
+  // живом тесте — все плашки съехали в одно место). Масштабируем только
+  // ПЕРВЫЙ вложенный div (тот, что мы сами верстаем внутри html:) — он
+  // не имеет отношения к позиционированию, только к оформлению.
+  document.querySelectorAll('.zone-label > div, .zone-label-prior > div').forEach(el => {
     el.style.transform = `scale(${scale.toFixed(3)})`;
   });
 }
