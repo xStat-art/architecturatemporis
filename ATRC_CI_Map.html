@@ -1580,7 +1580,24 @@ function snapContourToExistingZones(points, excludeZoneId) {
         const distToFirst = turf.distance(a, turf.point(coords[0]), { units: 'meters' });
         const distToLast  = turf.distance(a, turf.point(coords[coords.length - 1]), { units: 'meters' });
         if (distToLast < distToFirst) coords.reverse();
-        for (const [lng, lat] of coords.slice(1, -1)) densified.push([lat, lng]);
+        // v8.4: защита от "взяли не ту дугу" — граница соседней зоны это
+        // ЗАМКНУТОЕ кольцо, а turf.lineSlice об этом не знает: если a и b
+        // оказались рядом со "швом" массива координат (конец кольца
+        // соединяется с началом), lineSlice может вернуть путь почти по
+        // всему периметру соседа вместо короткого куска между точками.
+        // Обнаружено на живом тесте (зона 003 получила 215 вершин и
+        // фактически повторила контур 001 вместо своей собственной
+        // границы). Если длина вставляемого куска намного больше прямого
+        // расстояния между вершинами — это и есть тот случай, пропускаем
+        // вставку и оставляем обычную прямую связку между точками.
+        const straightDist = turf.distance(a, b, { units: 'meters' });
+        const sliceLength = turf.length(seg, { units: 'meters' });
+        const wrappedAroundRing = sliceLength > Math.max(straightDist * 8, 200);
+        if (wrappedAroundRing) {
+          console.warn('snapContourToExistingZones: skipped a neighbor-boundary slice that looked like it wrapped the wrong way around a closed ring', { straightDist, sliceLength });
+        } else {
+          for (const [lng, lat] of coords.slice(1, -1)) densified.push([lat, lng]);
+        }
       }
     }
   }
