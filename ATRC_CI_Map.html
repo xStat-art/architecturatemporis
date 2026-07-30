@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <!-- Turf.js for convex hull -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/polylabel/2.0.1/polylabel.min.js"></script>
 <!-- PapaParse for CSV -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
@@ -1304,6 +1305,31 @@ let markersLayer  = L.layerGroup().addTo(map);
 let hullLayer      = L.layerGroup().addTo(map);
 let gradientLayer  = L.layerGroup().addTo(map);
 
+// v8.2: подписи зон должны визуально мельчать при отдалении (zoom out) —
+// иначе на дальнем масштабе, где на экране одновременно видно много зон
+// (например, весь Боко-Которский залив), фиксированные 120px-плашки
+// перекрывают друг друга и соседние зоны сильнее, чем на крупном
+// масштабе, где у каждой зоны на экране больше места. Решаем через CSS
+// transform: scale() на контейнере плашки, не через пересборку маркеров —
+// дёшево, мгновенно, не требует повторного вызова renderZones() на каждый
+// шаг зума. Базовый зум 15 (тот же, что зум по умолчанию при загрузке)
+// соответствует масштабу 1.0; дальше линейно, с ограничением диапазона,
+// чтобы плашка не исчезла совсем на далёком отдалении и не разрослась
+// на очень крупном масштабе.
+const ZONE_LABEL_BASE_ZOOM = 15;
+const ZONE_LABEL_MIN_SCALE = 0.55;
+const ZONE_LABEL_MAX_SCALE = 1.25;
+
+function updateZoneLabelScale() {
+  const zoom = map.getZoom();
+  const raw = 1 + (zoom - ZONE_LABEL_BASE_ZOOM) * 0.14;
+  const scale = Math.max(ZONE_LABEL_MIN_SCALE, Math.min(ZONE_LABEL_MAX_SCALE, raw));
+  document.querySelectorAll('.zone-label, .zone-label-prior').forEach(el => {
+    el.style.transform = `scale(${scale.toFixed(3)})`;
+  });
+}
+map.on('zoomend', updateZoneLabelScale);
+
 // ═══════════════════════════════════════════════════════════════
 // v8.0: DEEP LINK FROM field.html — ?lat=..&lng=.. приходит, когда
 // исследователь в поле нажал "Create new zone here" (Сценарий Б —
@@ -2546,17 +2572,21 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
     if (!hull) return; // nothing to draw for this zone yet
 
     const hullBounds = L.geoJSON(hull).getBounds();
-    // v8.0: turf.centroid — это среднее арифметическое ВЕРШИН контура, не
-    // "визуальный центр" фигуры. У вытянутой/неправильной зоны с неровной
-    // плотностью точек (особенно после снаппинга, который местами
-    // "дорисовывает" много лишних вершин вдоль одной границы) это среднее
-    // может уехать к самому краю — замечено на живом примере 12 июля
-    // (подпись зоны 003 сместилась к границе с соседней зоной 002).
-    // turf.pointOnFeature гарантированно возвращает точку НА поверхности
-    // полигона (а не просто среднее его вершин) — визуально всегда внутри
-    // фигуры, независимо от того, насколько неровно она нарисована.
-    const center = turf.pointOnFeature(hull);
-    const [cLng, cLat] = center.geometry.coordinates;
+    // v8.2: turf.pointOnFeature гарантирует точку ВНУТРИ полигона, но не
+    // гарантирует, что вокруг неё есть запас места — для узкой вытянутой
+    // зоны (например, Пераста) любая внутренняя точка может оказаться
+    // близко к обоим краям сразу, и плашка фиксированной пиксельной
+    // ширины (120px) всё равно наедет на соседнюю зону, даже если
+    // формально её точка-якорь лежит внутри контура (живой пример: зона
+    // 007, узкая полоска между 001/002/003). polylabel решает именно эту
+    // задачу — "pole of inaccessibility", точка, максимально удалённая от
+    // всех границ фигуры (та же техника, что Mapbox использует для подписи
+    // нестандартных полигонов), поэтому у плашки всегда максимальный
+    // запас по краям, независимо от того, насколько зона узкая или сложная.
+    // Precision 0.000001 в градусах ≈ 0.11 м на широте Черногории, более
+    // чем достаточно для наших целей и всё ещё быстро на 5–20 точках зоны.
+    const pole = polylabel(hull.geometry.coordinates, 0.000001);
+    const [cLng, cLat] = pole;
 
     if (objects.length >= 3) {
       // ── STAGE 3: real IDW gradient ──────────────────────────
@@ -2632,6 +2662,11 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
       }).addTo(hullLayer);
     }
   });
+
+  // v8.2: применяем текущий масштаб плашек сразу после (пере)рендера зон —
+  // иначе свежедобавленные маркеры при следующей загрузке данных на том же
+  // уровне зума временно вернутся к 100% до следующего события zoomend.
+  updateZoneLabelScale();
 
   // ── Object markers (all zones) ─────────────────────────────
   allObjects.forEach(obj => {
