@@ -2683,7 +2683,13 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
       const pts = turf.featureCollection(objects.map(o => turf.point([o.lng, o.lat])));
       hull = turf.convex(pts);
     }
-    if (!hull) return; // nothing to draw for this zone yet
+    if (!hull) {
+      if (zoneId.endsWith('003') || zoneId.endsWith('007')) {
+        console.warn(`[DEBUG ${zoneId}] NOTHING TO DRAW: drawn=`, drawn, `objects.length=`, objects.length,
+          `(no drawn.ring AND fewer than 3 measured objects — this zone will not appear on the map at all)`);
+      }
+      return; // nothing to draw for this zone yet
+    }
 
     const hullBounds = L.geoJSON(hull).getBounds();
     // v8.2: turf.pointOnFeature гарантирует точку ВНУТРИ полигона, но не
@@ -2710,6 +2716,14 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
     const metersPerPixel = 156543.03392 * Math.cos(cLat * Math.PI / 180) / Math.pow(2, map.getZoom());
     const marginPx = (poleMarginDeg * 111320) / metersPerPixel;
     const tightFit = marginPx < 70; // меньше половины ширины полной плашки + запас
+
+    if (zoneId.endsWith('003') || zoneId.endsWith('007') || zoneId.endsWith('001')) {
+      console.warn(`[DEBUG ${zoneId}] hull vertices:`, hull.geometry.coordinates[0].length,
+        `bounds:`, hullBounds.toBBoxString(),
+        `pole: [${cLng.toFixed(6)}, ${cLat.toFixed(6)}]`,
+        `marginDeg:`, poleMarginDeg, `marginPx:`, marginPx.toFixed(1), `tightFit:`, tightFit,
+        `zoom:`, map.getZoom());
+    }
 
     if (objects.length >= 3) {
       // ── STAGE 3: real IDW gradient ──────────────────────────
