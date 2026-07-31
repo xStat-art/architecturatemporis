@@ -1498,9 +1498,25 @@ async function snapContourToOSM(points) {
         const distToFirst = turf.distance(a, turf.point(coords[0]), { units: 'meters' });
         const distToLast  = turf.distance(a, turf.point(coords[coords.length - 1]), { units: 'meters' });
         if (distToLast < distToFirst) coords.reverse();
-        // Первую и последнюю точку куска отбрасываем — это те же cur/next,
-        // они уже добавлены в densified, дублировать не нужно.
-        for (const [lng, lat] of coords.slice(1, -1)) densified.push([lat, lng]);
+        // v8.5: тот же баг с замкнутым кольцом, что нашли в
+        // snapContourToExistingZones (см. комментарий там) — только здесь
+        // источник не соседняя зона, а линия OSM. Некоторые объекты OSM
+        // сами являются ЗАМКНУТЫМИ линиями (контур здания, граница парка,
+        // круговая развязка), и turf.lineSlice об этом не знает точно так
+        // же. Живой пример: зона 009 после привязки к OSM выросла с 69 до
+        // 219 вершин — почти наверняка тот же обход "не в ту сторону"
+        // вокруг замкнутого объекта. Та же защита: если вставляемый кусок
+        // намного длиннее прямого расстояния между точками — пропускаем.
+        const straightDist = turf.distance(a, b, { units: 'meters' });
+        const sliceLength = turf.length(seg, { units: 'meters' });
+        const wrappedAroundRing = sliceLength > Math.max(straightDist * 8, 200);
+        if (wrappedAroundRing) {
+          console.warn('snapContourToOSM: skipped an OSM-line slice that looked like it wrapped the wrong way around a closed way', { straightDist, sliceLength });
+        } else {
+          // Первую и последнюю точку куска отбрасываем — это те же cur/next,
+          // они уже добавлены в densified, дублировать не нужно.
+          for (const [lng, lat] of coords.slice(1, -1)) densified.push([lat, lng]);
+        }
       }
     }
   }
