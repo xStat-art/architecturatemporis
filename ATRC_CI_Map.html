@@ -554,6 +554,18 @@
      вытянутые зоны вроде будущего Пераста) — только ID, без второй строки. */
   .zone-label-prior .zl-pill-compact{ display:inline-block; background:rgba(20,20,20,0.82); border-radius:3px; padding:2px 6px; }
   .zone-label-prior .zl-id-compact{ font-size:8px; letter-spacing:1px; font-weight:700; color:#fff; white-space:nowrap; }
+
+  /* v8.5: точки контура при рисовании/правке зоны — теперь L.marker
+     (draggable), а не L.circleMarker, стилизуем через divIcon так, чтобы
+     выглядело как прежде (маленький оранжевый кружок), плюс курсор "grab"
+     как визуальная подсказка, что точку можно потянуть мышью. */
+  .vertex-marker-icon{ background:none; border:none; }
+  .vertex-marker-icon .vertex-dot{
+    width:10px; height:10px; margin:3px; border-radius:50%;
+    background:#e8791a; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,0.35);
+    cursor:grab;
+  }
+  .vertex-marker-icon .vertex-dot:active{ cursor:grabbing; }
   /* ── MOBILE OVERRIDES ────────────────────────────────────────
      Placed last on purpose: must come AFTER the base #editorSidebar
      rule (position:fixed;top:0;right:0;width:340px;) so these rules
@@ -1320,13 +1332,23 @@ let gradientLayer  = L.layerGroup().addTo(map);
 // чтобы плашка не исчезла совсем на далёком отдалении и не разрослась
 // на очень крупном масштабе.
 const ZONE_LABEL_BASE_ZOOM = 15;
-const ZONE_LABEL_MIN_SCALE = 0.55;
+const ZONE_LABEL_MIN_SCALE = 0.4;
 const ZONE_LABEL_MAX_SCALE = 1.25;
 
 function updateZoneLabelScale() {
   const zoom = map.getZoom();
-  const raw = 1 + (zoom - ZONE_LABEL_BASE_ZOOM) * 0.14;
-  const scale = Math.max(ZONE_LABEL_MIN_SCALE, Math.min(ZONE_LABEL_MAX_SCALE, raw));
+  // v8.5: раньше падение было слишком пологим (0.14 за уровень зума,
+  // дно 0.55) — на сильном отдалении, когда одновременно видно много зон
+  // (живой пример: все 9 зон Херцег-Нови разом), подписи всё ещё
+  // оставались достаточно крупными, чтобы взаимно перекрываться. Теперь
+  // круче (0.20 за уровень) и ниже дно (0.4), плюс отдельно — плавное
+  // угасание прозрачности: на самом дальнем плане подписи почти исчезают
+  // совсем (сами зоны и точки измерений остаются видны), и проявляются
+  // снова по мере приближения. Оба эффекта настраиваются отдельно, если
+  // окажется, что нужно ещё агрессивнее или мягче.
+  const rawScale = 1 + (zoom - ZONE_LABEL_BASE_ZOOM) * 0.20;
+  const scale = Math.max(ZONE_LABEL_MIN_SCALE, Math.min(ZONE_LABEL_MAX_SCALE, rawScale));
+  const opacity = Math.max(0, Math.min(1, (zoom - 9) / 4)); // 1.0 на zoom>=13, 0.0 на zoom<=9
   // v8.3: НЕ трогаем сам .zone-label/.zone-label-prior — это внешний div,
   // которым управляет Leaflet через свой собственный CSS transform
   // (translate3d, ставит маркер в нужную точку карты). Если перезаписать
@@ -1337,6 +1359,7 @@ function updateZoneLabelScale() {
   // не имеет отношения к позиционированию, только к оформлению.
   document.querySelectorAll('.zone-label > div, .zone-label-prior > div').forEach(el => {
     el.style.transform = `scale(${scale.toFixed(3)})`;
+    el.style.opacity = opacity.toFixed(2);
   });
 }
 map.on('zoomend', updateZoneLabelScale);
@@ -1684,10 +1707,41 @@ function startDrawingEd(){
   collapseSidebarMobile();
 }
 
+/**
+ * v8.5: L.circleMarker (векторный слой) НЕ поддерживает перетаскивание в
+ * Leaflet из коробки — только L.Marker умеет draggable:true нативно, без
+ * сторонних плагинов. Визуально повторяем прежний вид (маленький оранжевый
+ * кружок) через divIcon, но с реальным драгом: на 'drag' пересчитываем
+ * соответствующую точку в currentPoints и сразу перерисовываем контур —
+ * живой предпросмотр прямо во время перетаскивания, не только по отпускании.
+ * Индекс точки ищем через vertexMarkers.indexOf(marker) в момент драга, а не
+ * храним в замыкании — так это остаётся корректным, даже если массив когда-
+ * нибудь начнёт меняться не только добавлением/удалением с конца.
+ */
+function makeVertexMarker(latlng){
+  const marker = L.marker(latlng, {
+    draggable: true,
+    icon: L.divIcon({
+      className: 'vertex-marker-icon',
+      html: '<div class="vertex-dot"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+    }),
+  }).addTo(map);
+  marker.on('drag', () => {
+    const idx = vertexMarkers.indexOf(marker);
+    if (idx === -1) return;
+    const ll = marker.getLatLng();
+    currentPoints[idx] = [ll.lat, ll.lng];
+    redrawCurrentShapeEd();
+  });
+  return marker;
+}
+
 function onMapClickEd(e){
   if(!drawing) return;
   currentPoints.push([e.latlng.lat, e.latlng.lng]);
-  const m = L.circleMarker(e.latlng, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map);
+  const m = makeVertexMarker(e.latlng);
   vertexMarkers.push(m);
   redrawCurrentShapeEd();
   document.getElementById('vcount').textContent = currentPoints.length;
@@ -2151,7 +2205,7 @@ async function finishDrawingEd(){
 
     // Перерисовываем контур и вершины уже по скорректированным координатам
     vertexMarkers.forEach(m => map.removeLayer(m));
-    vertexMarkers = currentPoints.map(p => L.circleMarker(p, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map));
+    vertexMarkers = currentPoints.map(p => makeVertexMarker(p));
     map.removeLayer(drawLayer);
     drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
 
@@ -2178,7 +2232,7 @@ async function finishDrawingEd(){
   if (zoneSnapResult.snappedCount > 0) {
     currentPoints = zoneSnapResult.points;
     vertexMarkers.forEach(m => map.removeLayer(m));
-    vertexMarkers = currentPoints.map(p => L.circleMarker(p, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map));
+    vertexMarkers = currentPoints.map(p => makeVertexMarker(p));
     map.removeLayer(drawLayer);
     drawLayer = L.polygon(currentPoints, { color:'#e8791a', weight:2, fillOpacity:0.1 }).addTo(map);
     const prevMsg = document.getElementById('snapStatus').textContent;
@@ -2405,7 +2459,7 @@ function editZoneEd(id){
   currentPoints = ringNoClose.map(c=>[c[1], c[0]]);
   drawing = true;
   vertexMarkers.forEach(m=>map.removeLayer(m));
-  vertexMarkers = currentPoints.map(p=>L.circleMarker(p, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map));
+  vertexMarkers = currentPoints.map(p => makeVertexMarker(p));
   redrawCurrentShapeEd();
   document.getElementById('vcount').textContent = currentPoints.length;
   document.getElementById('startBtn').style.display = 'none';
@@ -2583,7 +2637,7 @@ function loadSavedZoneForEditing(zoneId){
   currentPoints = zone.ring.map(p => [p[0], p[1]]); // уже [lat,lng], копия на всякий случай
   drawing = true;
   vertexMarkers.forEach(m=>map.removeLayer(m));
-  vertexMarkers = currentPoints.map(p=>L.circleMarker(p, { radius:5, color:'#e8791a', fillColor:'#e8791a', fillOpacity:1 }).addTo(map));
+  vertexMarkers = currentPoints.map(p => makeVertexMarker(p));
   redrawCurrentShapeEd();
   document.getElementById('vcount').textContent = currentPoints.length;
   document.getElementById('startBtn').style.display = 'none';
@@ -2796,7 +2850,7 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
     const marginPx = (poleMarginDeg * 111320) / metersPerPixel;
     const tightFit = marginPx < 70; // меньше половины ширины полной плашки + запас
 
-    if (zoneId.endsWith('003') || zoneId.endsWith('007') || zoneId.endsWith('001')) {
+    if (zoneId.endsWith('003') || zoneId.endsWith('007') || zoneId.endsWith('001') || zoneId.endsWith('002')) {
       console.warn(`[DEBUG ${zoneId}] hull vertices:`, hull.geometry.coordinates[0].length,
         `bounds:`, hullBounds.toBBoxString(),
         `pole: [${cLng.toFixed(6)}, ${cLat.toFixed(6)}]`,
@@ -2808,6 +2862,7 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
       // ── STAGE 3: real IDW gradient ──────────────────────────
       const avgCIWeighted = objects.reduce((s,o) => s + o.ciWeighted, 0) / objects.length;
       const color = ciToHex(avgCIWeighted);
+      if (zoneId.endsWith('002')) console.warn(`[DEBUG ${zoneId}] STAGE 3, objects.length=${objects.length}, avgCIWeighted=${avgCIWeighted}, color=${color}`);
       const bounds = hullBounds.pad(0.08);
       // v7.14: сетка увеличена с 48 до 128 — вычисление IDW почти ничего не
       // стоит (обычно 5-15 точек-объектов на зону), а видимая "пикселизация"
@@ -2842,6 +2897,7 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
       // ── STAGE 2: real color, no number yet (too few points for an honest average label) ──
       const avgCIWeighted = objects.reduce((s,o) => s + o.ciWeighted, 0) / objects.length;
       const color = ciToHex(avgCIWeighted);
+      if (zoneId.endsWith('002')) console.warn(`[DEBUG ${zoneId}] STAGE 2, objects.length=${objects.length}, avgCIWeighted=${avgCIWeighted}, color=${color}`);
       addZoneCasing(hull);
       L.geoJSON(hull, {
         style: { fillColor: color, fillOpacity: 0.45, color, weight: 1.4, opacity: 0.95, dashArray: '4 4' },
@@ -2871,6 +2927,7 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
       const priorCI = (drawn && drawn.priorCI !== null && drawn.priorCI !== undefined) ? drawn.priorCI : null;
       const color = decorativeZoneColor(zoneId);
       const isCentral = drawn && drawn.isCentral;
+      if (zoneId.endsWith('002')) console.warn(`[DEBUG ${zoneId}] STAGE 1, objects.length=${objects.length}, priorCI=${priorCI}, color=${color}`);
       addZoneCasing(hull);
       L.geoJSON(hull, {
         style: { fillColor: color, fillOpacity: isCentral ? 0.5 : 0.35, color, weight: 1.4, opacity: 0.9, dashArray: '2 6' },
