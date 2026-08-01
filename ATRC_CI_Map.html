@@ -3090,6 +3090,41 @@ function loadZonesSheet(callback) {
 // Поэтому при наличии deep-link'а первый fit тоже пропускается.
 let didInitialFit = !isNaN(deepLinkLat) && !isNaN(deepLinkLng);
 
+// v8.5: didInitialFit выше решает только "не переснапывать камеру при
+// автообновлении данных ВНУТРИ одной открытой вкладки" — это уже работало.
+// Но при полной перезагрузке страницы (F5) сама переменная сбрасывается,
+// и камера каждый раз заново считает fitBounds по всем данным сразу —
+// а раз в Херцег-Нови объектов и зон намного больше, чем в Перасте, охват
+// перетягивает туда, даже если вы только что работали именно в Перасте.
+// Сохраняем последнюю позицию/зум камеры в localStorage при каждом
+// перемещении, и на загрузке страницы, если сохранённая позиция есть,
+// используем её вместо fitBounds — тогда карта открывается ровно там, где
+// вы её оставили в прошлый раз, а не там, где "больше всего данных".
+const MAP_VIEW_STORAGE_KEY = 'atrc_last_map_view';
+
+function saveMapView() {
+  try {
+    const c = map.getCenter();
+    localStorage.setItem(MAP_VIEW_STORAGE_KEY, JSON.stringify({ lat: c.lat, lng: c.lng, zoom: map.getZoom() }));
+  } catch (e) { /* localStorage недоступен (приватный режим и т.п.) — молча пропускаем */ }
+}
+map.on('moveend', saveMapView);
+
+let restoredSavedView = false;
+if (!didInitialFit) {
+  try {
+    const raw = localStorage.getItem(MAP_VIEW_STORAGE_KEY);
+    if (raw) {
+      const v = JSON.parse(raw);
+      if (Number.isFinite(v.lat) && Number.isFinite(v.lng) && Number.isFinite(v.zoom)) {
+        map.setView([v.lat, v.lng], v.zoom);
+        didInitialFit = true; // не даём первому fitBounds перетереть восстановленный вид
+        restoredSavedView = true;
+      }
+    }
+  } catch (e) { /* повреждённые данные в localStorage — просто игнорируем, ведём себя как раньше */ }
+}
+
 function loadData() {
   document.getElementById('loadingOverlay').style.display = 'flex';
   document.getElementById('statusDot').style.background = '#c55a11';
