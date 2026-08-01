@@ -561,7 +561,7 @@
      как визуальная подсказка, что точку можно потянуть мышью. */
   .vertex-marker-icon{ background:none; border:none; }
   .vertex-marker-icon .vertex-dot{
-    width:10px; height:10px; margin:3px; border-radius:50%;
+    width:10px; height:10px; margin:9px; border-radius:50%;
     background:#e8791a; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,0.35);
     cursor:grab;
   }
@@ -1740,8 +1740,8 @@ function makeVertexMarker(latlng){
     icon: L.divIcon({
       className: 'vertex-marker-icon',
       html: '<div class="vertex-dot"></div>',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
     }),
   }).addTo(map);
   marker.on('drag', () => {
