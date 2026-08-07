@@ -278,6 +278,10 @@ function ciToRGB(ci){
   return [123,59,196];
 }
 function ciToColor(ci){ const [r,g,b]=ciToRGB(ci); return `rgb(${r},${g},${b})`; }
+// Marker/heatmap color uses CI_weighted = CI × PSM — this is what the real
+// spectral map colors by, which is why Forte Mare (PSM 1.5) reads blue/purple
+// even though its raw CI (0.894) looks mid-range on its own.
+function weightedCi(o){ return liveCi[o.id] * o.psm; }
 
 const map = L.map('leafletMap', { zoomControl:true, attributionControl:true }).setView([BASE_LAT, BASE_LNG], 17);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -288,7 +292,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 const markerRefs = {};
 objects.forEach(o=>{
   const marker = L.circleMarker([o.lat, o.lng], {
-    radius: 9, weight: 2, color: '#fff', fillColor: ciToColor(o.ci), fillOpacity: 1, className: 'obj-dot',
+    radius: 9, weight: 2, color: '#fff', fillColor: ciToColor(weightedCi(o)), fillOpacity: 1, className: 'obj-dot',
   }).addTo(map);
   marker.bindTooltip(`${o.name} · ${o.ci.toFixed(3)} · PSM ${o.psm}`, { direction:'top', offset:[0,-8] });
   marker.on('click', ()=> selectObject(o.id));
@@ -311,7 +315,7 @@ function drawHeatmap(){
   const img = ctx.createImageData(w,h);
   const pts = objects.map(o=>{
     const p = map.latLngToContainerPoint([o.lat,o.lng]);
-    return { x:p.x, y:p.y, rgb: ciToRGB(liveCi[o.id]) };
+    return { x:p.x, y:p.y, rgb: ciToRGB(weightedCi(o)) };
   });
   const step = 5;
   const FALLOFF = 260;
@@ -372,6 +376,7 @@ function selectObject(id){
     <div class="name">${selectedObj.name}</div>
     <div class="stat-row"><span>Current CI</span><b>${liveCi[id].toFixed(3)}</b></div>
     <div class="stat-row"><span>PSM</span><b>${selectedObj.psm}</b></div>
+    <div class="stat-row"><span>CI (weighted)</span><b>${(liveCi[id]*selectedObj.psm).toFixed(3)}</b></div>
     <div class="stat-row"><span>Zone</span><b>ZN·ME·BJ·HN·001</b></div>
   `;
   populateInterventions();
@@ -387,7 +392,7 @@ function applyIntervention(){
   const newCi = Math.max(0, Math.min(1.5, liveCi[selectedObj.id] + objDelta));
   liveCi[selectedObj.id] = newCi;
 
-  markerRefs[selectedObj.id].setStyle({ fillColor: ciToColor(newCi) });
+  markerRefs[selectedObj.id].setStyle({ fillColor: ciToColor(newCi * selectedObj.psm) });
   markerRefs[selectedObj.id].setTooltipContent(`${selectedObj.name} · ${newCi.toFixed(3)} · PSM ${selectedObj.psm}`);
 
   let steps = 12, i = 0;
@@ -400,7 +405,9 @@ function applyIntervention(){
     ciZoneValueEl.style.color = iv.dir==='pos' ? 'var(--good)' : iv.dir==='neg' ? 'var(--bad)' : 'var(--white)';
     deltaTagEl.textContent = (appliedDelta>=0?'+':'') + 'ΔCI ' + appliedDelta.toFixed(2) + ' ± ' + iv.d.toFixed(2);
     deltaTagEl.className = 'delta-tag mono show ' + (appliedDelta>0?'pos': appliedDelta<0?'neg':'');
-    selectedCard.querySelector('b').textContent = newCi.toFixed(3);
+    const bEls = selectedCard.querySelectorAll('b');
+    bEls[0].textContent = newCi.toFixed(3);
+    bEls[2].textContent = (newCi * selectedObj.psm).toFixed(3);
     showVerdict(appliedDelta);
   }, 300);
 }
@@ -430,7 +437,7 @@ function showVerdict(delta){
 function resetAll(){
   objects.forEach(o=>{
     liveCi[o.id] = o.ci;
-    markerRefs[o.id].setStyle({ fillColor: ciToColor(o.ci), weight:2 });
+    markerRefs[o.id].setStyle({ fillColor: ciToColor(o.ci * o.psm), weight:2 });
     markerRefs[o.id].setTooltipContent(`${o.name} · ${o.ci.toFixed(3)} · PSM ${o.psm}`);
   });
   drawHeatmap();
