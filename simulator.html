@@ -120,6 +120,9 @@
   .selected-card .empty{ color:var(--grey-dim); font-size:13px; }
   .selected-card .stat-row{ display:flex; justify-content:space-between; font-size:12.5px; margin-top:6px; color:var(--grey); }
   .selected-card .stat-row b{ color:var(--white); font-family:"SF Mono",monospace; }
+  .selected-card .live-adjust{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+  .selected-card .live-adjust label{ font-size:10.5px; letter-spacing:.5px; color:var(--grey); text-transform:uppercase; display:flex; justify-content:space-between; margin-bottom:6px; }
+  .selected-card .live-adjust input[type=range]{ width:100%; accent-color:var(--orange); }
 
   label.field-label{ font-size:11px; letter-spacing:1px; color:var(--grey); text-transform:uppercase; display:block; margin-bottom:6px; }
   select{ width:100%; background:var(--panel-2); color:var(--white); border:1px solid var(--line); border-radius:6px;
@@ -684,16 +687,45 @@ map.on('click', (e)=>{
   }, 30);
 });
 
+let liveAdjustTimer = null;
+
 function placeNewObject(lat, lng, ci, psm, label){
   const id = 'new_' + (newObjectCounter++);
-  objects.push({ id, name: label || `Hypothetical object ${newObjectCounter-1}`, ci, lat, lng, psm, kind:'new' });
+  const obj = { id, name: label || `Hypothetical object ${newObjectCounter-1}`, ci, lat, lng, psm, kind:'new' };
+  objects.push(obj);
   const delta = recomputeAll();
   showVerdict(delta);
+  renderLiveAdjustCard(obj);
+}
+
+function renderLiveAdjustCard(obj){
   selectedCard.innerHTML = `
-    <div class="name">${label}</div>
-    <div class="stat-row"><span>Starting CI</span><b>${ci.toFixed(3)}</b></div>
-    <div class="stat-row"><span>PSM</span><b>${psm}</b></div>
+    <div class="name">${obj.name}</div>
+    <div class="stat-row"><span>PSM</span><b>${obj.psm}</b></div>
+    <div class="live-adjust">
+      <label>Adjust CI <span class="mono" id="liveCiVal">${obj.ci.toFixed(3)}</span></label>
+      <input type="range" id="liveCiRange" min="0" max="1" step="0.01" value="${obj.ci}">
+    </div>
   `;
+  const range = document.getElementById('liveCiRange');
+  const val = document.getElementById('liveCiVal');
+  range.addEventListener('input', ()=>{
+    const newCi = parseFloat(range.value);
+    obj.ci = newCi;
+    val.textContent = newCi.toFixed(3);
+
+    // Instant feedback on the object's own dot while dragging...
+    const marker = markerRefs[obj.id];
+    if (marker) marker.setStyle({ fillColor: ciToColor(computeCIWeighted(newCi, obj.psm)) });
+
+    // ...and the full zone gradient recompute, throttled so a fast drag
+    // doesn't fire 96×96 IDW + canvas export on every pixel of movement.
+    clearTimeout(liveAdjustTimer);
+    liveAdjustTimer = setTimeout(()=>{
+      const delta = recomputeAll();
+      showVerdict(delta);
+    }, 60);
+  });
 }
 
 window.__confirmAddObject = function(lat, lng){
