@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIA Live Simulator — Zone 001 (Sandbox)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --bg: #0a0a0a;
+    --panel: #141414;
+    --panel-2: #1c1c1c;
+    --line: #2a2a2a;
+    --white: #f5f5f5;
+    --grey: #8a8a8a;
+    --grey-dim: #555;
+    --orange: #C8650A;
+    --orange-bright: #E8791A;
+    --good: #3BC46B;
+    --bad: #E8382A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background:var(--bg);
+    color:var(--white);
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    width:100%; height:100%;
+    overflow:hidden;
+  }
+  .mono{ font-family: "SF Mono", "Roboto Mono", Consolas, monospace; }
+
+  .sandbox-banner{
+    grid-area: banner;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background: #2a1a06;
+    border-bottom: 1px solid #4a2e0a;
+    color: #F2A93B;
+    font-size: 11.5px; font-weight:700; letter-spacing:.6px;
+    padding: 7px 12px;
+    text-align:center;
+  }
+  .sandbox-banner b{ color:#fff; }
+
+  .app{
+    display:grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: 30px 64px 1fr 56px;
+    grid-template-areas:
+      "banner banner"
+      "header header"
+      "map    panel"
+      "legend panel";
+    width:100vw; height:100vh;
+  }
+
+  .header{
+    grid-area: header;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 24px;
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+    z-index: 500;
+  }
+  .back-link{
+    font-size:11px; color:var(--grey); text-decoration:none;
+    letter-spacing:.5px; padding-right:18px; border-right:1px solid var(--line);
+    transition: color .15s;
+  }
+  .back-link:hover{ color:var(--white); }
+
+  .brand{ display:flex; align-items:baseline; gap:14px; }
+  .brand .mark{ font-weight:800; letter-spacing:1px; font-size:15px; }
+  .brand .mark span{ color:var(--orange); }
+  .brand .sub{ font-size:11px; letter-spacing:2px; color:var(--grey); text-transform:uppercase; }
+
+  .zone-readout{ display:flex; align-items:center; gap:22px; }
+  .readout-block{ text-align:right; }
+  .readout-label{ font-size:10px; letter-spacing:1.5px; color:var(--grey); text-transform:uppercase; }
+  .readout-value{ font-size:26px; font-weight:700; line-height:1.1; transition: color .5s; }
+  .delta-tag{
+    font-size:12px; padding:3px 9px; border-radius:4px;
+    font-weight:700; opacity:0; transform: translateY(-4px);
+    transition: all .4s ease;
+  }
+  .delta-tag.show{ opacity:1; transform:translateY(0); }
+  .delta-tag.pos{ background:rgba(59,196,107,.15); color:var(--good); }
+  .delta-tag.neg{ background:rgba(232,56,42,.15); color:var(--bad); }
+
+  .map-wrap{ grid-area: map; position:relative; background:#eee; }
+  #leafletMap{ width:100%; height:100%; background:#eee; }
+  #heatCanvas{
+    position:absolute; top:0; left:0;
+    pointer-events:none;
+    z-index: 450;
+    mix-blend-mode: multiply;
+  }
+
+  .leaflet-marker-icon.obj-dot{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
+  .leaflet-popup-content-wrapper{ border-radius:6px; }
+  .leaflet-popup-content{ font-family: -apple-system, Helvetica, Arial, sans-serif; font-size:12.5px; margin:8px 10px; }
+  .leaflet-popup-content b{ display:block; margin-bottom:2px; }
+
+  .legend{
+    grid-area: legend;
+    display:flex; align-items:center; gap:14px;
+    padding: 0 24px;
+    background:var(--panel);
+    border-top:1px solid var(--line);
+    border-right:1px solid var(--line);
+    z-index: 500;
+  }
+  .legend-label{ font-size:10px; letter-spacing:1.5px; color:var(--grey); text-transform:uppercase; white-space:nowrap; }
+  .legend-bar{ flex:1; height:8px; border-radius:4px;
+    background: linear-gradient(90deg, #E8382A, #F2A93B, #C4D93B, #3BC46B, #3BC4C4, #3B6BC4, #7B3BC4); }
+  .legend-ticks{ display:flex; justify-content:space-between; font-size:9px; color:var(--grey-dim); width:220px; }
+
+  .panel{
+    grid-area: panel;
+    background:var(--panel);
+    border-left:1px solid var(--line);
+    padding: 22px 22px 18px;
+    display:flex; flex-direction:column; gap:18px;
+    overflow-y:auto;
+    z-index: 500;
+  }
+  .panel h2{ font-size:11px; letter-spacing:1.8px; text-transform:uppercase; color:var(--grey);
+    padding-bottom:10px; border-bottom:1px solid var(--line); }
+
+  .selected-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:14px 16px; min-height: 64px; }
+  .selected-card .name{ font-size:15px; font-weight:700; margin-bottom:4px; }
+  .selected-card .empty{ color:var(--grey-dim); font-size:13px; }
+  .selected-card .stat-row{ display:flex; justify-content:space-between; font-size:12.5px; margin-top:6px; color:var(--grey); }
+  .selected-card .stat-row b{ color:var(--white); font-family:"SF Mono",monospace; }
+
+  label.field-label{ font-size:11px; letter-spacing:1px; color:var(--grey); text-transform:uppercase; display:block; margin-bottom:6px; }
+
+  select{ width:100%; background:var(--panel-2); color:var(--white); border:1px solid var(--line); border-radius:6px;
+    padding:10px 12px; font-size:13px; font-family:inherit; appearance:none; }
+  select:disabled{ opacity:.4; }
+
+  .btn-row{ display:flex; gap:10px; margin-top:4px; }
+  button{ font-family:inherit; font-size:12.5px; font-weight:700; letter-spacing:.4px; padding:11px 14px; border-radius:6px;
+    border:1px solid var(--line); cursor:pointer; background:var(--panel-2); color:var(--white); transition: all .15s ease; }
+  button.primary{ background:var(--orange); border-color:var(--orange); color:#fff; }
+  button.primary:hover{ background:var(--orange-bright); }
+  button.primary:disabled{ opacity:.35; cursor:not-allowed; background:var(--panel-2); border-color:var(--line); color:var(--grey);}
+  button.ghost:hover{ border-color:var(--grey); }
+  button:active{ transform: scale(.97); }
+
+  .verdict{ border-radius:8px; padding:14px 16px; font-size:13px; line-height:1.5;
+    opacity:0; transform:translateY(6px); transition: all .5s ease .3s; border:1px solid var(--line); }
+  .verdict.show{ opacity:1; transform:translateY(0); }
+  .verdict .tag{ display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:1px; padding:3px 8px; border-radius:4px; margin-bottom:8px; text-transform:uppercase; }
+  .verdict.ok .tag{ background:rgba(59,196,107,.18); color:var(--good); }
+  .verdict.warn .tag{ background:rgba(242,169,59,.18); color:#F2A93B; }
+  .verdict.bad .tag{ background:rgba(232,56,42,.18); color:var(--bad); }
+  .verdict p{ color:var(--grey); font-size:12px; }
+
+  .footnote{ font-size:10.5px; color:var(--grey-dim); line-height:1.5; margin-top:auto; padding-top:12px; border-top:1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="sandbox-banner">
+    ⚠ SANDBOX — <b>illustrative only.</b> Nothing you do here reads from or writes to the live CI registry.
+  </div>
+
+  <div class="header">
+    <div class="brand">
+      <a href="index.html" class="back-link">← architecturatemporis.com</a>
+      <div class="mark">AT<span>RC</span> &nbsp;TIA LIVE SIMULATOR</div>
+      <div class="sub">Zone 001 — Herceg Novi · Sandbox</div>
+    </div>
+    <div class="zone-readout">
+      <div class="delta-tag mono" id="deltaTag">Δ0.00</div>
+      <div class="readout-block">
+        <div class="readout-label">CI_zone (w)</div>
+        <div class="readout-value mono" id="ciZoneValue">0.968</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-wrap">
+    <div id="leafletMap"></div>
+    <canvas id="heatCanvas"></canvas>
+  </div>
+
+  <div class="legend">
+    <div class="legend-label">Chronity Index</div>
+    <div class="legend-bar"></div>
+    <div class="legend-ticks"><span>0.00</span><span>0.50</span><span>1.00</span><span>1.50</span></div>
+  </div>
+
+  <div class="panel">
+    <div>
+      <h2>Selected object</h2>
+      <div class="selected-card" id="selectedCard">
+        <div class="empty">Click a point on the map to select an object.</div>
+      </div>
+    </div>
+
+    <div>
+      <label class="field-label">Intervention type</label>
+      <select id="interventionSelect" disabled>
+        <option value="">— select an object first —</option>
+      </select>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary" id="applyBtn" disabled>Apply</button>
+      <button class="ghost" id="resetBtn">Reset all</button>
+    </div>
+
+    <div class="verdict" id="verdictBox">
+      <div class="tag" id="verdictTag">—</div>
+      <div id="verdictText"></div>
+      <p id="verdictNote"></p>
+    </div>
+
+    <div class="footnote">
+      Illustrative sandbox for demonstrating the TIA principle. Simplified zone-level calculation, not the production ACAP engine. Object coordinates and baseline CI values match the live Zone 001 registry. Nothing here writes to the live registry. Map requires an internet connection (CARTO tiles).
+    </div>
+  </div>
+
+</div>
+
+<script>
+const BASE_LAT = 42.451752, BASE_LNG = 18.537204;
+const objects = [
+  { id:'kanli', name:'Kanli Kula Fortress', ci:0.975, lat:42.452372, lng:18.538084, psm:1.2 },
+  { id:'forte', name:'Forte Mare Fortress', ci:0.894, lat:42.450224, lng:18.53618, psm:1.5 },
+  { id:'jeronim', name:'St. Jeronim', ci:0.856, lat:42.450496, lng:18.537349, psm:1.2 },
+  { id:'bella', name:'Bellavista', ci:0.853, lat:42.451494, lng:18.537486, psm:1.2 },
+  { id:'marka_v', name:'Marka Vojinovića', ci:0.834, lat:42.451041, lng:18.537015, psm:1.2 },
+  { id:'stepen', name:'Stepenište Kralja Tvrtka I', ci:0.814, lat:42.451752, lng:18.537204, psm:1.2 },
+  { id:'marka_c', name:'Marka Cara Street', ci:0.746, lat:42.45106, lng:18.537451, psm:1.2 },
+  { id:'clock', name:'Clock Tower', ci:0.746, lat:42.451551, lng:18.537208, psm:1.2 },
+  { id:'zuta', name:'Žuta kuća', ci:0.384, lat:42.451914, lng:18.537867, psm:1.0 },
+];
+
+const interventions = [
+  { code:'A2',  label:'A2 — Material replacement (authentic)',      delta:+0.030, d:0.02, dir:'pos' },
+  { code:'A3',  label:'A3 — Restoration with authentic material',   delta:+0.020, d:0.02, dir:'pos' },
+  { code:'B9',  label:'B9 — Removal of anachronistic element',      delta:+0.030, d:0.03, dir:'pos' },
+  { code:'B10', label:'B10 — Restoration of visual chronity',       delta:+0.040, d:0.04, dir:'pos' },
+  { code:'A15', label:'A15 — Conservation without changes',         delta:+0.000, d:0.01, dir:'zero' },
+  { code:'A1',  label:'A1 — Material replacement (non-authentic)',  delta:-0.020, d:0.02, dir:'neg' },
+  { code:'A13', label:'A13 — Patina removal (cleaning)',            delta:-0.030, d:0.03, dir:'neg' },
+  { code:'A7',  label:'A7 — Demolition of historic element',        delta:-0.020, d:0.02, dir:'neg' },
+  { code:'A12', label:'A12 — Demolition of historic building',      delta:-0.030, d:0.03, dir:'neg' },
+  { code:'B2',  label:'B2 — High-rise construction in buffer zone', delta:-0.050, d:0.05, dir:'neg' },
+  { code:'B6',  label:'B6 — Demolition of historic district',       delta:-0.050, d:0.05, dir:'neg' },
+];
+
+const CI_ZONE_BASELINE = 0.968;
+let ciZoneCurrent = CI_ZONE_BASELINE;
+let selectedObj = null;
+let appliedDelta = 0;
+const liveCi = {};
+objects.forEach(o=> liveCi[o.id] = o.ci);
+
+function ciToRGB(ci){
+  const stops = [
+    [0.00, [232,56,42]], [0.25, [242,169,59]], [0.50, [196,217,59]],
+    [0.75, [59,196,107]], [1.00, [59,196,196]], [1.25, [59,107,196]], [1.50, [123,59,196]],
+  ];
+  const v = Math.max(0, Math.min(1.5, ci));
+  for(let i=0;i<stops.length-1;i++){
+    const [p0,c0]=stops[i], [p1,c1]=stops[i+1];
+    if(v>=p0 && v<=p1){
+      const t=(v-p0)/(p1-p0);
+      return [Math.round(c0[0]+(c1[0]-c0[0])*t), Math.round(c0[1]+(c1[1]-c0[1])*t), Math.round(c0[2]+(c1[2]-c0[2])*t)];
+    }
+  }
+  return [123,59,196];
+}
+function ciToColor(ci){ const [r,g,b]=ciToRGB(ci); return `rgb(${r},${g},${b})`; }
+
+const map = L.map('leafletMap', { zoomControl:true, attributionControl:true }).setView([BASE_LAT, BASE_LNG], 17);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+  subdomains: 'abcd', maxZoom: 20,
+}).addTo(map);
+
+const markerRefs = {};
+objects.forEach(o=>{
+  const marker = L.circleMarker([o.lat, o.lng], {
+    radius: 9, weight: 2, color: '#fff', fillColor: ciToColor(o.ci), fillOpacity: 1, className: 'obj-dot',
+  }).addTo(map);
+  marker.bindTooltip(`${o.name} · ${o.ci.toFixed(3)} · PSM ${o.psm}`, { direction:'top', offset:[0,-8] });
+  marker.on('click', ()=> selectObject(o.id));
+  markerRefs[o.id] = marker;
+});
+
+const canvas = document.getElementById('heatCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas(){
+  const mapDiv = document.getElementById('leafletMap');
+  canvas.width = mapDiv.clientWidth;
+  canvas.height = mapDiv.clientHeight;
+  drawHeatmap();
+}
+
+function drawHeatmap(){
+  const w = canvas.width, h = canvas.height;
+  if(w===0||h===0) return;
+  const img = ctx.createImageData(w,h);
+  const pts = objects.map(o=>{
+    const p = map.latLngToContainerPoint([o.lat,o.lng]);
+    return { x:p.x, y:p.y, rgb: ciToRGB(liveCi[o.id]) };
+  });
+  const step = 5;
+  const FALLOFF = 260;
+
+  for(let y=0;y<h;y+=step){
+    for(let x=0;x<w;x+=step){
+      let wsum=0, r=0,g=0,b=0, maxw=0;
+      for(const p of pts){
+        const dx=x-p.x, dy=y-p.y;
+        const wgt = 1/((dx*dx+dy*dy)/FALLOFF + 1);
+        wsum += wgt;
+        r += p.rgb[0]*wgt; g += p.rgb[1]*wgt; b += p.rgb[2]*wgt;
+        if(wgt>maxw) maxw = wgt;
+      }
+      r/=wsum; g/=wsum; b/=wsum;
+      const alpha = Math.round(Math.min(190, maxw*230));
+      for(let yy=0; yy<step && y+yy<h; yy++){
+        for(let xx=0; xx<step && x+xx<w; xx++){
+          const idx = ((y+yy)*w + (x+xx))*4;
+          img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=alpha;
+        }
+      }
+    }
+  }
+  ctx.putImageData(img,0,0);
+}
+
+map.on('move zoom resize', drawHeatmap);
+map.whenReady(()=>{ resizeCanvas(); });
+window.addEventListener('resize', resizeCanvas);
+
+const selectedCard = document.getElementById('selectedCard');
+const interventionSelect = document.getElementById('interventionSelect');
+const applyBtn = document.getElementById('applyBtn');
+const resetBtn = document.getElementById('resetBtn');
+const ciZoneValueEl = document.getElementById('ciZoneValue');
+const deltaTagEl = document.getElementById('deltaTag');
+const verdictBox = document.getElementById('verdictBox');
+const verdictTag = document.getElementById('verdictTag');
+const verdictText = document.getElementById('verdictText');
+const verdictNote = document.getElementById('verdictNote');
+
+function populateInterventions(){
+  interventionSelect.innerHTML = '<option value="">— select intervention type —</option>';
+  interventions.forEach(iv=>{
+    const opt = document.createElement('option');
+    opt.value = iv.code; opt.textContent = iv.label;
+    interventionSelect.appendChild(opt);
+  });
+  interventionSelect.disabled = false;
+}
+
+function selectObject(id){
+  if(selectedObj) markerRefs[selectedObj.id].setStyle({ weight:2 });
+  selectedObj = objects.find(o=>o.id===id);
+  markerRefs[id].setStyle({ weight:4 });
+  selectedCard.innerHTML = `
+    <div class="name">${selectedObj.name}</div>
+    <div class="stat-row"><span>Current CI</span><b>${liveCi[id].toFixed(3)}</b></div>
+    <div class="stat-row"><span>PSM</span><b>${selectedObj.psm}</b></div>
+    <div class="stat-row"><span>Zone</span><b>ZN·ME·BJ·HN·001</b></div>
+  `;
+  populateInterventions();
+  applyBtn.disabled = false;
+  verdictBox.classList.remove('show','ok','warn','bad');
+}
+
+function applyIntervention(){
+  const code = interventionSelect.value;
+  if(!selectedObj || !code) return;
+  const iv = interventions.find(i=>i.code===code);
+  const objDelta = iv.delta * 3;
+  const newCi = Math.max(0, Math.min(1.5, liveCi[selectedObj.id] + objDelta));
+  liveCi[selectedObj.id] = newCi;
+
+  markerRefs[selectedObj.id].setStyle({ fillColor: ciToColor(newCi) });
+  markerRefs[selectedObj.id].setTooltipContent(`${selectedObj.name} · ${newCi.toFixed(3)} · PSM ${selectedObj.psm}`);
+
+  let steps = 12, i = 0;
+  const anim = setInterval(()=>{ i++; drawHeatmap(); if(i>=steps) clearInterval(anim); }, 40);
+
+  setTimeout(()=>{
+    appliedDelta = iv.delta;
+    ciZoneCurrent = CI_ZONE_BASELINE + appliedDelta;
+    ciZoneValueEl.textContent = ciZoneCurrent.toFixed(3);
+    ciZoneValueEl.style.color = iv.dir==='pos' ? 'var(--good)' : iv.dir==='neg' ? 'var(--bad)' : 'var(--white)';
+    deltaTagEl.textContent = (appliedDelta>=0?'+':'') + 'ΔCI ' + appliedDelta.toFixed(2) + ' ± ' + iv.d.toFixed(2);
+    deltaTagEl.className = 'delta-tag mono show ' + (appliedDelta>0?'pos': appliedDelta<0?'neg':'');
+    selectedCard.querySelector('b').textContent = newCi.toFixed(3);
+    showVerdict(appliedDelta);
+  }, 300);
+}
+
+function showVerdict(delta){
+  verdictBox.classList.remove('ok','warn','bad');
+  let tag, text, note, cls;
+  if(delta >= 0){
+    cls='ok'; tag='Admissible';
+    text='ΔCI_zone ≥ 0 — the intervention does not erode accumulated chronity.';
+    note='Under the TIA decision table, this is approved without further conditions.';
+  } else if(delta >= -0.05){
+    cls='warn'; tag='Minor reduction';
+    text='ΔCI_zone is slightly negative, within the minor-correction threshold.';
+    note='Recommendation: correct material or interface detailing before approval.';
+  } else {
+    cls='bad'; tag='Significant reduction';
+    text='ΔCI_zone exceeds the minor-correction threshold.';
+    note='Recommendation: the concept requires revision before further review.';
+  }
+  verdictBox.classList.add(cls,'show');
+  verdictTag.textContent = tag;
+  verdictText.textContent = text;
+  verdictNote.textContent = note;
+}
+
+function resetAll(){
+  objects.forEach(o=>{
+    liveCi[o.id] = o.ci;
+    markerRefs[o.id].setStyle({ fillColor: ciToColor(o.ci), weight:2 });
+    markerRefs[o.id].setTooltipContent(`${o.name} · ${o.ci.toFixed(3)} · PSM ${o.psm}`);
+  });
+  drawHeatmap();
+  selectedObj = null;
+  appliedDelta = 0;
+  ciZoneCurrent = CI_ZONE_BASELINE;
+  ciZoneValueEl.textContent = CI_ZONE_BASELINE.toFixed(3);
+  ciZoneValueEl.style.color = 'var(--white)';
+  deltaTagEl.className = 'delta-tag mono';
+  deltaTagEl.textContent = 'Δ0.00';
+  verdictBox.classList.remove('show','ok','warn','bad');
+  selectedCard.innerHTML = '<div class="empty">Click a point on the map to select an object.</div>';
+  interventionSelect.innerHTML = '<option value="">— select an object first —</option>';
+  interventionSelect.disabled = true;
+  applyBtn.disabled = true;
+}
+
+applyBtn.addEventListener('click', applyIntervention);
+resetBtn.addEventListener('click', resetAll);
+</script>
+
+</body>
+</html>
