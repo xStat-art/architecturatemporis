@@ -100,6 +100,21 @@
   .mode-btn.active{ background:var(--orange); color:#fff; }
   .mode-hint{ font-size:11px; color:var(--grey-dim); line-height:1.5; }
 
+  .preset-row{ display:none; flex-direction:column; gap:6px; margin-top:10px; }
+  .preset-row.show{ display:flex; }
+  .preset-btn{
+    display:flex; align-items:center; gap:8px; text-align:left;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
+    padding:9px 10px; cursor:pointer; transition: all .15s;
+  }
+  .preset-btn:hover{ border-color:var(--grey); }
+  .preset-btn.active{ border-color:var(--orange); background:rgba(200,101,10,.12); }
+  .preset-btn .icon{ font-size:15px; line-height:1; }
+  .preset-btn .txt{ display:flex; flex-direction:column; }
+  .preset-btn .txt b{ font-size:11.5px; }
+  .preset-btn .txt span{ font-size:10px; color:var(--grey); }
+  .preset-btn.custom .txt b{ color:var(--grey); }
+
   .selected-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:14px 16px; min-height: 60px; }
   .selected-card .name{ font-size:15px; font-weight:700; margin-bottom:4px; }
   .selected-card .empty{ color:var(--grey-dim); font-size:13px; }
@@ -172,6 +187,20 @@
         <div class="mode-btn" id="modeAdd">Add new object</div>
       </div>
       <div class="mode-hint" id="modeHint" style="margin-top:10px;">Click a measured object on the map, then choose an intervention type.</div>
+      <div class="preset-row" id="presetRow">
+        <div class="preset-btn" data-preset="construction">
+          <span class="icon">🏗</span>
+          <span class="txt"><b>New construction</b><span>Non-authentic materials · CI ≈ 0.35</span></span>
+        </div>
+        <div class="preset-btn" data-preset="reconstruction">
+          <span class="icon">🏚</span>
+          <span class="txt"><b>Improper reconstruction</b><span>Substandard renovation · CI ≈ 0.40</span></span>
+        </div>
+        <div class="preset-btn custom" data-preset="custom">
+          <span class="icon">🎚</span>
+          <span class="txt"><b>Custom</b><span>Set CI and PSM manually</span></span>
+        </div>
+      </div>
     </div>
 
     <div>
@@ -390,6 +419,7 @@ L.polygon(ZONE_RING.map(([lng,lat])=>[lat,lng]), { fillOpacity:0, color:'#1b1e24
 let gradientOverlay = null;
 const markerRefs = {};
 let addModeMarker = null;
+let addPending = false;
 let mode = 'modify'; // 'modify' | 'add'
 let selectedObj = null;
 let newObjectCounter = 1;
@@ -477,6 +507,24 @@ const legendTicks = document.getElementById('legendTicks');
 const modeModifyBtn = document.getElementById('modeModify');
 const modeAddBtn = document.getElementById('modeAdd');
 const modeHint = document.getElementById('modeHint');
+const presetRow = document.getElementById('presetRow');
+const presetButtons = Array.from(document.querySelectorAll('.preset-btn'));
+
+const PRESETS = {
+  construction:   { ci:0.35, psm:1.0, label:'New construction' },
+  reconstruction: { ci:0.40, psm:1.0, label:'Improperly reconstructed building' },
+};
+let selectedPreset = null; // 'construction' | 'reconstruction' | 'custom' | null
+
+presetButtons.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    selectedPreset = btn.dataset.preset;
+    presetButtons.forEach(b=> b.classList.toggle('active', b===btn));
+    modeHint.textContent = selectedPreset==='custom'
+      ? 'Click inside the zone boundary to place a new object, then set its CI and PSM.'
+      : `Click inside the zone boundary to place: ${PRESETS[selectedPreset].label}.`;
+  });
+});
 
 function populateInterventions(){
   interventionSelect.innerHTML = '<option value="">— select intervention type —</option>';
@@ -545,6 +593,7 @@ function resetAll(){
   newObjectCounter = 1;
   selectedObj = null;
   if (addModeMarker){ map.removeLayer(addModeMarker); addModeMarker=null; }
+  addPending = false;
   recomputeAll();
   selectedCard.innerHTML = '<div class="empty">Click a point on the map to select an object.</div>';
   interventionSelect.innerHTML = '<option value="">— select an object first —</option>';
@@ -554,14 +603,24 @@ function resetAll(){
 }
 
 function setMode(next){
+  // Leaving 'add' mode with an unconfirmed marker still open — clean it up
+  // rather than leaving it stranded on the map.
+  if (mode==='add' && next!=='add' && addModeMarker){
+    addPending = false;
+    map.removeLayer(addModeMarker);
+    addModeMarker = null;
+  }
   mode = next;
   modeModifyBtn.classList.toggle('active', mode==='modify');
   modeAddBtn.classList.toggle('active', mode==='add');
   interventionBlock.style.display = mode==='modify' ? '' : 'none';
   applyBtn.style.display = mode==='modify' ? '' : 'none';
+  presetRow.classList.toggle('show', mode==='add');
+  selectedPreset = null;
+  presetButtons.forEach(b=> b.classList.remove('active'));
   modeHint.textContent = mode==='modify'
     ? 'Click a measured object on the map, then choose an intervention type.'
-    : 'Click anywhere inside the zone boundary to place a hypothetical new object, then set its starting CI and PSM.';
+    : 'Choose a preset below, then click inside the zone boundary to place it.';
   if (mode==='add'){
     selectedObj = null;
     selectedCard.innerHTML = '<div class="empty">Click inside the zone boundary on the map.</div>';
@@ -581,7 +640,18 @@ map.on('click', (e)=>{
     selectedCard.innerHTML = '<div class="empty" style="color:var(--bad)">That point is outside the zone boundary — click inside the outline.</div>';
     return;
   }
+
+  // A preset (not "custom") places the object immediately with fixed
+  // values — no form, so it reads clearly in a live demo: click, see the
+  // gradient shift right away.
+  if (selectedPreset && selectedPreset!=='custom'){
+    const p = PRESETS[selectedPreset];
+    placeNewObject(lat, lng, p.ci, p.psm, p.label);
+    return;
+  }
+
   if (addModeMarker) map.removeLayer(addModeMarker);
+  addPending = true;
   addModeMarker = L.marker([lat,lng]).addTo(map);
   const html = `
     <div class="add-popup">
@@ -597,6 +667,16 @@ map.on('click', (e)=>{
       <button onclick="window.__confirmAddObject(${lat},${lng})">Add to zone</button>
     </div>`;
   addModeMarker.bindPopup(html, { closeButton:true }).openPopup();
+  addModeMarker.on('popupclose', ()=>{
+    // Fires both when the user dismisses without confirming AND right after
+    // we programmatically remove the marker on confirm — addPending tells
+    // these apart, so a confirmed add doesn't get wiped a second time here.
+    if (addPending && addModeMarker){
+      map.removeLayer(addModeMarker);
+      addModeMarker = null;
+      selectedCard.innerHTML = '<div class="empty">Cancelled — click inside the zone boundary to try again.</div>';
+    }
+  });
   setTimeout(()=>{
     const range = document.getElementById('addCiRange');
     const val = document.getElementById('addCiVal');
@@ -604,15 +684,24 @@ map.on('click', (e)=>{
   }, 30);
 });
 
+function placeNewObject(lat, lng, ci, psm, label){
+  const id = 'new_' + (newObjectCounter++);
+  objects.push({ id, name: label || `Hypothetical object ${newObjectCounter-1}`, ci, lat, lng, psm, kind:'new' });
+  const delta = recomputeAll();
+  showVerdict(delta);
+  selectedCard.innerHTML = `
+    <div class="name">${label}</div>
+    <div class="stat-row"><span>Starting CI</span><b>${ci.toFixed(3)}</b></div>
+    <div class="stat-row"><span>PSM</span><b>${psm}</b></div>
+  `;
+}
+
 window.__confirmAddObject = function(lat, lng){
   const ci = parseFloat(document.getElementById('addCiRange').value);
   const psm = parseFloat(document.getElementById('addPsmSelect').value);
-  const id = 'new_' + (newObjectCounter++);
-  objects.push({ id, name:`Hypothetical object ${newObjectCounter-1}`, ci, lat, lng, psm, kind:'new' });
+  addPending = false; // confirmed — popupclose cleanup above must not remove this
   if (addModeMarker){ map.removeLayer(addModeMarker); addModeMarker=null; }
-  const delta = recomputeAll();
-  showVerdict(delta);
-  selectedCard.innerHTML = `<div class="empty">Object added. Switch to "Modify object" to test further interventions, or add another.</div>`;
+  placeNewObject(lat, lng, ci, psm, 'Custom hypothetical object');
 };
 
 // ═══════════════════════════════════════════════════════════════
