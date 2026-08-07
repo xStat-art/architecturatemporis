@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,53 +22,34 @@
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{
-    background:var(--bg);
-    color:var(--white);
+    background:var(--bg); color:var(--white);
     font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
-    width:100%; height:100%;
-    overflow:hidden;
+    width:100%; height:100%; overflow:hidden;
   }
   .mono{ font-family: "SF Mono", "Roboto Mono", Consolas, monospace; }
 
   .sandbox-banner{
     grid-area: banner;
     display:flex; align-items:center; justify-content:center; gap:8px;
-    background: #2a1a06;
-    border-bottom: 1px solid #4a2e0a;
-    color: #F2A93B;
-    font-size: 11.5px; font-weight:700; letter-spacing:.6px;
-    padding: 7px 12px;
-    text-align:center;
+    background: #2a1a06; border-bottom: 1px solid #4a2e0a; color: #F2A93B;
+    font-size: 11.5px; font-weight:700; letter-spacing:.6px; padding: 7px 12px; text-align:center;
   }
   .sandbox-banner b{ color:#fff; }
 
   .app{
     display:grid;
-    grid-template-columns: 1fr 340px;
-    grid-template-rows: 30px 64px 1fr 56px;
-    grid-template-areas:
-      "banner banner"
-      "header header"
-      "map    panel"
-      "legend panel";
+    grid-template-columns: 1fr 360px;
+    grid-template-rows: 30px 64px 1fr;
+    grid-template-areas: "banner banner" "header header" "map panel";
     width:100vw; height:100vh;
   }
 
-  .header{
-    grid-area: header;
-    display:flex; align-items:center; justify-content:space-between;
-    padding: 0 24px;
-    background:var(--panel);
-    border-bottom:1px solid var(--line);
-    z-index: 500;
-  }
-  .back-link{
-    font-size:11px; color:var(--grey); text-decoration:none;
-    letter-spacing:.5px; padding-right:18px; border-right:1px solid var(--line);
-    transition: color .15s;
-  }
+  .back-link{ font-size:11px; color:var(--grey); text-decoration:none; letter-spacing:.5px;
+    padding-right:18px; border-right:1px solid var(--line); transition: color .15s; }
   .back-link:hover{ color:var(--white); }
 
+  .header{ grid-area: header; display:flex; align-items:center; justify-content:space-between;
+    padding: 0 24px; background:var(--panel); border-bottom:1px solid var(--line); z-index: 500; }
   .brand{ display:flex; align-items:baseline; gap:14px; }
   .brand .mark{ font-weight:800; letter-spacing:1px; font-size:15px; }
   .brand .mark span{ color:var(--orange); }
@@ -78,78 +59,72 @@
   .readout-block{ text-align:right; }
   .readout-label{ font-size:10px; letter-spacing:1.5px; color:var(--grey); text-transform:uppercase; }
   .readout-value{ font-size:26px; font-weight:700; line-height:1.1; transition: color .5s; }
-  .delta-tag{
-    font-size:12px; padding:3px 9px; border-radius:4px;
-    font-weight:700; opacity:0; transform: translateY(-4px);
-    transition: all .4s ease;
-  }
+  .delta-tag{ font-size:12px; padding:3px 9px; border-radius:4px; font-weight:700;
+    opacity:0; transform: translateY(-4px); transition: all .4s ease; }
   .delta-tag.show{ opacity:1; transform:translateY(0); }
   .delta-tag.pos{ background:rgba(59,196,107,.15); color:var(--good); }
   .delta-tag.neg{ background:rgba(232,56,42,.15); color:var(--bad); }
 
   .map-wrap{ grid-area: map; position:relative; background:#eee; }
   #leafletMap{ width:100%; height:100%; background:#eee; }
-  #heatCanvas{
-    position:absolute; top:0; left:0;
-    pointer-events:none;
-    z-index: 450;
-    mix-blend-mode: multiply;
-  }
 
   .leaflet-marker-icon.obj-dot{ filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
-  .leaflet-popup-content-wrapper{ border-radius:6px; }
-  .leaflet-popup-content{ font-family: -apple-system, Helvetica, Arial, sans-serif; font-size:12.5px; margin:8px 10px; }
-  .leaflet-popup-content b{ display:block; margin-bottom:2px; }
+  .leaflet-popup-content-wrapper{ border-radius:8px; }
+  .leaflet-popup-content{ font-family: -apple-system, Helvetica, Arial, sans-serif; font-size:12.5px; margin:10px 12px; }
+  .add-popup h4{ font-size:12px; margin-bottom:8px; }
+  .add-popup label{ display:block; font-size:10.5px; color:#666; text-transform:uppercase; letter-spacing:.5px; margin:8px 0 3px; }
+  .add-popup input[type=range]{ width:100%; }
+  .add-popup select{ width:100%; padding:5px; font-size:12px; }
+  .add-popup .ci-val{ font-weight:700; font-family:monospace; }
+  .add-popup button{ margin-top:10px; width:100%; padding:8px; background:#C8650A; color:#fff;
+    border:none; border-radius:5px; font-weight:700; font-size:11.5px; cursor:pointer; letter-spacing:.4px; }
+  .add-popup button:hover{ background:#E8791A; }
 
-  .legend{
-    grid-area: legend;
-    display:flex; align-items:center; gap:14px;
-    padding: 0 24px;
-    background:var(--panel);
-    border-top:1px solid var(--line);
-    border-right:1px solid var(--line);
-    z-index: 500;
+  .legend-float{
+    position:absolute; left:16px; bottom:16px; z-index:490;
+    background:rgba(20,20,20,0.85); border-radius:8px; padding:10px 14px;
+    display:flex; align-items:center; gap:10px; backdrop-filter: blur(4px);
   }
-  .legend-label{ font-size:10px; letter-spacing:1.5px; color:var(--grey); text-transform:uppercase; white-space:nowrap; }
-  .legend-bar{ flex:1; height:8px; border-radius:4px;
-    background: linear-gradient(90deg, #E8382A, #F2A93B, #C4D93B, #3BC46B, #3BC4C4, #3B6BC4, #7B3BC4); }
-  .legend-ticks{ display:flex; justify-content:space-between; font-size:9px; color:var(--grey-dim); width:220px; }
+  .legend-label{ font-size:9.5px; letter-spacing:1.2px; color:var(--grey); text-transform:uppercase; white-space:nowrap; }
+  .legend-bar{ width:180px; height:8px; border-radius:4px; }
+  .legend-ticks{ display:flex; justify-content:space-between; font-size:8.5px; color:#999; width:180px; position:absolute; left:14px; bottom:-14px; }
 
-  .panel{
-    grid-area: panel;
-    background:var(--panel);
-    border-left:1px solid var(--line);
-    padding: 22px 22px 18px;
-    display:flex; flex-direction:column; gap:18px;
-    overflow-y:auto;
-    z-index: 500;
-  }
+  .panel{ grid-area: panel; background:var(--panel); border-left:1px solid var(--line);
+    padding: 20px 20px 16px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; z-index: 500; }
   .panel h2{ font-size:11px; letter-spacing:1.8px; text-transform:uppercase; color:var(--grey);
-    padding-bottom:10px; border-bottom:1px solid var(--line); }
+    padding-bottom:9px; border-bottom:1px solid var(--line); }
 
-  .selected-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:14px 16px; min-height: 64px; }
+  .mode-toggle{ display:flex; gap:6px; background:var(--panel-2); border-radius:7px; padding:3px; }
+  .mode-btn{ flex:1; padding:8px 6px; font-size:11px; font-weight:700; letter-spacing:.3px;
+    text-align:center; border-radius:5px; cursor:pointer; color:var(--grey); transition: all .15s; }
+  .mode-btn.active{ background:var(--orange); color:#fff; }
+  .mode-hint{ font-size:11px; color:var(--grey-dim); line-height:1.5; }
+
+  .selected-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:14px 16px; min-height: 60px; }
   .selected-card .name{ font-size:15px; font-weight:700; margin-bottom:4px; }
   .selected-card .empty{ color:var(--grey-dim); font-size:13px; }
   .selected-card .stat-row{ display:flex; justify-content:space-between; font-size:12.5px; margin-top:6px; color:var(--grey); }
   .selected-card .stat-row b{ color:var(--white); font-family:"SF Mono",monospace; }
 
   label.field-label{ font-size:11px; letter-spacing:1px; color:var(--grey); text-transform:uppercase; display:block; margin-bottom:6px; }
-
   select{ width:100%; background:var(--panel-2); color:var(--white); border:1px solid var(--line); border-radius:6px;
     padding:10px 12px; font-size:13px; font-family:inherit; appearance:none; }
   select:disabled{ opacity:.4; }
 
-  .btn-row{ display:flex; gap:10px; margin-top:4px; }
-  button{ font-family:inherit; font-size:12.5px; font-weight:700; letter-spacing:.4px; padding:11px 14px; border-radius:6px;
-    border:1px solid var(--line); cursor:pointer; background:var(--panel-2); color:var(--white); transition: all .15s ease; }
-  button.primary{ background:var(--orange); border-color:var(--orange); color:#fff; }
-  button.primary:hover{ background:var(--orange-bright); }
-  button.primary:disabled{ opacity:.35; cursor:not-allowed; background:var(--panel-2); border-color:var(--line); color:var(--grey);}
-  button.ghost:hover{ border-color:var(--grey); }
-  button:active{ transform: scale(.97); }
+  .btn-row{ display:flex; gap:10px; margin-top:2px; }
+  button.uibtn{ font-family:inherit; font-size:12.5px; font-weight:700; letter-spacing:.4px; padding:11px 14px;
+    border-radius:6px; border:1px solid var(--line); cursor:pointer; background:var(--panel-2); color:var(--white); transition: all .15s ease; }
+  button.uibtn.primary{ background:var(--orange); border-color:var(--orange); color:#fff; }
+  button.uibtn.primary:hover{ background:var(--orange-bright); }
+  button.uibtn.primary:disabled{ opacity:.35; cursor:not-allowed; background:var(--panel-2); border-color:var(--line); color:var(--grey);}
+  button.uibtn.ghost:hover{ border-color:var(--grey); }
+  button.uibtn:active{ transform: scale(.97); }
+
+  .zone-count{ font-size:11.5px; color:var(--grey); }
+  .zone-count b{ color:var(--white); }
 
   .verdict{ border-radius:8px; padding:14px 16px; font-size:13px; line-height:1.5;
-    opacity:0; transform:translateY(6px); transition: all .5s ease .3s; border:1px solid var(--line); }
+    opacity:0; transform:translateY(6px); transition: all .5s ease .2s; border:1px solid var(--line); }
   .verdict.show{ opacity:1; transform:translateY(0); }
   .verdict .tag{ display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:1px; padding:3px 8px; border-radius:4px; margin-bottom:8px; text-transform:uppercase; }
   .verdict.ok .tag{ background:rgba(59,196,107,.18); color:var(--good); }
@@ -163,19 +138,16 @@
 <body>
 
 <div class="app">
-
-  <div class="sandbox-banner">
-    ⚠ SANDBOX — <b>illustrative only.</b> Nothing you do here reads from or writes to the live CI registry.
-  </div>
+  <div class="sandbox-banner">⚠ SANDBOX — <b>illustrative only.</b> Nothing you do here reads from or writes to the live CI registry.</div>
 
   <div class="header">
     <div class="brand">
       <a href="index.html" class="back-link">← architecturatemporis.com</a>
       <div class="mark">AT<span>RC</span> &nbsp;TIA LIVE SIMULATOR</div>
-      <div class="sub">Zone 001 — Herceg Novi · Sandbox</div>
+      <div class="sub">Zone ZN·ME·BJ·HN·001 — Herceg Novi · Sandbox</div>
     </div>
     <div class="zone-readout">
-      <div class="delta-tag mono" id="deltaTag">Δ0.00</div>
+      <div class="delta-tag mono" id="deltaTag">Δ0.000</div>
       <div class="readout-block">
         <div class="readout-label">CI_zone (w)</div>
         <div class="readout-value mono" id="ciZoneValue">0.968</div>
@@ -185,24 +157,31 @@
 
   <div class="map-wrap">
     <div id="leafletMap"></div>
-    <canvas id="heatCanvas"></canvas>
-  </div>
-
-  <div class="legend">
-    <div class="legend-label">Chronity Index</div>
-    <div class="legend-bar"></div>
-    <div class="legend-ticks"><span>0.00</span><span>0.50</span><span>1.00</span><span>1.50</span></div>
+    <div class="legend-float">
+      <div class="legend-label">Chronity Index (weighted)</div>
+      <div class="legend-bar" id="legendBar"></div>
+    </div>
+    <div class="legend-ticks" id="legendTicks"></div>
   </div>
 
   <div class="panel">
     <div>
+      <h2>Mode</h2>
+      <div class="mode-toggle" style="margin-top:12px;">
+        <div class="mode-btn active" id="modeModify">Modify object</div>
+        <div class="mode-btn" id="modeAdd">Add new object</div>
+      </div>
+      <div class="mode-hint" id="modeHint" style="margin-top:10px;">Click a measured object on the map, then choose an intervention type.</div>
+    </div>
+
+    <div>
       <h2>Selected object</h2>
-      <div class="selected-card" id="selectedCard">
+      <div class="selected-card" id="selectedCard" style="margin-top:12px;">
         <div class="empty">Click a point on the map to select an object.</div>
       </div>
     </div>
 
-    <div>
+    <div id="interventionBlock">
       <label class="field-label">Intervention type</label>
       <select id="interventionSelect" disabled>
         <option value="">— select an object first —</option>
@@ -210,9 +189,11 @@
     </div>
 
     <div class="btn-row">
-      <button class="primary" id="applyBtn" disabled>Apply</button>
-      <button class="ghost" id="resetBtn">Reset all</button>
+      <button class="uibtn primary" id="applyBtn" disabled>Apply</button>
+      <button class="uibtn ghost" id="resetBtn">Reset all</button>
     </div>
+
+    <div class="zone-count" id="zoneCount">9 measured objects</div>
 
     <div class="verdict" id="verdictBox">
       <div class="tag" id="verdictTag">—</div>
@@ -221,134 +202,267 @@
     </div>
 
     <div class="footnote">
-      Illustrative sandbox for demonstrating the TIA principle. Simplified zone-level calculation, not the production ACAP engine. Object coordinates and baseline CI values match the live Zone 001 registry. Nothing here writes to the live registry. Map requires an internet connection (CARTO tiles).
+      Real zone boundary, real object coordinates and CI values, and the same colour science (400–700nm mapping, IDW power-2 interpolation) as the production Spectral CI Map. Intervention magnitudes are simplified/illustrative — not the production ΔCI protocol. Nothing here writes to the live registry. Requires an internet connection (CARTO tiles).
     </div>
   </div>
-
 </div>
 
 <script>
-const BASE_LAT = 42.451752, BASE_LNG = 18.537204;
-const objects = [
-  { id:'kanli', name:'Kanli Kula Fortress', ci:0.975, lat:42.452372, lng:18.538084, psm:1.2 },
-  { id:'forte', name:'Forte Mare Fortress', ci:0.894, lat:42.450224, lng:18.53618, psm:1.5 },
-  { id:'jeronim', name:'St. Jeronim', ci:0.856, lat:42.450496, lng:18.537349, psm:1.2 },
-  { id:'bella', name:'Bellavista', ci:0.853, lat:42.451494, lng:18.537486, psm:1.2 },
-  { id:'marka_v', name:'Marka Vojinovića', ci:0.834, lat:42.451041, lng:18.537015, psm:1.2 },
-  { id:'stepen', name:'Stepenište Kralja Tvrtka I', ci:0.814, lat:42.451752, lng:18.537204, psm:1.2 },
-  { id:'marka_c', name:'Marka Cara Street', ci:0.746, lat:42.45106, lng:18.537451, psm:1.2 },
-  { id:'clock', name:'Clock Tower', ci:0.746, lat:42.451551, lng:18.537208, psm:1.2 },
-  { id:'zuta', name:'Žuta kuća', ci:0.384, lat:42.451914, lng:18.537867, psm:1.0 },
+// ═══════════════════════════════════════════════════════════════
+// REAL ZONE GEOMETRY — ZN·ME·BJ·HN·001, from the ZONES sheet
+// (Polygon_GeoJSON column), pasted verbatim.
+// ═══════════════════════════════════════════════════════════════
+const ZONE_RING = [[18.53786964512551,42.452779337455915],[18.537931400471525,42.45284450720106],[18.53852296654498,42.452619527687425],[18.5385119,42.452485],[18.5384661,42.4523134],[18.5383897,42.4521193],[18.5383897,42.4521193],[18.538099170612867,42.45170022270082],[18.538128681671225,42.451530066617885],[18.538091122142415,42.45135793150546],[18.537868461646017,42.451100826753134],[18.537855047528602,42.45087131159191],[18.53787919293995,42.450485486796325],[18.538083971998216,42.4502893475146],[18.5380692,42.4502754],[18.5379856,42.4501895],[18.5378899,42.450107],[18.537850993743803,42.450084134819825],[18.5377582,42.4500296],[18.5376043,42.4499754],[18.5375017,42.44996],[18.53748740792803,42.44996],[18.5374003,42.44996],[18.5372835,42.4499687],[18.5372356,42.449974],[18.5371604,42.4499905],[18.5370015,42.4500282],[18.536896312344684,42.45005384618961],[18.5368641,42.4500617],[18.536692,42.450118],[18.5365419,42.4501557],[18.536518719061064,42.450163040957804],[18.536449155236458,42.45009542610474],[18.53632574535606,42.44993318011155],[18.536019697690744,42.44980116101333],[18.53584551995198,42.44977884816701],[18.535741871664104,42.44988431040713],[18.535928687480084,42.45012510520437],[18.53625212601063,42.45034404110768],[18.5362561,42.4503656],[18.5363193,42.4504629],[18.5364068,42.4505867],[18.5365213,42.4507783],[18.536559481456337,42.450853192627946],[18.53666056334131,42.45110299281967],[18.536899688224775,42.45151271980305],[18.53697674181727,42.451798014516285],[18.536988571995465,42.45191780297464],[18.537123078492904,42.45211716338234],[18.5372092,42.4521109],[18.53724530431419,42.452120458017696],[18.5373161,42.4521392],[18.537359588517468,42.4521636041069],[18.5373815,42.4521759],[18.5374209,42.4522161],[18.5374977,42.4523446],[18.53754454220911,42.452419947895336],[18.5375562,42.4524387],[18.5377371,42.4526588],[18.537747767411567,42.45267000301382],[18.53787545697032,42.45278513416571],[18.53786964512551,42.452779337455915]];
+
+const CENTER_LAT = 42.451752, CENTER_LNG = 18.537204;
+
+// Real measured objects, Zone 001 (Herceg Novi). Coordinates and CI
+// values match the live registry (ATRC · CI Field Data · 2026, ZONE
+// ZN·ME·BJ·HN·001). PSM = Protection Status Multiplier.
+const baseObjects = [
+  { id:'kanli',   name:'Kanli Kula Fortress',        ci:0.975, lat:42.452372, lng:18.538084, psm:1.2, kind:'measured' },
+  { id:'forte',   name:'Forte Mare Fortress',        ci:0.894, lat:42.450224, lng:18.536180, psm:1.5, kind:'measured' },
+  { id:'jeronim', name:'St. Jeronim',                ci:0.856, lat:42.450496, lng:18.537349, psm:1.2, kind:'measured' },
+  { id:'bella',   name:'Bellavista',                 ci:0.853, lat:42.451494, lng:18.537486, psm:1.2, kind:'measured' },
+  { id:'marka_v', name:'Marka Vojinovića',           ci:0.834, lat:42.451041, lng:18.537015, psm:1.2, kind:'measured' },
+  { id:'stepen',  name:'Stepenište Kralja Tvrtka I', ci:0.814, lat:42.451752, lng:18.537204, psm:1.2, kind:'measured' },
+  { id:'marka_c', name:'Marka Cara Street',          ci:0.746, lat:42.451060, lng:18.537451, psm:1.2, kind:'measured' },
+  { id:'clock',   name:'Clock Tower',                ci:0.746, lat:42.451551, lng:18.537208, psm:1.2, kind:'measured' },
+  { id:'zuta',    name:'Žuta kuća',                  ci:0.384, lat:42.451914, lng:18.537867, psm:1.0, kind:'measured' },
 ];
+
+// Working copy — interventions and added objects mutate this, resetAll()
+// restores it to baseObjects.
+let objects = baseObjects.map(o => ({...o}));
 
 const interventions = [
-  { code:'A2',  label:'A2 — Material replacement (authentic)',      delta:+0.030, d:0.02, dir:'pos' },
-  { code:'A3',  label:'A3 — Restoration with authentic material',   delta:+0.020, d:0.02, dir:'pos' },
-  { code:'B9',  label:'B9 — Removal of anachronistic element',      delta:+0.030, d:0.03, dir:'pos' },
-  { code:'B10', label:'B10 — Restoration of visual chronity',       delta:+0.040, d:0.04, dir:'pos' },
-  { code:'A15', label:'A15 — Conservation without changes',         delta:+0.000, d:0.01, dir:'zero' },
-  { code:'A1',  label:'A1 — Material replacement (non-authentic)',  delta:-0.020, d:0.02, dir:'neg' },
-  { code:'A13', label:'A13 — Patina removal (cleaning)',            delta:-0.030, d:0.03, dir:'neg' },
-  { code:'A7',  label:'A7 — Demolition of historic element',        delta:-0.020, d:0.02, dir:'neg' },
-  { code:'A12', label:'A12 — Demolition of historic building',      delta:-0.030, d:0.03, dir:'neg' },
-  { code:'B2',  label:'B2 — High-rise construction in buffer zone', delta:-0.050, d:0.05, dir:'neg' },
-  { code:'B6',  label:'B6 — Demolition of historic district',       delta:-0.050, d:0.05, dir:'neg' },
+  { code:'A2',  label:'A2 — Material replacement (authentic)',      delta:+0.050, dir:'pos' },
+  { code:'A3',  label:'A3 — Restoration with authentic material',   delta:+0.030, dir:'pos' },
+  { code:'B9',  label:'B9 — Removal of anachronistic element',      delta:+0.050, dir:'pos' },
+  { code:'B10', label:'B10 — Restoration of visual chronity',       delta:+0.060, dir:'pos' },
+  { code:'A15', label:'A15 — Conservation without changes',         delta:+0.000, dir:'zero' },
+  { code:'A1',  label:'A1 — Material replacement (non-authentic)',  delta:-0.040, dir:'neg' },
+  { code:'A13', label:'A13 — Patina removal (cleaning)',            delta:-0.050, dir:'neg' },
+  { code:'A7',  label:'A7 — Demolition of historic element',        delta:-0.050, dir:'neg' },
+  { code:'A12', label:'A12 — Demolition of historic building',      delta:-0.080, dir:'neg' },
+  { code:'B2',  label:'B2 — High-rise construction in buffer zone', delta:-0.100, dir:'neg' },
+  { code:'B6',  label:'B6 — Demolition of historic district',       delta:-0.120, dir:'neg' },
 ];
 
-const CI_ZONE_BASELINE = 0.968;
-let ciZoneCurrent = CI_ZONE_BASELINE;
-let selectedObj = null;
-let appliedDelta = 0;
-const liveCi = {};
-objects.forEach(o=> liveCi[o.id] = o.ci);
+// ═══════════════════════════════════════════════════════════════
+// REAL COLOR SCIENCE — ported verbatim from ATRC_CI_Map.html
+// (wavelengthToRGB / weightedToT / ciToColor / computeCIWeighted)
+// ═══════════════════════════════════════════════════════════════
+const PSM_MAX = 1.5, SPECTRUM_SPLIT = 0.8;
 
-function ciToRGB(ci){
-  const stops = [
-    [0.00, [232,56,42]], [0.25, [242,169,59]], [0.50, [196,217,59]],
-    [0.75, [59,196,107]], [1.00, [59,196,196]], [1.25, [59,107,196]], [1.50, [123,59,196]],
+function computeCIWeighted(ci, psm){
+  const c = (psm===null || psm===undefined || isNaN(psm)) ? 1.0 : psm;
+  return Math.min(ci*c, PSM_MAX);
+}
+
+function wavelengthToRGB(wl){
+  let r=0,g=0,b=0;
+  if (wl>=380 && wl<440){ r=(440-wl)/(440-380); g=0; b=1; }
+  else if (wl<490){ r=0; g=(wl-440)/(490-440); b=1; }
+  else if (wl<510){ r=0; g=1; b=(510-wl)/(510-490); }
+  else if (wl<580){ r=(wl-510)/(580-510); g=1; b=0; }
+  else if (wl<645){ r=1; g=(645-wl)/(645-580); b=0; }
+  else if (wl<=780){ r=1; g=0; b=0; }
+  let factor=1.0;
+  if (wl>=380 && wl<420) factor=0.3+0.7*(wl-380)/(420-380);
+  else if (wl>=700 && wl<=780) factor=0.3+0.7*(780-wl)/(780-700);
+  return [
+    Math.round(255*Math.pow(r*factor,0.8)),
+    Math.round(255*Math.pow(g*factor,0.8)),
+    Math.round(255*Math.pow(b*factor,0.8)),
   ];
-  const v = Math.max(0, Math.min(1.5, ci));
-  for(let i=0;i<stops.length-1;i++){
-    const [p0,c0]=stops[i], [p1,c1]=stops[i+1];
-    if(v>=p0 && v<=p1){
-      const t=(v-p0)/(p1-p0);
-      return [Math.round(c0[0]+(c1[0]-c0[0])*t), Math.round(c0[1]+(c1[1]-c0[1])*t), Math.round(c0[2]+(c1[2]-c0[2])*t)];
+}
+
+function weightedToT(ciWeighted){
+  const v = Math.max(0, ciWeighted);
+  if (v<=1.0) return (v/1.0)*SPECTRUM_SPLIT;
+  const span = PSM_MAX-1.0, extra = Math.min(v,PSM_MAX)-1.0;
+  return SPECTRUM_SPLIT + (span>0?(extra/span):0)*(1-SPECTRUM_SPLIT);
+}
+
+function ciToColor(ciWeighted){
+  const t = weightedToT(ciWeighted);
+  const wl = 700 - t*300; // t 1 -> 400nm violet (good), t 0 -> 700nm red (alarm)
+  const [r,g,b] = wavelengthToRGB(wl);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REAL IDW GRID + GRADIENT RENDER — ported verbatim from ATRC_CI_Map.html
+// ═══════════════════════════════════════════════════════════════
+function computeIDWGrid(points, bounds, gridSize, power){
+  power = power || 2;
+  const south=bounds.south, north=bounds.north, west=bounds.west, east=bounds.east;
+  const grid=[];
+  for(let i=0;i<gridSize;i++){
+    const row=[];
+    const lat = south + (north-south)*(i/(gridSize-1));
+    for(let j=0;j<gridSize;j++){
+      const lng = west + (east-west)*(j/(gridSize-1));
+      let wSum=0, vSum=0, exact=null;
+      for(const p of points){
+        const d = Math.hypot(p.lat-lat, p.lng-lng);
+        if (d<1e-7){ exact=p.ciWeighted; break; }
+        const w = 1/Math.pow(d,power);
+        wSum+=w; vSum+=w*p.ciWeighted;
+      }
+      row.push(exact!==null?exact:(wSum?vSum/wSum:null));
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+function renderGradientCanvas(grid, gridSize, ring, bounds){
+  const size = 900;
+  const raw = document.createElement('canvas'); raw.width=size; raw.height=size;
+  const rawCtx = raw.getContext('2d');
+  const cell = size/gridSize;
+  for(let i=0;i<gridSize;i++){
+    for(let j=0;j<gridSize;j++){
+      const v = grid[i][j];
+      if (v===null) continue;
+      rawCtx.fillStyle = ciToColor(v);
+      const x = j*cell;
+      const y = size - (i+1)*cell;
+      rawCtx.fillRect(x, y-0.5, cell+1, cell+1);
     }
   }
-  return [123,59,196];
-}
-function ciToColor(ci){ const [r,g,b]=ciToRGB(ci); return `rgb(${r},${g},${b})`; }
-// Marker/heatmap color uses CI_weighted = CI × PSM — this is what the real
-// spectral map colors by, which is why Forte Mare (PSM 1.5) reads blue/purple
-// even though its raw CI (0.894) looks mid-range on its own.
-function weightedCi(o){ return liveCi[o.id] * o.psm; }
+  const canvas = document.createElement('canvas'); canvas.width=size; canvas.height=size;
+  const ctx = canvas.getContext('2d');
+  ctx.filter = 'blur(6px)';
+  ctx.drawImage(raw,0,0);
+  ctx.filter = 'none';
 
-const map = L.map('leafletMap', { zoomControl:true, attributionControl:true }).setView([BASE_LAT, BASE_LNG], 17);
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.beginPath();
+  ring.forEach(([lng,lat],idx)=>{
+    const px = (lng-bounds.west)/(bounds.east-bounds.west)*size;
+    const py = size - (lat-bounds.south)/(bounds.north-bounds.south)*size;
+    idx===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+  });
+  ctx.closePath();
+  ctx.fillStyle = '#000';
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  return canvas.toDataURL();
+}
+
+function ringBounds(ring, padRatio){
+  padRatio = padRatio || 0;
+  let south=Infinity, north=-Infinity, west=Infinity, east=-Infinity;
+  ring.forEach(([lng,lat])=>{
+    if(lat<south) south=lat; if(lat>north) north=lat;
+    if(lng<west) west=lng; if(lng>east) east=lng;
+  });
+  const latPad=(north-south)*padRatio, lngPad=(east-west)*padRatio;
+  return { south:south-latPad, north:north+latPad, west:west-lngPad, east:east+lngPad };
+}
+
+function pointInRing(lng, lat, ring){
+  let inside=false;
+  for(let i=0,j=ring.length-1; i<ring.length; j=i++){
+    const [xi,yi]=ring[i], [xj,yj]=ring[j];
+    if (((yi>lat)!==(yj>lat)) && (lng < (xj-xi)*(lat-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAP SETUP
+// ═══════════════════════════════════════════════════════════════
+const map = L.map('leafletMap', { zoomControl:true, attributionControl:true }).setView([CENTER_LAT, CENTER_LNG], 17);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-  subdomains: 'abcd', maxZoom: 20,
+  attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains:'abcd', maxZoom:20,
 }).addTo(map);
 
+const zoneBounds = ringBounds(ZONE_RING, 0.08);
+const leafletZoneBounds = L.latLngBounds([zoneBounds.south, zoneBounds.west],[zoneBounds.north, zoneBounds.east]);
+
+L.polygon(ZONE_RING.map(([lng,lat])=>[lat,lng]), { fillOpacity:0, color:'#1b1e24', weight:3, opacity:0.5 }).addTo(map);
+
+let gradientOverlay = null;
 const markerRefs = {};
-objects.forEach(o=>{
-  const marker = L.circleMarker([o.lat, o.lng], {
-    radius: 9, weight: 2, color: '#fff', fillColor: ciToColor(weightedCi(o)), fillOpacity: 1, className: 'obj-dot',
-  }).addTo(map);
-  marker.bindTooltip(`${o.name} · ${o.ci.toFixed(3)} · PSM ${o.psm}`, { direction:'top', offset:[0,-8] });
-  marker.on('click', ()=> selectObject(o.id));
-  markerRefs[o.id] = marker;
-});
+let addModeMarker = null;
+let mode = 'modify'; // 'modify' | 'add'
+let selectedObj = null;
+let newObjectCounter = 1;
 
-const canvas = document.getElementById('heatCanvas');
-const ctx = canvas.getContext('2d');
-
-function resizeCanvas(){
-  const mapDiv = document.getElementById('leafletMap');
-  canvas.width = mapDiv.clientWidth;
-  canvas.height = mapDiv.clientHeight;
-  drawHeatmap();
+function zoneAvgWeighted(){
+  return objects.reduce((s,o)=> s+o.ciWeighted, 0) / objects.length;
 }
 
-function drawHeatmap(){
-  const w = canvas.width, h = canvas.height;
-  if(w===0||h===0) return;
-  const img = ctx.createImageData(w,h);
-  const pts = objects.map(o=>{
-    const p = map.latLngToContainerPoint([o.lat,o.lng]);
-    return { x:p.x, y:p.y, rgb: ciToRGB(weightedCi(o)) };
-  });
-  const step = 5;
-  const FALLOFF = 260;
+function recomputeAll(){
+  objects.forEach(o=> o.ciWeighted = computeCIWeighted(o.ci, o.psm));
 
-  for(let y=0;y<h;y+=step){
-    for(let x=0;x<w;x+=step){
-      let wsum=0, r=0,g=0,b=0, maxw=0;
-      for(const p of pts){
-        const dx=x-p.x, dy=y-p.y;
-        const wgt = 1/((dx*dx+dy*dy)/FALLOFF + 1);
-        wsum += wgt;
-        r += p.rgb[0]*wgt; g += p.rgb[1]*wgt; b += p.rgb[2]*wgt;
-        if(wgt>maxw) maxw = wgt;
-      }
-      r/=wsum; g/=wsum; b/=wsum;
-      const alpha = Math.round(Math.min(190, maxw*230));
-      for(let yy=0; yy<step && y+yy<h; yy++){
-        for(let xx=0; xx<step && x+xx<w; xx++){
-          const idx = ((y+yy)*w + (x+xx))*4;
-          img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=alpha;
-        }
-      }
+  const gridSize = 96;
+  const grid = computeIDWGrid(objects, zoneBounds, gridSize, 2);
+  const dataURL = renderGradientCanvas(grid, gridSize, ZONE_RING, zoneBounds);
+
+  if (gradientOverlay) map.removeLayer(gradientOverlay);
+  gradientOverlay = L.imageOverlay(dataURL, leafletZoneBounds, { opacity:0.6, interactive:false }).addTo(map);
+
+  // markers on top
+  objects.forEach(o=>{
+    if (!markerRefs[o.id]){
+      const marker = L.circleMarker([o.lat,o.lng], {
+        radius: o.kind==='new' ? 8 : 9, weight: o.kind==='new' ? 3 : 2,
+        color: o.kind==='new' ? '#fff' : '#fff',
+        dashArray: o.kind==='new' ? '3 2' : null,
+        fillColor: ciToColor(o.ciWeighted), fillOpacity:1, className:'obj-dot',
+      }).addTo(map);
+      marker.on('click', ()=> selectObject(o.id));
+      markerRefs[o.id] = marker;
     }
-  }
-  ctx.putImageData(img,0,0);
+    markerRefs[o.id].setStyle({ fillColor: ciToColor(o.ciWeighted) });
+    markerRefs[o.id].setTooltipContent ? null : null;
+    markerRefs[o.id].bindTooltip(`${o.name} · CI ${o.ci.toFixed(3)} · PSM ${o.psm} · w ${o.ciWeighted.toFixed(3)}`, { direction:'top', offset:[0,-8] });
+  });
+
+  const avg = zoneAvgWeighted();
+  ciZoneValueEl.textContent = avg.toFixed(3);
+  const delta = avg - CI_ZONE_BASELINE;
+  deltaTagEl.textContent = (delta>=0?'+':'') + 'ΔCI ' + delta.toFixed(3);
+  deltaTagEl.className = 'delta-tag mono show ' + (delta>0.0005?'pos': delta<-0.0005?'neg':'');
+  ciZoneValueEl.style.color = delta>0.0005 ? 'var(--good)' : delta<-0.0005 ? 'var(--bad)' : 'var(--white)';
+
+  const measuredCount = objects.filter(o=>o.kind==='measured').length;
+  const newCount = objects.filter(o=>o.kind==='new').length;
+  zoneCountEl.textContent = newCount>0
+    ? `${measuredCount} measured + ${newCount} simulated object${newCount>1?'s':''}`
+    : `${measuredCount} measured objects`;
+
+  return delta;
 }
 
-map.on('move zoom resize', drawHeatmap);
-map.whenReady(()=>{ resizeCanvas(); });
-window.addEventListener('resize', resizeCanvas);
+// ═══════════════════════════════════════════════════════════════
+// LEGEND (built from the real weightedToT/ciToColor mapping)
+// ═══════════════════════════════════════════════════════════════
+function buildLegend(){
+  const steps = 40;
+  const stops = [];
+  for(let i=0;i<=steps;i++){
+    const v = (i/steps)*PSM_MAX;
+    stops.push(`${ciToColor(v)} ${(weightedToT(v)*100).toFixed(1)}%`);
+  }
+  legendBar.style.background = `linear-gradient(90deg, ${stops.join(',')})`;
+  legendTicks.innerHTML = `<span>0.0</span><span>0.5</span><span>1.0</span><span style="color:${ciToColor(1.25)}">1.25</span><span style="color:${ciToColor(1.5)}">1.5</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UI WIRING
+// ═══════════════════════════════════════════════════════════════
+const CI_ZONE_BASELINE = baseObjects.reduce((s,o)=> s+computeCIWeighted(o.ci,o.psm), 0) / baseObjects.length;
 
 const selectedCard = document.getElementById('selectedCard');
 const interventionSelect = document.getElementById('interventionSelect');
+const interventionBlock = document.getElementById('interventionBlock');
 const applyBtn = document.getElementById('applyBtn');
 const resetBtn = document.getElementById('resetBtn');
 const ciZoneValueEl = document.getElementById('ciZoneValue');
@@ -357,6 +471,12 @@ const verdictBox = document.getElementById('verdictBox');
 const verdictTag = document.getElementById('verdictTag');
 const verdictText = document.getElementById('verdictText');
 const verdictNote = document.getElementById('verdictNote');
+const zoneCountEl = document.getElementById('zoneCount');
+const legendBar = document.getElementById('legendBar');
+const legendTicks = document.getElementById('legendTicks');
+const modeModifyBtn = document.getElementById('modeModify');
+const modeAddBtn = document.getElementById('modeAdd');
+const modeHint = document.getElementById('modeHint');
 
 function populateInterventions(){
   interventionSelect.innerHTML = '<option value="">— select intervention type —</option>';
@@ -369,15 +489,15 @@ function populateInterventions(){
 }
 
 function selectObject(id){
-  if(selectedObj) markerRefs[selectedObj.id].setStyle({ weight:2 });
+  if (mode!=='modify') return;
+  if (selectedObj) markerRefs[selectedObj.id] && markerRefs[selectedObj.id].setStyle({ weight: selectedObj.kind==='new'?3:2 });
   selectedObj = objects.find(o=>o.id===id);
-  markerRefs[id].setStyle({ weight:4 });
+  markerRefs[id].setStyle({ weight:5 });
   selectedCard.innerHTML = `
     <div class="name">${selectedObj.name}</div>
-    <div class="stat-row"><span>Current CI</span><b>${liveCi[id].toFixed(3)}</b></div>
+    <div class="stat-row"><span>Current CI</span><b>${selectedObj.ci.toFixed(3)}</b></div>
     <div class="stat-row"><span>PSM</span><b>${selectedObj.psm}</b></div>
-    <div class="stat-row"><span>CI (weighted)</span><b>${(liveCi[id]*selectedObj.psm).toFixed(3)}</b></div>
-    <div class="stat-row"><span>Zone</span><b>ZN·ME·BJ·HN·001</b></div>
+    <div class="stat-row"><span>CI (weighted)</span><b>${selectedObj.ciWeighted.toFixed(3)}</b></div>
   `;
   populateInterventions();
   applyBtn.disabled = false;
@@ -386,40 +506,26 @@ function selectObject(id){
 
 function applyIntervention(){
   const code = interventionSelect.value;
-  if(!selectedObj || !code) return;
+  if (!selectedObj || !code) return;
   const iv = interventions.find(i=>i.code===code);
-  const objDelta = iv.delta * 3;
-  const newCi = Math.max(0, Math.min(1.5, liveCi[selectedObj.id] + objDelta));
-  liveCi[selectedObj.id] = newCi;
+  selectedObj.ci = Math.max(0, Math.min(1, selectedObj.ci + iv.delta));
 
-  markerRefs[selectedObj.id].setStyle({ fillColor: ciToColor(newCi * selectedObj.psm) });
-  markerRefs[selectedObj.id].setTooltipContent(`${selectedObj.name} · ${newCi.toFixed(3)} · PSM ${selectedObj.psm}`);
+  const delta = recomputeAll();
+  selectedCard.querySelector('.stat-row b').textContent = selectedObj.ci.toFixed(3);
+  const bEls = selectedCard.querySelectorAll('b');
+  bEls[2].textContent = selectedObj.ciWeighted.toFixed(3);
 
-  let steps = 12, i = 0;
-  const anim = setInterval(()=>{ i++; drawHeatmap(); if(i>=steps) clearInterval(anim); }, 40);
-
-  setTimeout(()=>{
-    appliedDelta = iv.delta;
-    ciZoneCurrent = CI_ZONE_BASELINE + appliedDelta;
-    ciZoneValueEl.textContent = ciZoneCurrent.toFixed(3);
-    ciZoneValueEl.style.color = iv.dir==='pos' ? 'var(--good)' : iv.dir==='neg' ? 'var(--bad)' : 'var(--white)';
-    deltaTagEl.textContent = (appliedDelta>=0?'+':'') + 'ΔCI ' + appliedDelta.toFixed(2) + ' ± ' + iv.d.toFixed(2);
-    deltaTagEl.className = 'delta-tag mono show ' + (appliedDelta>0?'pos': appliedDelta<0?'neg':'');
-    const bEls = selectedCard.querySelectorAll('b');
-    bEls[0].textContent = newCi.toFixed(3);
-    bEls[2].textContent = (newCi * selectedObj.psm).toFixed(3);
-    showVerdict(appliedDelta);
-  }, 300);
+  showVerdict(delta);
 }
 
 function showVerdict(delta){
   verdictBox.classList.remove('ok','warn','bad');
   let tag, text, note, cls;
-  if(delta >= 0){
+  if (delta >= 0){
     cls='ok'; tag='Admissible';
-    text='ΔCI_zone ≥ 0 — the intervention does not erode accumulated chronity.';
+    text='ΔCI_zone ≥ 0 (cumulative from baseline) — no erosion of accumulated chronity.';
     note='Under the TIA decision table, this is approved without further conditions.';
-  } else if(delta >= -0.05){
+  } else if (delta >= -0.05){
     cls='warn'; tag='Minor reduction';
     text='ΔCI_zone is slightly negative, within the minor-correction threshold.';
     note='Recommendation: correct material or interface detailing before approval.';
@@ -429,34 +535,91 @@ function showVerdict(delta){
     note='Recommendation: the concept requires revision before further review.';
   }
   verdictBox.classList.add(cls,'show');
-  verdictTag.textContent = tag;
-  verdictText.textContent = text;
-  verdictNote.textContent = note;
+  verdictTag.textContent = tag; verdictText.textContent = text; verdictNote.textContent = note;
 }
 
 function resetAll(){
-  objects.forEach(o=>{
-    liveCi[o.id] = o.ci;
-    markerRefs[o.id].setStyle({ fillColor: ciToColor(o.ci * o.psm), weight:2 });
-    markerRefs[o.id].setTooltipContent(`${o.name} · ${o.ci.toFixed(3)} · PSM ${o.psm}`);
-  });
-  drawHeatmap();
+  Object.values(markerRefs).forEach(m=> map.removeLayer(m));
+  for (const k in markerRefs) delete markerRefs[k];
+  objects = baseObjects.map(o=>({...o}));
+  newObjectCounter = 1;
   selectedObj = null;
-  appliedDelta = 0;
-  ciZoneCurrent = CI_ZONE_BASELINE;
-  ciZoneValueEl.textContent = CI_ZONE_BASELINE.toFixed(3);
-  ciZoneValueEl.style.color = 'var(--white)';
-  deltaTagEl.className = 'delta-tag mono';
-  deltaTagEl.textContent = 'Δ0.00';
-  verdictBox.classList.remove('show','ok','warn','bad');
+  if (addModeMarker){ map.removeLayer(addModeMarker); addModeMarker=null; }
+  recomputeAll();
   selectedCard.innerHTML = '<div class="empty">Click a point on the map to select an object.</div>';
   interventionSelect.innerHTML = '<option value="">— select an object first —</option>';
   interventionSelect.disabled = true;
   applyBtn.disabled = true;
+  verdictBox.classList.remove('show','ok','warn','bad');
 }
 
+function setMode(next){
+  mode = next;
+  modeModifyBtn.classList.toggle('active', mode==='modify');
+  modeAddBtn.classList.toggle('active', mode==='add');
+  interventionBlock.style.display = mode==='modify' ? '' : 'none';
+  applyBtn.style.display = mode==='modify' ? '' : 'none';
+  modeHint.textContent = mode==='modify'
+    ? 'Click a measured object on the map, then choose an intervention type.'
+    : 'Click anywhere inside the zone boundary to place a hypothetical new object, then set its starting CI and PSM.';
+  if (mode==='add'){
+    selectedObj = null;
+    selectedCard.innerHTML = '<div class="empty">Click inside the zone boundary on the map.</div>';
+    verdictBox.classList.remove('show','ok','warn','bad');
+  }
+}
+
+modeModifyBtn.addEventListener('click', ()=> setMode('modify'));
+modeAddBtn.addEventListener('click', ()=> setMode('add'));
 applyBtn.addEventListener('click', applyIntervention);
 resetBtn.addEventListener('click', resetAll);
+
+map.on('click', (e)=>{
+  if (mode!=='add') return;
+  const { lat, lng } = e.latlng;
+  if (!pointInRing(lng, lat, ZONE_RING)){
+    selectedCard.innerHTML = '<div class="empty" style="color:var(--bad)">That point is outside the zone boundary — click inside the outline.</div>';
+    return;
+  }
+  if (addModeMarker) map.removeLayer(addModeMarker);
+  addModeMarker = L.marker([lat,lng]).addTo(map);
+  const html = `
+    <div class="add-popup">
+      <h4>New hypothetical object</h4>
+      <label>Starting CI: <span class="ci-val" id="addCiVal">0.500</span></label>
+      <input type="range" id="addCiRange" min="0" max="1" step="0.01" value="0.5">
+      <label>PSM (protection status)</label>
+      <select id="addPsmSelect">
+        <option value="1.0">1.0 — local</option>
+        <option value="1.2">1.2 — national register</option>
+        <option value="1.5">1.5 — UNESCO</option>
+      </select>
+      <button onclick="window.__confirmAddObject(${lat},${lng})">Add to zone</button>
+    </div>`;
+  addModeMarker.bindPopup(html, { closeButton:true }).openPopup();
+  setTimeout(()=>{
+    const range = document.getElementById('addCiRange');
+    const val = document.getElementById('addCiVal');
+    if (range) range.addEventListener('input', ()=> val.textContent = parseFloat(range.value).toFixed(3));
+  }, 30);
+});
+
+window.__confirmAddObject = function(lat, lng){
+  const ci = parseFloat(document.getElementById('addCiRange').value);
+  const psm = parseFloat(document.getElementById('addPsmSelect').value);
+  const id = 'new_' + (newObjectCounter++);
+  objects.push({ id, name:`Hypothetical object ${newObjectCounter-1}`, ci, lat, lng, psm, kind:'new' });
+  if (addModeMarker){ map.removeLayer(addModeMarker); addModeMarker=null; }
+  const delta = recomputeAll();
+  showVerdict(delta);
+  selectedCard.innerHTML = `<div class="empty">Object added. Switch to "Modify object" to test further interventions, or add another.</div>`;
+};
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+buildLegend();
+map.whenReady(()=>{ recomputeAll(); });
 </script>
 
 </body>
