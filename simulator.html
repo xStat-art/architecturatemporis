@@ -89,6 +89,22 @@
   .legend-bar{ width:180px; height:8px; border-radius:4px; }
   .legend-ticks{ display:flex; justify-content:space-between; font-size:8.5px; color:#999; width:180px; position:absolute; left:14px; bottom:-14px; }
 
+  .buildings-ctrl{
+    position:absolute; right:16px; top:16px; z-index:490;
+    background:rgba(20,20,20,0.85); border-radius:8px; padding:10px 12px;
+    backdrop-filter: blur(4px); max-width:220px;
+  }
+  .buildings-ctrl button{
+    width:100%; font-family:inherit; font-size:11px; font-weight:700; letter-spacing:.3px;
+    padding:8px 10px; border-radius:5px; border:1px solid #333; cursor:pointer;
+    background:var(--orange); color:#fff;
+  }
+  .buildings-ctrl button:hover{ background:var(--orange-bright); }
+  .buildings-ctrl button:disabled{ background:#333; color:#888; cursor:default; }
+  .buildings-ctrl .status{ font-size:10px; color:var(--grey); margin-top:6px; line-height:1.4; }
+
+  .osm-building{ pointer-events:auto; cursor:pointer; }
+
   .panel{ grid-area: panel; background:var(--panel); border-left:1px solid var(--line);
     padding: 20px 20px 16px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; z-index: 500; }
   .panel h2{ font-size:11px; letter-spacing:1.8px; text-transform:uppercase; color:var(--grey);
@@ -180,6 +196,10 @@
       <div class="legend-bar" id="legendBar"></div>
     </div>
     <div class="legend-ticks" id="legendTicks"></div>
+    <div class="buildings-ctrl">
+      <button id="loadBuildingsBtn">Load unmeasured buildings</button>
+      <div class="status" id="buildingsStatus">Loads real building footprints (OpenStreetMap) inside the zone. Click one to simulate a renovation on it — same live CI slider as "Add new object".</div>
+    </div>
   </div>
 
   <div class="panel">
@@ -350,27 +370,68 @@ function computeIDWGrid(points, bounds, gridSize, power){
   return grid;
 }
 
+// Simple box blur on raw ImageData — used instead of ctx.filter='blur()'
+// because canvas filter support is inconsistent on iOS/older Safari
+// (silently no-ops on some versions), which is exactly what produced the
+// blocky, unblurred grid on iPad. This runs at the small grid resolution
+// (cheap) before the image is upscaled with built-in smoothing.
+function boxBlurImageData(imgData, width, height, radius){
+  const src = imgData.data;
+  const out = new Uint8ClampedArray(src.length);
+  for(let y=0;y<height;y++){
+    for(let x=0;x<width;x++){
+      let r=0,g=0,b=0,a=0,count=0;
+      for(let dy=-radius; dy<=radius; dy++){
+        const yy = y+dy;
+        if (yy<0||yy>=height) continue;
+        for(let dx=-radius; dx<=radius; dx++){
+          const xx = x+dx;
+          if (xx<0||xx>=width) continue;
+          const idx=(yy*width+xx)*4;
+          r+=src[idx]; g+=src[idx+1]; b+=src[idx+2]; a+=src[idx+3]; count++;
+        }
+      }
+      const oidx=(y*width+x)*4;
+      out[oidx]=r/count; out[oidx+1]=g/count; out[oidx+2]=b/count; out[oidx+3]=a/count;
+    }
+  }
+  return new ImageData(out, width, height);
+}
+
 function renderGradientCanvas(grid, gridSize, ring, bounds){
   const size = 900;
-  const raw = document.createElement('canvas'); raw.width=size; raw.height=size;
-  const rawCtx = raw.getContext('2d');
-  const cell = size/gridSize;
+
+  // 1) Paint the raw IDW grid at its native (small) resolution — one
+  //    pixel per grid cell, hard edges expected at this stage.
+  const small = document.createElement('canvas'); small.width=gridSize; small.height=gridSize;
+  const smallCtx = small.getContext('2d');
   for(let i=0;i<gridSize;i++){
     for(let j=0;j<gridSize;j++){
       const v = grid[i][j];
       if (v===null) continue;
-      rawCtx.fillStyle = ciToColor(v);
-      const x = j*cell;
-      const y = size - (i+1)*cell;
-      rawCtx.fillRect(x, y-0.5, cell+1, cell+1);
+      smallCtx.fillStyle = ciToColor(v);
+      // grid row 0 = south edge, so flip vertically to match canvas y-down
+      smallCtx.fillRect(j, gridSize-1-i, 1, 1);
     }
   }
+
+  // 2) Manually box-blur at the small resolution (cheap: gridSize² pixels).
+  const smallData = smallCtx.getImageData(0,0,gridSize,gridSize);
+  const blurred = boxBlurImageData(smallData, gridSize, gridSize, 1);
+  smallCtx.putImageData(blurred, 0, 0);
+
+  // 3) Upscale to the final canvas with the browser's built-in bilinear
+  //    smoothing — reliably supported everywhere (desktop and iOS both),
+  //    unlike ctx.filter. This is what turns the blurred small grid into
+  //    a smooth-looking gradient at full size.
   const canvas = document.createElement('canvas'); canvas.width=size; canvas.height=size;
   const ctx = canvas.getContext('2d');
-  ctx.filter = 'blur(6px)';
-  ctx.drawImage(raw,0,0);
-  ctx.filter = 'none';
+  ctx.imageSmoothingEnabled = true;
+  if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(small, 0, 0, size, size);
 
+  // 4) Clip to the real zone polygon last, so the blur never bleeds past
+  //    the actual boundary.
   ctx.globalCompositeOperation = 'destination-in';
   ctx.beginPath();
   ring.forEach(([lng,lat],idx)=>{
@@ -405,6 +466,92 @@ function pointInRing(lng, lat, ring){
   }
   return inside;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// UNMEASURED BUILDINGS — real OSM footprints inside the zone, same
+// Overpass endpoint the real Zone Editor uses for street/wall snapping.
+// Clicking a footprint that isn't already one of the 9 measured objects
+// turns it into a simulated point with a live CI slider, same as
+// "Add new object", but anchored to its real centroid and shape.
+// ═══════════════════════════════════════════════════════════════
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+const buildingLayers = []; // {layer, centroid:{lat,lng}, objId}
+
+function polygonCentroid(latlngs){
+  let latSum=0, lngSum=0;
+  latlngs.forEach(([lat,lng])=>{ latSum+=lat; lngSum+=lng; });
+  return { lat: latSum/latlngs.length, lng: lngSum/latlngs.length };
+}
+
+async function loadUnmeasuredBuildings(){
+  loadBuildingsBtn.disabled = true;
+  buildingsStatus.textContent = 'Fetching building footprints from OpenStreetMap…';
+
+  const b = zoneBounds;
+  const bbox = `${b.south},${b.west},${b.north},${b.east}`;
+  const query = `[out:json][timeout:20];(way["building"](${bbox}););out geom;`;
+
+  try{
+    const res = await fetch(OVERPASS_URL, { method:'POST', body:'data=' + encodeURIComponent(query) });
+    if (!res.ok) throw new Error('Overpass HTTP ' + res.status);
+    const data = await res.json();
+    const ways = (data.elements || []).filter(el => el.type==='way' && el.geometry && el.geometry.length>=3);
+
+    let added = 0;
+    ways.forEach((way, idx)=>{
+      const latlngs = way.geometry.map(g=>[g.lat, g.lon]);
+      const centroid = polygonCentroid(latlngs);
+      // skip footprints whose centroid falls outside the zone boundary —
+      // Overpass returns everything touching the bbox, which is a
+      // rectangle, not the actual zone outline
+      if (!pointInRing(centroid.lng, centroid.lat, ZONE_RING)) return;
+      // skip anything essentially on top of an already-measured object
+      const tooClose = baseObjects.some(o=>{
+        const dLat=(o.lat-centroid.lat)*111320, dLng=(o.lng-centroid.lng)*82170;
+        return Math.hypot(dLat,dLng) < 10;
+      });
+      if (tooClose) return;
+
+      const poly = L.polygon(latlngs, {
+        className:'osm-building', color:'#8a8a8a', weight:1.2, dashArray:'3 2',
+        fillColor:'#8a8a8a', fillOpacity:0.18, interactive:true,
+      }).addTo(map);
+      poly.bindTooltip('Unmeasured building — click to simulate', { sticky:true });
+      poly.on('click', ()=> selectUnmeasuredBuilding(poly, centroid, idx));
+      buildingLayers.push({ layer:poly, centroid, objId:null, wayIdx:idx });
+      added++;
+    });
+
+    buildingsStatus.textContent = added>0
+      ? `${added} unmeasured building${added>1?'s':''} loaded — click one to simulate.`
+      : 'No additional building footprints found inside the zone.';
+  } catch(err){
+    buildingsStatus.textContent = 'Could not reach OpenStreetMap (Overpass). Check your connection and try again.';
+    loadBuildingsBtn.disabled = false;
+    return;
+  }
+  loadBuildingsBtn.disabled = false;
+  loadBuildingsBtn.textContent = 'Reload buildings';
+}
+
+function selectUnmeasuredBuilding(poly, centroid, wayIdx){
+  const entry = buildingLayers.find(b=>b.wayIdx===wayIdx);
+  // Already turned into a simulated object earlier this session — just
+  // re-select it instead of adding a duplicate point.
+  if (entry.objId){
+    const obj = objects.find(o=>o.id===entry.objId);
+    if (obj){ renderLiveAdjustCard(obj); return; }
+  }
+  poly.setStyle({ color:'#C8650A', fillOpacity:0.32 });
+  const id = 'unm_' + wayIdx;
+  const obj = { id, name:'Unmeasured building (assumed baseline)', ci:0.50, lat:centroid.lat, lng:centroid.lng, psm:1.0, kind:'unmeasured' };
+  objects.push(obj);
+  entry.objId = id;
+  const delta = recomputeAll();
+  showVerdict(delta);
+  renderLiveAdjustCard(obj, 'Baseline is an assumption (CI 0.50) — this building has not been field-measured. Adjust to explore how a renovation of it would move the zone.');
+}
+
 
 // ═══════════════════════════════════════════════════════════════
 // MAP SETUP
@@ -507,6 +654,9 @@ const verdictNote = document.getElementById('verdictNote');
 const zoneCountEl = document.getElementById('zoneCount');
 const legendBar = document.getElementById('legendBar');
 const legendTicks = document.getElementById('legendTicks');
+const loadBuildingsBtn = document.getElementById('loadBuildingsBtn');
+const buildingsStatus = document.getElementById('buildingsStatus');
+loadBuildingsBtn.addEventListener('click', loadUnmeasuredBuildings);
 const modeModifyBtn = document.getElementById('modeModify');
 const modeAddBtn = document.getElementById('modeAdd');
 const modeHint = document.getElementById('modeHint');
@@ -597,6 +747,10 @@ function resetAll(){
   selectedObj = null;
   if (addModeMarker){ map.removeLayer(addModeMarker); addModeMarker=null; }
   addPending = false;
+  buildingLayers.forEach(b=>{
+    b.objId = null;
+    b.layer.setStyle({ color:'#8a8a8a', fillOpacity:0.18 });
+  });
   recomputeAll();
   selectedCard.innerHTML = '<div class="empty">Click a point on the map to select an object.</div>';
   interventionSelect.innerHTML = '<option value="">— select an object first —</option>';
@@ -698,7 +852,7 @@ function placeNewObject(lat, lng, ci, psm, label){
   renderLiveAdjustCard(obj);
 }
 
-function renderLiveAdjustCard(obj){
+function renderLiveAdjustCard(obj, note){
   selectedCard.innerHTML = `
     <div class="name">${obj.name}</div>
     <div class="stat-row"><span>PSM</span><b>${obj.psm}</b></div>
@@ -706,6 +860,7 @@ function renderLiveAdjustCard(obj){
       <label>Adjust CI <span class="mono" id="liveCiVal">${obj.ci.toFixed(3)}</span></label>
       <input type="range" id="liveCiRange" min="0" max="1" step="0.01" value="${obj.ci}">
     </div>
+    ${note ? `<div class="mode-hint" style="margin-top:10px;">${note}</div>` : ''}
   `;
   const range = document.getElementById('liveCiRange');
   const val = document.getElementById('liveCiVal');
