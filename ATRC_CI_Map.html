@@ -2796,6 +2796,21 @@ function addZoneCasing(hull) {
 // момент активного рисования новой зоны в другом городе. fitBounds теперь
 // вызывается только на самой первой успешной загрузке страницы —
 // см. didInitialFit ниже, в loadData().
+// ── Рендер-фильтр для зон с известной проблемной геометрией ────────────
+// Диагностика 18 авг 2026: у этих 8 периферийных зон Polygon_GeoJSON в
+// живой таблице — convex hull через разрыв (слияние двух несвязных кусков
+// геометрии в step2j_build_payload.py дало MultiPolygon, что требует
+// одного простого кольца для карты, поэтому применена выпуклая оболочка;
+// см. TEMP/ZoneTessellation/payload_28_zones_draft.json, used_convex_hull).
+// Оболочка перекрывает территорию, реально этой зоне не принадлежащую
+// (вода, чужая зона, рельеф) — визуально выглядит как "зона уходит в горы"
+// или "пересекает залив". Сама живая таблица ZONES НЕ меняется, это
+// чисто рендер-фильтр: зона просто не рисуется на карте, пока геометрия
+// не будет пересчитана без hull-фоллбэка.
+// Включить зону обратно: убрать её короткий код (OWNER·NNN) из массива
+// ниже, или обнулить весь массив (HIDDEN_GEOMETRY_ZONES = []).
+const HIDDEN_GEOMETRY_ZONES = ['BA·002', 'HN·010', 'KR·002', 'KR·004', 'KU·002', 'LE·004', 'SK·002', 'ZE·002'];
+
 function renderZones(zonesMap, drawnZones, fitBounds) {
   if (fitBounds === undefined) fitBounds = true;
   markersLayer.clearLayers();
@@ -2804,7 +2819,8 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
   lastGridsByZone = {};
   drawnZones = drawnZones || {};
 
-  const zoneIds = Array.from(new Set([...Object.keys(zonesMap), ...Object.keys(drawnZones)]));
+  const zoneIds = Array.from(new Set([...Object.keys(zonesMap), ...Object.keys(drawnZones)]))
+    .filter(zoneId => !HIDDEN_GEOMETRY_ZONES.some(code => zoneId.endsWith('·' + code)));
   const allObjects = Object.keys(zonesMap).flatMap(z => zonesMap[z]);
 
   if (allObjects.length === 0 && zoneIds.length === 0) {
@@ -2833,11 +2849,27 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
       hull = turf.convex(pts);
     }
     if (!hull) {
-      if (zoneId.endsWith('003') || zoneId.endsWith('007')) {
+      // v8.7: раньше зона без Polygon_GeoJSON и без ≥3 измерений просто не
+      // рисовалась вообще, ни точкой, ни подписью (см. ZoneTessellation_TZ,
+      // "Отрисовка на карте") — Center_Lat/Center_Lon в таблице были, но
+      // нигде не читались. Теперь это последний fallback: точка-заглушка,
+      // явно помеченная как черновая (не настоящая граница зоны).
+      if (drawn && Number.isFinite(drawn.centerLat) && Number.isFinite(drawn.centerLng)) {
+        L.marker([drawn.centerLat, drawn.centerLng], {
+          icon: L.divIcon({
+            className: 'zone-label-prior',
+            html: `<div class="zl-pill" style="border:1px dashed rgba(255,255,255,0.5);background:rgba(60,60,60,0.75);">
+                     <div class="zl-id">${zoneId}</div>
+                     <div class="zl-note">Draft point · no polygon yet</div>
+                   </div>`,
+            iconAnchor: [60, -6], iconSize: [120, 30],
+          }), interactive: false,
+        }).addTo(hullLayer);
+      } else {
         console.warn(`[DEBUG ${zoneId}] NOTHING TO DRAW: drawn=`, drawn, `objects.length=`, objects.length,
-          `(no drawn.ring AND fewer than 3 measured objects — this zone will not appear on the map at all)`);
+          `(no drawn.ring, no Center_Lat/Center_Lon, fewer than 3 measured objects — this zone will not appear on the map at all)`);
       }
-      return; // nothing to draw for this zone yet
+      return; // no hull-based geometry for this zone — nothing further to compute below
     }
 
     const hullBounds = L.geoJSON(hull).getBounds();
@@ -3065,13 +3097,19 @@ function loadZonesSheet(callback) {
           const geo = JSON.parse(row['Polygon_GeoJSON']);
           ring = geo.coordinates[0].slice(0, -1).map(c => [c[1], c[0]]); // [lng,lat]->[lat,lng]
         } catch(e) { ring = null; }
+        const centerLatNum = Number(row['Center_Lat']);
+        const centerLngNum = Number(row['Center_Lon']);
         zones[zoneId] = {
           name: row['Name'], cityCode: row['City_Code'],
           regionCode: row['Region_Code'] || 'BJ', // старые строки без этой колонки — считаем BJ (единственный регион до этой сессии)
           unescoStatus: row['UNESCO_Status'] || 'none',
           ring,
           isCentral: String(row['Is_Central']).toUpperCase() === 'TRUE',
-          priorCI: row['Prior_CI'] === '' || row['Prior_CI'] == null ? null : Number(row['Prior_CI'])
+          priorCI: row['Prior_CI'] === '' || row['Prior_CI'] == null ? null : Number(row['Prior_CI']),
+          // v8.7: fallback-маркер для зон без Polygon_GeoJSON и без ≥3 полевых
+          // измерений — см. ZoneTessellation_TZ, раздел "Отрисовка на карте".
+          centerLat: Number.isFinite(centerLatNum) ? centerLatNum : null,
+          centerLng: Number.isFinite(centerLngNum) ? centerLngNum : null
         };
       });
       callback(zones);
