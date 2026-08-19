@@ -112,21 +112,24 @@
   .nav-toggle.open span:nth-child(3) { top: 18px; transform: rotate(-45deg); }
 
   .mobile-menu {
-    position: fixed; top: 0; left: 0; right: 0;
-    height: 100vh; /* fallback for browsers without dvh support */
-    height: 100dvh;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: var(--black);
     z-index: 200;
-    display: flex; flex-direction: column;
-    justify-content: flex-start;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 80px 32px 48px;
     opacity: 0; visibility: hidden;
     transition: opacity .25s ease, visibility .25s;
   }
   .mobile-menu.open {
     opacity: 1; visibility: visible;
+  }
+  .mobile-menu-scroll {
+    height: 100vh; /* fallback for browsers without dvh support */
+    height: 100dvh;
+    box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex; flex-direction: column;
+    justify-content: flex-start;
+    padding: 80px 32px 48px;
   }
   .mobile-menu nav.mobile-links {
     display: flex; flex-direction: column;
@@ -462,7 +465,9 @@
 </nav>
 
 <div class="mobile-menu" id="mobileMenu">
-  <nav class="mobile-links" id="mobileLinks"><!-- auto-filled from .nav-links, see script at bottom --></nav>
+  <div class="mobile-menu-scroll">
+    <nav class="mobile-links" id="mobileLinks"><!-- auto-filled from .nav-links, see script at bottom --></nav>
+  </div>
 </div>
 
 <!-- ═══ 01 HERO (dark) ═══ -->
@@ -1257,7 +1262,7 @@
   });
 
   window.addEventListener('resize', function(){
-    if(window.innerWidth > 768) closeMenu();
+    if(window.innerWidth > 1399) closeMenu();
   });
 })();
 </script>
