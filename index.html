@@ -131,8 +131,9 @@
     justify-content: flex-start;
     padding: 80px 32px 48px;
   }
-  .mobile-menu nav.mobile-links {
+  .mobile-menu .mobile-links {
     display: flex; flex-direction: column;
+    flex-shrink: 0;
     gap: 2px;
   }
   .mobile-menu a {
@@ -466,7 +467,7 @@
 
 <div class="mobile-menu" id="mobileMenu">
   <div class="mobile-menu-scroll">
-    <nav class="mobile-links" id="mobileLinks"><!-- auto-filled from .nav-links, see script at bottom --></nav>
+    <div class="mobile-links" id="mobileLinks"><!-- auto-filled from .nav-links, see script at bottom --></div>
   </div>
 </div>
 
