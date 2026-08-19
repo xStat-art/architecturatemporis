@@ -3,25 +3,32 @@
  * ─────────────────────────────────────────────────────────────────────────
  * Vanilla ES6 module. Overlay bar chart for zone chronity + TIA impact.
  *
- * CONCEPT (Sergei's, from chat): each zone state is a rectangle whose
- * WIDTH is its min–max chronity range (coloured on the spectral scale)
- * and whose HEIGHT is its mean. Two states share one X axis:
- *   - "without outlier" (hypothetical/potential) — drawn behind, at
- *     reduced opacity
- *   - "with outlier" (the zone's real, current state) — drawn in front,
- *     fully opaque, and reads as both WIDER (the outlier drags the low
- *     edge of the range down) and SHORTER (the outlier drags the mean
- *     down) than the ghost behind it
- * Both effects are visible in one shape at once — this is the answer to
- * "on the map, one bad object visibly distorts the whole gradient
- * pattern — how do we show that here, where there's no map to distort?"
- * A 1D bar can't show spatial distortion, but it CAN show the same object
- * distorting the zone's aggregate shape (wider + shorter), which is the
- * same underlying fact the map's visual dent is standing in for.
+ * CONCEPT (Sergei's, from chat): each zone state is a block whose X position
+ * on the CI(weighted) spectral scale AND whose height both track the same
+ * single number — the zone's aggregate CI_zone(weighted). Two states share
+ * one X axis:
+ *   - "before" (the zone as it stands in PASSPORT_REGISTRY, pre-scenario) —
+ *     drawn behind, at reduced opacity
+ *   - "after" (the same zone once a TIA scenario is applied) — drawn in
+ *     front, fully opaque
+ * Both numbers come straight from the server (handleComputeTIA's response:
+ * ciZoneWeightedBefore, ciZoneWeightedAfter, deltaCIWeighted, decision) —
+ * this file does no aggregation of its own and knows nothing about how many
+ * objects changed or which ones. That's deliberate: scenario.modify is a
+ * single flat patch per object per request (see applyTiaScenario in
+ * ACAP_AppsScript_v8_1.gs) — the caller is the one that accumulates
+ * multiple interventions into a final scenario before sending it, so by the
+ * time a response comes back, all this file ever sees is one before/after
+ * pair for the whole zone, never a list of individual edits. Trying to
+ * visualize "which object changed" here would be inventing detail the data
+ * doesn't carry.
  *
- * Earlier versions of this file (see prior chat) used a single spectral
- * bar with a separate grey "impact" block floating next to it, connected
- * by an arrow. That's gone — this replaces it, not extends it.
+ * REPLACES an earlier version of this file that computed its own "outlier"
+ * (the single lowest-CI object in the zone, via a local computeZoneStats()
+ * heuristic) and drew a stepped "ghost vs current-with-outlier" shape. That
+ * heuristic never talked to the real backend at all — removed outright, not
+ * kept as a fallback, per Sergei's decision 2026-08-12: this component now
+ * shows the zone's real before/after TIA state or nothing.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
@@ -32,7 +39,7 @@ export const BAR_GEOMETRY = {
   scaleMax: 1.50,
   plotLeft: 122.4,
   plotRight: 574.1,
-  legendX: 606,          // right-side column, "could have been" reference
+  legendX: 606,          // right-side column, "before" reference
   legendLineEndX: 687.3,
   baselineY: 420,
   maxBarHeight: 190,
@@ -41,7 +48,6 @@ export const BAR_GEOMETRY = {
   categoryLabelY: 440,
   tickLabelY: 483,
   footerY: 507,
-  cornerLabelY: 210,
   titleX: 75.54,
   titleY: 42,      // was 24.23 — at 39.685px font, the ascenders reached above y=0 and got clipped by the viewBox edge
   subtitleY: 64.69,
@@ -50,8 +56,13 @@ export const BAR_GEOMETRY = {
   currentLabelY: 152.39,
 };
 
+// v8.4: Anxious lower bound corrected 0.25 -> 0.20, to match the confirmed
+// value in tia-ring.js (RING_CATEGORIES) — that file's own history comment
+// documents this as a deliberate revision from the original baked artwork's
+// 0.30 down to 0.20, confirmed with Sergei. This file's 0.25 had simply
+// never picked up that correction; the two components now agree.
 export const CATEGORIES = [
-  { key: 'anxious', label: 'Anxious', lo: 0.25, hi: 0.50 },
+  { key: 'anxious', label: 'Anxious', lo: 0.20, hi: 0.50 },
   { key: 'low', label: 'low', lo: 0.50, hi: 0.80 },
   { key: 'moderate', label: 'Moderate', lo: 0.80, hi: 1.05 },
   { key: 'high', label: 'High', lo: 1.05, hi: 1.25 },
@@ -132,111 +143,127 @@ function buildCategoryRow(meanValue) {
   }).join('');
 }
 
-function buildCornerLabel(x, shapeTopY) {
-  const y = BAR_GEOMETRY.cornerLabelY;
-  return `<line x1="${x.toFixed(2)}" y1="${y + 10}" x2="${x.toFixed(2)}" y2="${shapeTopY.toFixed(2)}" stroke="#666" stroke-width="0.5" stroke-dasharray="1,2"/>`;
+function buildCornerLabel(x, shapeTopY, labelY) {
+  return `<line x1="${x.toFixed(2)}" y1="${(labelY + 10).toFixed(2)}" x2="${x.toFixed(2)}" y2="${shapeTopY.toFixed(2)}" stroke="#666" stroke-width="0.5" stroke-dasharray="1,2"/>`;
 }
-function buildCornerValue(x, value, opts) {
+function buildCornerValue(x, labelY, value, opts) {
   const { bold } = opts || {};
-  return `<text x="${x.toFixed(2)}" y="${BAR_GEOMETRY.cornerLabelY}" text-anchor="middle" font-size="12" font-weight="${bold ? '700' : '400'}" fill="${bold ? '#fff' : '#ccc'}" font-family="Arial, sans-serif">${value.toFixed(3)}</text>`;
+  return `<text x="${x.toFixed(2)}" y="${labelY.toFixed(2)}" text-anchor="middle" font-size="12" font-weight="${bold ? '700' : '400'}" fill="${bold ? '#fff' : '#ccc'}" font-family="Arial, sans-serif">${value.toFixed(3)}</text>`;
 }
 
-function buildOverlayBar(uid, id, range, opacity, defsOut) {
-  const { baselineY } = BAR_GEOMETRY;
-  const x0 = valueToX(range.min), x1 = valueToX(range.max);
-  const h = valueToHeight(range.mean);
+// Margin between a corner label's own baseline and the top of the bar it
+// marks, when there's no risk of colliding with the OTHER label — and the
+// minimum vertical gap enforced between before/after's two labels when
+// their natural positions (each bar's own top - CORNER_LABEL_MARGIN) would
+// otherwise land closer together than this.
+const CORNER_LABEL_MARGIN = 16;
+const CORNER_LABEL_MIN_GAP = 20;
+
+/**
+ * Computes each shown bar's corner-label Y. Each label's NATURAL position
+ * is CORNER_LABEL_MARGIN above its own bar's top — so a taller bar's label
+ * ends up higher on the canvas too, same as the bar itself (one value
+ * driving both, same principle buildStateBar already uses for X/height).
+ *
+ * When before/after are close enough that their natural positions would
+ * collide — the common case: a small ΔCI is the typical real TIA outcome —
+ * both are pushed apart around their shared midpoint until
+ * CORNER_LABEL_MIN_GAP separates them, WITHOUT changing which one ends up
+ * on top. This matters because "before" and "after" are not fixed to a
+ * particular row: whichever one currently has the higher CI_zone(weighted)
+ * gets the higher label, in both directions (ΔCI positive OR negative) —
+ * a fixed pair of Y positions only happens to read correctly in one
+ * direction and silently misleads in the other (verified 2026-08-12 by
+ * checking both before<after and before>after by hand before shipping this).
+ */
+function computeLabelPositions(beforeBar, afterBar) {
+  const positions = {};
+  if (beforeBar && afterBar) {
+    const entries = [
+      { key: 'before', naturalY: beforeBar.top - CORNER_LABEL_MARGIN },
+      { key: 'after', naturalY: afterBar.top - CORNER_LABEL_MARGIN },
+    ].sort((a, b) => a.naturalY - b.naturalY);
+    const [higher, lower] = entries;
+    if (lower.naturalY - higher.naturalY < CORNER_LABEL_MIN_GAP) {
+      const mid = (higher.naturalY + lower.naturalY) / 2;
+      positions[higher.key] = mid - CORNER_LABEL_MIN_GAP / 2;
+      positions[lower.key] = mid + CORNER_LABEL_MIN_GAP / 2;
+    } else {
+      positions[higher.key] = higher.naturalY;
+      positions[lower.key] = lower.naturalY;
+    }
+  } else if (beforeBar) {
+    positions.before = beforeBar.top - CORNER_LABEL_MARGIN;
+  } else if (afterBar) {
+    positions.after = afterBar.top - CORNER_LABEL_MARGIN;
+  }
+  return positions;
+}
+
+/**
+ * Draws one zone-state block: a solid-colour bar centred on valueToX(value),
+ * with height valueToHeight(value) — one number drives both dimensions at
+ * once, which is what makes the block visibly "move" along the spectral
+ * scale AND change height as the zone's CI shifts. Replaces the old
+ * buildOverlayBar (which spread a block across a min–max RANGE with an
+ * internal gradient) — there is no range anymore, only the single
+ * zone-level ciZoneWeighted number the server gives us, so a flat fill at
+ * that one colour is the honest representation, not a gradient implying a
+ * spread we don't have data for.
+ *
+ * Width is a proportion of the plot area (10% each side, ~20% of plotWidth
+ * total), not a fixed pixel value — the earlier fixed 22px read as far too
+ * thin against the ~450px plot, leaving the chart looking sparse (flagged
+ * 2026-08-12). At the scale's extreme edges (value pinned near 0.25 or
+ * 1.50) a bar this wide sits close to the Y-axis tick labels without quite
+ * touching them — a known, accepted minor tradeoff, not addressed here.
+ */
+function buildStateBar(uid, id, value, opacity, defsOut) {
+  const { baselineY, plotLeft, plotRight } = BAR_GEOMETRY;
+  const halfWidth = (plotRight - plotLeft) * 0.10;
+  const cx = valueToX(value);
+  const x0 = cx - halfWidth, x1 = cx + halfWidth;
+  const h = valueToHeight(value);
   const top = baselineY - h;
-  const gradId = `${id}-grad-${uid}`;
-  defsOut.push(buildGradientDef(gradId, x0, x1, top, top,
-    t => valueToHex(range.min + t * (range.max - range.min))));
+  const color = valueToHex(value);
   return {
-    markup: `<rect id="${id}-${uid}" x="${x0.toFixed(2)}" y="${top.toFixed(2)}" width="${Math.max(2, x1 - x0).toFixed(2)}" height="${h.toFixed(2)}" fill="url(#${gradId})" opacity="${opacity}"/>
+    markup: `<rect id="${id}-${uid}" x="${x0.toFixed(2)}" y="${top.toFixed(2)}" width="${(x1 - x0).toFixed(2)}" height="${h.toFixed(2)}" fill="${color}" opacity="${opacity}"/>
       <line x1="${x0.toFixed(2)}" y1="${top.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${top.toFixed(2)}" stroke="#fff" stroke-width="${opacity < 1 ? 0.5 : 1}" opacity="${opacity}"/>`,
-    x0, x1, top, h,
+    x0, x1, top, h, cx, value,
   };
 }
 
-// The "current" state is no longer a plain rectangle. Per Sergei: its
-// WIDTH should match the "normal" (non-outlier) range — same as the ghost
-// behind it — and the outlier's own contribution becomes a separate strip
-// attached to the main block's left edge, stepping DOWN to the outlier's
-// own real height rather than being folded into one uniform bar. One
-// connected silhouette: tall block for the zone, short step where the
-// outlier sits, joined at the seam.
-//
-// EVERY boundary value gets a number at the fixed label row (min, max,
-// and the outlier's own low value) — leaving any edge unlabelled reads as
-// "this width was picked arbitrarily", which is exactly what Sergei
-// flagged. Ghost's own min/max already cover the main block's left/right
-// edges (they're the same x — normal range on both), so only the strip's
-// own left edge needs a label the ghost doesn't already provide.
-function buildCurrentStepShape(uid, withAnomaly, withoutAnomaly, tia, opacity, defsOut) {
-  const { baselineY } = BAR_GEOMETRY;
-  const strokeOpacity = 0.75; // reference file uses a slightly different stroke vs fill opacity
-  const mainX0 = valueToX(withoutAnomaly.min), mainX1 = valueToX(withAnomaly.max);
-  const mainH = valueToHeight(withAnomaly.mean);
-  const mainTop = baselineY - mainH;
-  const mainGradId = `tiabar-current-main-grad-${uid}`;
-  defsOut.push(buildGradientDef(mainGradId, mainX0, mainX1, mainTop, mainTop,
-    t => valueToHex(withoutAnomaly.min + t * (withAnomaly.max - withoutAnomaly.min))));
-  let markup = `<rect x="${mainX0.toFixed(2)}" y="${mainTop.toFixed(2)}" width="${Math.max(2, mainX1 - mainX0).toFixed(2)}" height="${mainH.toFixed(2)}" fill="url(#${mainGradId})" opacity="${opacity}"/>
-    <line x1="${mainX0.toFixed(2)}" y1="${mainTop.toFixed(2)}" x2="${mainX1.toFixed(2)}" y2="${mainTop.toFixed(2)}" stroke="#fff" stroke-width="0.7" opacity="${strokeOpacity}"/>`;
-
-  let stripX0 = mainX0;
-  if (tia) {
-    const stripX0v = Math.min(tia.ciWeighted, withoutAnomaly.min);
-    stripX0 = valueToX(stripX0v);
-    const stripH = valueToHeight(tia.ciWeighted);
-    const stripTop = baselineY - stripH;
-    const stripGradId = `tiabar-current-strip-grad-${uid}`;
-    defsOut.push(buildGradientDef(stripGradId, stripX0, mainX0, stripTop, stripTop,
-      t => valueToHex(stripX0v + t * (withoutAnomaly.min - stripX0v))));
-    markup += `<rect x="${stripX0.toFixed(2)}" y="${stripTop.toFixed(2)}" width="${Math.max(2, mainX0 - stripX0).toFixed(2)}" height="${stripH.toFixed(2)}" fill="url(#${stripGradId})" opacity="${opacity}"/>
-      <line x1="${stripX0.toFixed(2)}" y1="${stripTop.toFixed(2)}" x2="${mainX0.toFixed(2)}" y2="${stripTop.toFixed(2)}" stroke="#fff" stroke-width="0.7" opacity="${strokeOpacity}"/>
-      <line x1="${mainX0.toFixed(2)}" y1="${stripTop.toFixed(2)}" x2="${mainX0.toFixed(2)}" y2="${mainTop.toFixed(2)}" stroke="#fff" stroke-width="0.7" opacity="${strokeOpacity}"/>`;
-    markup += `<text x="${((stripX0 + mainX0) / 2).toFixed(2)}" y="${(stripTop - 8).toFixed(2)}" text-anchor="middle" font-size="9.5" fill="#ccc" font-family="Arial, sans-serif">${tia.targetName || 'outlier'}</text>`;
-    markup += buildCornerLabel(stripX0, stripTop) + buildCornerValue(stripX0, stripX0v, {});
-  }
-
-  return { markup, x0: stripX0, x1: mainX1, top: mainTop, h: mainH };
-}
-
-// "could have been" stays as a small right-side reference; the "current"
-// mean moved up near the zone name (it's the headline number — promoted
-// to a more prominent spot, per Sergei's reference file).
-function buildGhostLegend(withoutBar, withoutAnomaly) {
+// "before" stays as a small right-side reference, same legend column the
+// old "could have been" text used — renamed, not moved. The "after" mean
+// lives near the zone name (the headline number).
+function buildBeforeLegend(beforeBar, beforeValue) {
   const { legendX, legendLineEndX } = BAR_GEOMETRY;
-  const line1Y = withoutBar.top - 6.4;
+  const line1Y = beforeBar.top - 6.4;
   const line2Y = line1Y + 31.62;
-  return `<line x1="${withoutBar.x1.toFixed(2)}" y1="${withoutBar.top.toFixed(2)}" x2="${legendLineEndX}" y2="${withoutBar.top.toFixed(2)}" stroke="#7c7b7b" stroke-width="0.5" stroke-dasharray="1,2"/>
-    <text x="${legendX}" y="${line1Y.toFixed(2)}" font-size="11.5" fill="#999" font-family="Arial, sans-serif">could have been</text>
-    <text x="${legendX}" y="${line2Y.toFixed(2)}" font-size="12" fill="#ccc" font-family="Arial, sans-serif">mean ${withoutAnomaly.mean.toFixed(3)}</text>`;
+  return `<line x1="${beforeBar.x1.toFixed(2)}" y1="${beforeBar.top.toFixed(2)}" x2="${legendLineEndX}" y2="${beforeBar.top.toFixed(2)}" stroke="#7c7b7b" stroke-width="0.5" stroke-dasharray="1,2"/>
+    <text x="${legendX}" y="${line1Y.toFixed(2)}" font-size="11.5" fill="#999" font-family="Arial, sans-serif">before</text>
+    <text x="${legendX}" y="${line2Y.toFixed(2)}" font-size="12" fill="#ccc" font-family="Arial, sans-serif">CI_zone ${beforeValue.toFixed(3)}</text>`;
 }
 
-// Faint secondary reference line at the current bar's own top height —
-// present in the reference file even though the "current" text label
-// itself now lives up near the zone name, not next to this line.
-function buildCurrentReferenceLine(withBar) {
+// Faint secondary reference line at the "after" bar's own top height —
+// ties the after value to the same right-side column, without a duplicate
+// text label (the after value is already the prominent headline number).
+function buildAfterReferenceLine(afterBar) {
   const { legendLineEndX } = BAR_GEOMETRY;
-  return `<line x1="${withBar.x1.toFixed(2)}" y1="${withBar.top.toFixed(2)}" x2="${legendLineEndX}" y2="${withBar.top.toFixed(2)}" stroke="#888" stroke-width="0.7" stroke-dasharray="1,2"/>`;
+  return `<line x1="${afterBar.x1.toFixed(2)}" y1="${afterBar.top.toFixed(2)}" x2="${legendLineEndX}" y2="${afterBar.top.toFixed(2)}" stroke="#888" stroke-width="0.7" stroke-dasharray="1,2"/>`;
 }
-
-
 
 function buildResultsSummary(data) {
   const parts = [];
-  if (data.withAnomaly) {
-    parts.push(`current range: ${data.withAnomaly.min.toFixed(3)} \u2013 ${data.withAnomaly.max.toFixed(3)}, mean ${data.withAnomaly.mean.toFixed(3)}`);
-  }
-  if (data.withoutAnomaly) {
-    parts.push(`without outlier: ${data.withoutAnomaly.min.toFixed(3)} \u2013 ${data.withoutAnomaly.max.toFixed(3)}, mean ${data.withoutAnomaly.mean.toFixed(3)}`);
-  }
+  if (data.ciZoneWeightedBefore !== undefined) parts.push(`before ${data.ciZoneWeightedBefore.toFixed(3)}`);
+  if (data.ciZoneWeightedAfter !== undefined) parts.push(`after ${data.ciZoneWeightedAfter.toFixed(3)}`);
   if (!parts.length) return '';
   const cx = (BAR_GEOMETRY.plotLeft + BAR_GEOMETRY.plotRight) / 2;
-  let out = `<text x="${cx.toFixed(2)}" y="${BAR_GEOMETRY.footerY + 45}" text-anchor="middle" font-size="11.5" fill="#c8c8c8" font-family="Arial, sans-serif">${parts.join('   \u00b7   ')}</text>`;
-  if (data.tia && data.tia.targetName) {
-    const magnitude = Math.abs(data.tia.deltaCIWeighted).toFixed(3);
-    out += `<text x="${cx.toFixed(2)}" y="${BAR_GEOMETRY.footerY + 65}" text-anchor="middle" font-size="11" fill="#aaa" font-family="Arial, sans-serif">${data.tia.targetName} (CI ${data.tia.ciWeighted.toFixed(3)}) pulls the zone mean down by ${magnitude}</text>`;
+  let out = `<text x="${cx.toFixed(2)}" y="${BAR_GEOMETRY.footerY + 45}" text-anchor="middle" font-size="11.5" fill="#c8c8c8" font-family="Arial, sans-serif">${parts.join('   →   ')}</text>`;
+  if (data.deltaCIWeighted !== undefined) {
+    const sign = data.deltaCIWeighted >= 0 ? '+' : '';
+    const decisionSuffix = data.decision ? `  —  ${data.decision}` : '';
+    out += `<text x="${cx.toFixed(2)}" y="${BAR_GEOMETRY.footerY + 65}" text-anchor="middle" font-size="11" fill="#aaa" font-family="Arial, sans-serif">ΔCI_zone ${sign}${data.deltaCIWeighted.toFixed(3)}${decisionSuffix}</text>`;
   }
   return out;
 }
@@ -273,32 +300,31 @@ function buildSVG(uid, data) {
   const zoneIdLabel = data.zoneIdLabel || '';
   const defsOut = [];
 
-  let withoutBar = null, withBar = null, bars = '', ghostLegend = '', currentRefLine = '';
-  if (data.withoutAnomaly) {
-    withoutBar = buildOverlayBar(uid, 'tiabar-ghost', data.withoutAnomaly, 0.45, defsOut);
-    bars += withoutBar.markup;
-    // Every boundary gets a number — leaving the ghost's own min/max
-    // unlabelled was exactly what made the width look arbitrary.
-    bars += buildCornerLabel(withoutBar.x0, withoutBar.top) + buildCornerValue(withoutBar.x0, data.withoutAnomaly.min, {});
-    bars += buildCornerLabel(withoutBar.x1, withoutBar.top) + buildCornerValue(withoutBar.x1, data.withoutAnomaly.max, { bold: true });
-    ghostLegend = buildGhostLegend(withoutBar, data.withoutAnomaly);
+  let beforeBar = null, afterBar = null, bars = '', beforeLegend = '', afterRefLine = '';
+  const hasBefore = data.ciZoneWeightedBefore !== undefined;
+  const hasAfter = data.ciZoneWeightedAfter !== undefined;
+
+  if (hasBefore) beforeBar = buildStateBar(uid, 'tiabar-before', data.ciZoneWeightedBefore, 0.45, defsOut);
+  if (hasAfter) afterBar = buildStateBar(uid, 'tiabar-after', data.ciZoneWeightedAfter, 0.71, defsOut);
+  const labelY = computeLabelPositions(beforeBar, afterBar);
+
+  if (beforeBar) {
+    bars += beforeBar.markup;
+    bars += buildCornerLabel(beforeBar.cx, beforeBar.top, labelY.before) + buildCornerValue(beforeBar.cx, labelY.before, data.ciZoneWeightedBefore, {});
+    beforeLegend = buildBeforeLegend(beforeBar, data.ciZoneWeightedBefore);
   }
-  if (data.withAnomaly && data.withoutAnomaly) {
-    withBar = buildCurrentStepShape(uid, data.withAnomaly, data.withoutAnomaly, data.tia, 0.71, defsOut);
-    bars += withBar.markup;
-    currentRefLine = buildCurrentReferenceLine(withBar);
-  } else if (data.withAnomaly) {
-    withBar = buildOverlayBar(uid, 'tiabar-real', data.withAnomaly, 0.71, defsOut);
-    bars += buildCornerLabel(withBar.x0, withBar.top) + buildCornerValue(withBar.x0, data.withAnomaly.min, {});
-    bars += buildCornerLabel(withBar.x1, withBar.top) + buildCornerValue(withBar.x1, data.withAnomaly.max, { bold: true });
-    bars += withBar.markup;
+  if (afterBar) {
+    bars += buildCornerLabel(afterBar.cx, afterBar.top, labelY.after) + buildCornerValue(afterBar.cx, labelY.after, data.ciZoneWeightedAfter, { bold: true });
+    bars += afterBar.markup;
+    if (beforeBar) afterRefLine = buildAfterReferenceLine(afterBar);
   }
 
-  const zoneNameCx = withBar ? (withBar.x0 + withBar.x1) / 2 : (BAR_GEOMETRY.plotLeft + BAR_GEOMETRY.plotRight) / 2;
+  const headlineBar = afterBar || beforeBar;
+  const zoneNameCx = headlineBar ? headlineBar.cx : (BAR_GEOMETRY.plotLeft + BAR_GEOMETRY.plotRight) / 2;
   const spectrum = buildSpectrumBar(uid, defsOut);
-  const meanForCategory = data.withAnomaly ? data.withAnomaly.mean : undefined;
-  const currentLabel = data.withAnomaly
-    ? `<text x="${zoneNameCx.toFixed(2)}" y="${BAR_GEOMETRY.currentLabelY}" text-anchor="middle" font-size="12" fill="#fff" font-family="Arial, sans-serif">Current mean ${data.withAnomaly.mean.toFixed(3)}</text>`
+  const meanForCategory = hasAfter ? data.ciZoneWeightedAfter : (hasBefore ? data.ciZoneWeightedBefore : undefined);
+  const currentLabel = hasAfter
+    ? `<text x="${zoneNameCx.toFixed(2)}" y="${BAR_GEOMETRY.currentLabelY}" text-anchor="middle" font-size="12" fill="#fff" font-family="Arial, sans-serif">CI_zone (after) ${data.ciZoneWeightedAfter.toFixed(3)}</text>`
     : '';
 
   return `<svg viewBox="0 0 ${vbW} ${vbH}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -312,8 +338,8 @@ function buildSVG(uid, data) {
     <line x1="${BAR_GEOMETRY.plotLeft}" y1="${BAR_GEOMETRY.baselineY}" x2="${BAR_GEOMETRY.plotRight}" y2="${BAR_GEOMETRY.baselineY}" stroke="#333" stroke-width="1"/>
     ${buildYAxis()}
     ${bars}
-    ${currentRefLine}
-    ${ghostLegend}
+    ${afterRefLine}
+    ${beforeLegend}
     ${buildCategoryRow(meanForCategory)}
     ${spectrum}
     <text x="${((BAR_GEOMETRY.plotLeft + BAR_GEOMETRY.plotRight) / 2).toFixed(2)}" y="${(BAR_GEOMETRY.tickLabelY + 24).toFixed(2)}" text-anchor="middle" font-size="11.34" letter-spacing="3" fill="#9b9a9a" font-family="Arial, sans-serif">CHRONITY INDEX (WEIGHTED)   -   SPECTRAL SCALE</text>
@@ -336,64 +362,19 @@ const instances = new Map();
  * renderTIABar(containerId, data)
  * data = {
  *   zoneName, zoneIdLabel,
- *   withAnomaly:    { min, max, mean },  // the zone's real state: ALL
- *     // measured objects, including the flagged low outlier
- *   withoutAnomaly: { min, max, mean },  // the zone's real state if the
- *     // outlier had never been measured: min/max/mean computed over the
- *     // REMAINING objects only — a strict statistic, not an illustrative
- *     // guess. (An earlier version of this file widened this range for
- *     // visual effect; that was a misreading — Sergei's actual point is
- *     // simpler: 8 objects give one real number, adding the 9th (low)
- *     // object pulls it down, and THAT real difference is what the chart
- *     // shows. Widening this range artificially shrinks the outlier's own
- *     // step in buildCurrentStepShape almost to nothing, which is exactly
- *     // the bug that prompted this correction.)
- *   tia: { targetName, ciWeighted, deltaCIWeighted },
+ *   ciZoneWeightedBefore,   // zone CI(weighted) before the scenario —
+ *                           // handleComputeTIA's ciZoneWeightedBefore, verbatim
+ *   ciZoneWeightedAfter,    // zone CI(weighted) after the scenario —
+ *                           // handleComputeTIA's ciZoneWeightedAfter, verbatim
+ *   deltaCIWeighted,        // handleComputeTIA's deltaCIWeighted, verbatim
+ *   decision,               // handleComputeTIA's decision string, verbatim
  * }
+ * All four scenario fields are optional independently — omit
+ * ciZoneWeightedBefore for a plain "current state, no scenario" snapshot
+ * (draws only the after bar), or pass only ciZoneWeightedBefore for a
+ * "before we intervene" preview. A response straight from computeTIA can be
+ * passed through with just zoneName/zoneIdLabel added — no adapter needed.
  */
-/**
- * computeZoneStats(objects, thresholdFraction = 0.9)
- *
- * Takes the zone's raw measured objects and derives everything renderTIABar
- * needs — no more hand-typed min/max/mean, which is exactly how the wrong
- * "illustrative" numbers snuck in earlier in this file's history.
- *
- * objects: [{ name, ciRaw, psm }]  (psm defaults to 1.0 if omitted)
- * thresholdFraction: an object is flagged as the outlier if its CI_raw
- *   falls below (thresholdFraction × the zone's simple CI_raw mean) — the
- *   same "-10% of the current mean" rule from the TIA methodology
- *   (thresholdFraction 0.9 = 10% below).
- *
- * Returns { withAnomaly, withoutAnomaly, tia } ready to spread into
- * renderTIABar's data object, or null in `tia` if nothing crosses the
- * threshold (no outlier to flag).
- */
-export function computeZoneStats(objects, thresholdFraction = 0.9) {
-  const weighted = objects.map(o => ({ name: o.name, ciRaw: o.ciRaw, w: o.ciRaw * (o.psm !== undefined ? o.psm : 1.0) }));
-  const stat = list => ({
-    min: Math.min(...list.map(o => o.w)),
-    max: Math.max(...list.map(o => o.w)),
-    mean: list.reduce((s, o) => s + o.w, 0) / list.length,
-  });
-
-  const withAnomaly = stat(weighted);
-
-  const meanCiRaw = objects.reduce((s, o) => s + o.ciRaw, 0) / objects.length;
-  const threshold = meanCiRaw * thresholdFraction;
-  const flagged = weighted.filter(o => o.ciRaw < threshold).sort((a, b) => a.ciRaw - b.ciRaw)[0];
-
-  if (!flagged) return { withAnomaly, withoutAnomaly: withAnomaly, tia: null };
-
-  const remaining = weighted.filter(o => o.name !== flagged.name);
-  const withoutAnomaly = stat(remaining);
-  const tia = {
-    targetName: flagged.name,
-    ciWeighted: flagged.w,
-    deltaCIWeighted: withAnomaly.mean - withoutAnomaly.mean, // negative: the outlier pulls the current mean down from what it'd be without it
-  };
-  return { withAnomaly, withoutAnomaly, tia };
-}
-
 export function renderTIABar(containerId, data) {
   injectGlobalStyles();
   const container = document.getElementById(containerId);

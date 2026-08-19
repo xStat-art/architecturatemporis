@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log Intervention — ATRC</title>
+<meta name="description" content="ATRC field entry for a real TIA intervention: full methodological path (S/E-parameters → PI/AD/II → CI), not a manual CI slider.">
+<meta name="author" content="Sergei Tatarnikov">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* LIGHT THEME — deliberate, field-forms only (not the desktop tools:
+     map/passport/registry/tia.html/simulator.html keep their dark theme).
+     Sergei, 2026-08-14: dark-on-light reads far better in direct sunlight
+     than light-on-dark, which is what actually gets used outdoors filling
+     this form. Same variable names as the dark-theme pages for a smaller
+     diff, values swapped/recalibrated for outdoor contrast — plain grey on
+     white washes out in bright light, so the "muted" tones here are darker
+     than a typical light-theme UI would use. */
+  :root {
+    --black:   #171512;
+    --dark:    #FAF9F5;       /* page background — warm off-white, not pure white (glare) */
+    --white:   #1C1A15;       /* primary text — near-black */
+    --off-white: #FFFFFF;
+    --grey-1:  #FFFFFF;       /* card background */
+    --grey-2:  #DDD7C4;       /* surface fill: input bg, badges, toggle track, result box, secondary buttons */
+    --grey-3:  #6B6656;       /* secondary text — labels, nav, eyebrow — also anything sitting ON --grey-2 */
+    --grey-4:  #7A7566;       /* tertiary text — hints, disabled — only ever on --dark/--grey-1, never on --grey-2 */
+    --grey-5:  #A79F82;       /* crisp border tone — inputs/selects, distinct from --grey-2 fill */
+    --orange:  #C8650A;
+    --orange-bright: #A8540A; /* darker, not brighter, for hover — brighter would lose contrast on light bg */
+    --good:    #1E7A42;
+    --bad:     #B0241A;
+    --font-display: 'Arial Black','Helvetica Neue',Arial,sans-serif;
+    --font-body:    Arial,'Helvetica Neue',sans-serif;
+    --font-mono:    'Courier New',Courier,monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body);
+    font-size: 16px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background: var(--dark); color: var(--white);
+  }
+
+  /* ── NAV (matches tia.html) ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: var(--dark); border-bottom: 1px solid var(--grey-2);
+    padding: 0 48px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: var(--font-body); font-size: 13px; font-weight: bold;
+    letter-spacing: 3px; color: var(--white); text-decoration: none;
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; }
+  .nav-links a {
+    font-size: 12px; color: var(--grey-3); text-decoration: none;
+    letter-spacing: 1.5px; text-transform: uppercase; transition: color .2s;
+    white-space: nowrap;
+  }
+  .nav-links a:hover { color: var(--white); }
+  @media (max-width: 480px) {
+    .nav-links { gap: 14px; }
+    .nav-links a { font-size: 10px; letter-spacing: 1px; }
+  }
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-toggle-btn {
+    font-family: var(--font-body); font-size: 11px; font-weight: bold; letter-spacing: 1px;
+    color: var(--grey-3); background: transparent; border: 1px solid var(--grey-2);
+    border-radius: 4px; padding: 4px 9px; cursor: pointer;
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .lang-toggle-btn:hover { color: var(--white); border-color: var(--grey-3); }
+  .lang-toggle-btn.active { color: var(--white); background: var(--grey-2); border-color: var(--grey-3); }
+
+  .inner { max-width: 760px; margin: 0 auto; padding: 0 48px; }
+
+  .hero { padding: 140px 0 30px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 4px; color: var(--grey-3);
+    text-transform: uppercase; margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: var(--font-display); font-size: clamp(26px, 4vw, 38px);
+    letter-spacing: -1px; margin-bottom: 14px;
+  }
+  .hero p { max-width: 620px; font-size: 14.5px; color: var(--grey-4); }
+
+  .content { padding: 10px 0 80px; }
+
+  .card {
+    background: var(--grey-1); border: 1px solid var(--grey-2); border-radius: 10px;
+    padding: 22px 24px; margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--grey-3);
+    padding-bottom: 10px; margin-bottom: 16px; border-bottom: 1px solid var(--grey-2);
+  }
+  .card p.hint { font-size: 12.5px; color: var(--grey-4); margin-bottom: 14px; line-height: 1.6; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .field-row.single { grid-template-columns: 1fr; }
+  @media (max-width: 620px) { .field-row { grid-template-columns: 1fr; } }
+
+  label.field-label {
+    font-size: 11px; letter-spacing: 1px; color: var(--grey-3); text-transform: uppercase;
+    display: block; margin-bottom: 6px;
+  }
+  label.field-label .unit { text-transform: none; letter-spacing: 0; color: var(--grey-4); }
+
+  select, input[type=text], input[type=number], input[type=date], textarea {
+    width: 100%; background: var(--grey-2); color: var(--white);
+    border: 1px solid var(--grey-5); border-radius: 6px;
+    padding: 10px 12px; font-size: 13.5px; font-family: inherit;
+  }
+  select:disabled, input:disabled { opacity: .4; }
+  textarea { resize: vertical; min-height: 60px; }
+
+  input[type=range] { width: 100%; accent-color: var(--orange); }
+  .range-row { display: flex; align-items: center; gap: 10px; }
+  .range-row output { font-family: var(--font-mono); font-size: 13px; min-width: 42px; text-align: right; color: var(--white); }
+  .range-bounds { display: flex; justify-content: space-between; font-size: 10px; color: var(--grey-4); margin-top: 2px; }
+  .eparam-note { margin-top: 5px; font-size: 11px; color: var(--grey-3); line-height: 1.5; }
+  .eparam-note-source { color: var(--grey-4); font-style: italic; }
+
+  .subgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px; }
+  @media (max-width: 620px) { .subgrid { grid-template-columns: 1fr 1fr; } }
+
+  .readonly-badge {
+    display: inline-block; font-size: 10px; letter-spacing: .5px; color: var(--grey-3);
+    background: var(--grey-2); padding: 2px 7px; border-radius: 4px; margin-left: 6px;
+  }
+
+  .empty-note { font-size: 12.5px; color: var(--grey-4); font-style: italic; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+  button.uibtn {
+    font-family: inherit; font-size: 13px; font-weight: 700; letter-spacing: .4px;
+    padding: 12px 18px; border-radius: 7px; border: 1px solid var(--grey-2);
+    cursor: pointer; background: var(--grey-2); color: var(--white);
+    transition: all .15s ease;
+  }
+  button.uibtn.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+  button.uibtn.primary:hover { background: var(--orange-bright); }
+  button.uibtn.primary:disabled { opacity: .35; cursor: not-allowed; background: var(--grey-2); border-color: var(--grey-2); color: var(--grey-4); }
+  button.uibtn:not(.primary):hover { border-color: var(--grey-4); }
+
+  .toggle-row { display: flex; gap: 8px; background: var(--grey-2); border-radius: 8px; padding: 3px; margin-bottom: 14px; }
+  .toggle-btn {
+    flex: 1; padding: 9px 8px; font-size: 12px; font-weight: 700; letter-spacing: .3px;
+    text-align: center; border-radius: 6px; cursor: pointer; color: var(--grey-3); transition: all .15s;
+  }
+  .toggle-btn.active { background: var(--orange); color: #fff; }
+
+  .result-box {
+    border-radius: 8px; padding: 16px 18px; margin-top: 4px;
+    border: 1px solid var(--grey-2); background: var(--grey-2);
+  }
+  .result-row { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; font-size: 13px; }
+  .result-row b { font-family: var(--font-mono); font-size: 16px; }
+  .result-row.delta b.pos { color: var(--good); }
+  .result-row.delta b.neg { color: var(--bad); }
+  .result-row.delta b.zero { color: var(--grey-3); }
+
+  .status-msg { font-size: 12.5px; margin-top: 12px; line-height: 1.6; }
+  .status-msg.ok { color: var(--good); }
+  .status-msg.err { color: var(--bad); }
+  .status-msg a { color: var(--orange-bright); }
+
+  .unsupported-note {
+    font-size: 11.5px; color: var(--grey-4); background: var(--grey-2);
+    border-left: 3px solid var(--orange); border-radius: 4px; padding: 8px 10px; margin-top: 8px;
+  }
+
+  /* ── anchor scale hints (Appendix J v2.0, §J.4) ── */
+  details.anchor-scale { margin-top: 5px; }
+  details.anchor-scale summary {
+    font-size: 10.5px; color: var(--orange); cursor: pointer; list-style: none;
+    letter-spacing: .3px;
+  }
+  details.anchor-scale summary::-webkit-details-marker { display: none; }
+  details.anchor-scale summary::before { content: "▸ "; }
+  details.anchor-scale[open] summary::before { content: "▾ "; }
+  details.anchor-scale .scale-table {
+    margin-top: 6px; font-size: 11px; color: var(--grey-3); line-height: 1.6;
+    background: var(--grey-2); border-radius: 5px; padding: 8px 10px;
+  }
+  details.anchor-scale .scale-table div { display: flex; gap: 6px; }
+  details.anchor-scale .scale-table b { font-family: var(--font-mono); min-width: 16px; color: var(--white); }
+  details.anchor-scale .scale-source { display: block; margin-top: 4px; font-size: 9.5px; color: var(--grey-4); font-style: italic; }
+
+  /* ── new/unlisted object picker (map, ported from simulator.html) ── */
+  .new-object-panel {
+    border: 1px solid var(--grey-5); border-radius: 8px; padding: 16px; margin-top: 10px;
+    background: var(--off-white);
+  }
+  .new-object-panel .subtitle { font-size: 11.5px; color: var(--grey-4); margin-bottom: 12px; line-height: 1.6; }
+  #objectPickerMap {
+    width: 100%; height: 280px; border-radius: 8px; border: 1px solid var(--grey-5);
+    margin: 10px 0; background: #eee;
+  }
+  .map-btn-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .map-status { font-size: 11px; color: var(--grey-4); }
+  .picked-point {
+    font-size: 12px; color: var(--good); margin-top: 8px; font-family: var(--font-mono);
+  }
+  .osm-building-hint { pointer-events: auto; cursor: pointer; }
+
+  footer {
+    border-top: 1px solid var(--grey-2); padding: 32px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--grey-3); flex-wrap: wrap; gap: 12px;
+  }
+  @media (max-width: 600px) {
+    .inner { padding: 0 24px; } nav { padding: 0 24px; } footer { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<script src="i18n.js" defer></script>
+
+<nav>
+  <a href="field-workspace.html" class="nav-logo">ATRC</a>
+  <ul class="nav-links">
+    <li><a href="field-workspace.html" data-i18n="tia.nav.back">← Field Workspace</a></li>
+    <li><a href="tia.html" data-i18n="entry.nav.tia">TIA Viewer</a></li>
+  </ul>
+  <div class="lang-toggle">
+    <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
+    <button type="button" class="lang-toggle-btn" data-lang="sr" data-i18n="lang.toggle.sr">SR</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="inner">
+    <p class="eyebrow" data-i18n="entry.eyebrow">Architectura Temporis Research Centre · Field Workspace</p>
+    <h1 data-i18n="entry.h1">Log Intervention</h1>
+    <p data-i18n="entry.hero.p">Records a real TIA intervention on one object, the full methodological way: assess the object's current state, apply the AT_ImpactMatrix type's rule, and the resulting CI is calculated — not typed in by hand. That's what separates this from the TIA Live Simulator, which stays a quick "what if" sandbox with a plain CI slider.</p>
+  </div>
+</div>
+
+<div class="content">
+  <div class="inner">
+
+    <!-- STEP 1 — zone / object / type -->
+    <div class="card">
+      <h2 data-i18n="entry.step1.title">1 · Zone, object, intervention type</h2>
+      <div class="field-row">
+        <div>
+          <label class="field-label" for="zoneSelect" data-i18n="tia.zonePicker.label">Zone</label>
+          <select id="zoneSelect">
+            <option value="hn001">Herceg Novi Old Town · ZN·ME·BJ·HN·001</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="objectSelect" data-i18n="entry.objectPicker.label">Object</label>
+          <select id="objectSelect" disabled>
+            <option value="" data-i18n="entry.loading">Loading live registry…</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- NEW/UNLISTED OBJECT PANEL — temporary bridge until KotorBaseline_TZ's
+           proper object-digitization mode exists (see memory
+           project_kotor_baseline_zone_tz_13aug2026, Шаг 3). Map picking reuses
+           simulator.html's loadUnmeasuredBuildings()/Overpass pattern verbatim
+           (same query, same click-to-select mechanic) rather than a fresh
+           implementation — same OSM building footprints, same fallback: if
+           OSM has nothing there (small/unmapped structure), click anywhere
+           else inside the zone boundary — or its 50m visibility buffer,
+           added 2026-08-14, see BUFFER_METERS in the script below — to
+           drop a manual pin instead. -->
+      <div class="new-object-panel" id="newObjectPanel" style="display:none;">
+        <p class="subtitle" data-i18n="entry.newObj.subtitle">Temporary bridge until proper object digitization exists (KotorBaseline_TZ). Pick the building's real footprint from OpenStreetMap if it's mapped, or drop a pin manually if it isn't.</p>
+        <div class="field-row single">
+          <div>
+            <label class="field-label" for="newObjName" data-i18n="entry.newObj.name">Object name</label>
+            <input type="text" id="newObjName" placeholder="—">
+          </div>
+        </div>
+        <div class="map-btn-row">
+          <button type="button" class="uibtn" id="loadBuildingsPickerBtn" data-i18n="entry.newObj.loadBuildings">Load building footprints (OSM)</button>
+          <span class="map-status" id="pickerMapStatus" data-i18n="entry.newObj.mapHint">Click a footprint to select it, or click empty ground inside the zone (or its shaded 50m buffer) to drop a pin.</span>
+        </div>
+        <div id="objectPickerMap"></div>
+        <div class="unsupported-note" id="pickerMapUnavailableNote" style="display:none;" data-i18n="entry.newObj.mapUnavailable">Map picker unavailable for this zone (boundary geometry not found) — use the text location field below instead.</div>
+        <div class="picked-point" id="pickedPointDisplay" style="display:none;"></div>
+        <div class="field-row single">
+          <div>
+            <label class="field-label" for="newObjLocationText" data-i18n="entry.newObj.locationFallback">Rough location — text fallback (only if you couldn't place a point on the map above)</label>
+            <input type="text" id="newObjLocationText" placeholder="e.g. street name / landmark / description">
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row single">
+        <div>
+          <label class="field-label" for="typeSelect" data-i18n="entry.typePicker.label">Intervention type (AT_ImpactMatrix, 25 types)</label>
+          <select id="typeSelect" disabled>
+            <option value="" data-i18n="entry.loading">Loading catalog…</option>
+          </select>
+          <div id="unsupportedNote" class="unsupported-note" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 — current state -->
+    <div class="card" id="beforeCard" style="display:none;">
+      <h2 data-i18n="entry.step2.title">2 · Object's current state (assess fresh, as in the field)</h2>
+      <p class="hint" data-i18n="entry.step2.hint">AD/II are auto-filled from the live registry (editable if you want to re-verify). The six PI components are NOT stored per-object in the registry — only their combined PI is — so assess them fresh here, same anchor scale as the CI Field Data form.</p>
+      <div class="subgrid">
+        <div>
+          <label class="field-label" data-i18n="entry.param.A1">A1 — Acoustics <span class="unit">(0–5)</span></label>
+          <input type="number" id="beforeA1" min="0" max="5" step="0.5">
+          <details class="anchor-scale"><summary data-i18n="entry.anchor.summary">Anchor scale</summary>
+            <div class="scale-table">
+              <div><b>5</b><span data-i18n="entry.anchor.A1.5">≤ 40 dB — deep quiet, natural sounds only</span></div>
+              <div><b>4</b><span data-i18n="entry.anchor.A1.4">41–50 dB — quiet, occasional distant traffic</span></div>
+              <div><b>3</b><span data-i18n="entry.anchor.A1.3">51–60 dB — moderate, continuous ambient noise</span></div>
+              <div><b>2</b><span data-i18n="entry.anchor.A1.2">61–70 dB — significant urban noise</span></div>
+              <div><b>1</b><span data-i18n="entry.anchor.A1.1">&gt; 70 dB — high noise, concentration difficult</span></div>
+              <span class="scale-source">Appendix J v2.0, §J.4</span>
+            </div>
+          </details>
+        </div>
+        <div>
+          <label class="field-label" data-i18n="entry.param.PMI">PMI — Patina <span class="unit">(1–5)</span></label>
+          <input type="number" id="beforePMI" min="1" max="5" step="0.5">
+          <details class="anchor-scale"><summary data-i18n="entry.anchor.summary">Anchor scale</summary>
+            <div class="scale-table">
+              <div><b>5</b><span data-i18n="entry.anchor.PMI.5">Exceptional — stratified layers from different periods, biological component integrated, surface reads as living</span></div>
+              <div><b>4</b><span data-i18n="entry.anchor.PMI.4">Mature — differentiation by relief legible, possible moss at joints</span></div>
+              <div><b>3</b><span data-i18n="entry.anchor.PMI.3">Forming — uniform colour change, no relief differentiation yet</span></div>
+              <div><b>2</b><span data-i18n="entry.anchor.PMI.2">New/neutral — original material, no time trace</span></div>
+              <div><b>1</b><span data-i18n="entry.anchor.PMI.1">Cleaned/damaged — no patina layer visible</span></div>
+              <span class="scale-source" data-i18n="entry.anchor.PMI.note">Applies to Type A/B materials only — Type C/D surfaces record PMI = 3 (neutral). Appendix J v2.0, §J.4.</span>
+            </div>
+          </details>
+        </div>
+        <div>
+          <label class="field-label" data-i18n="entry.param.VQI">VQI — Visual <span class="unit">(0–5)</span></label>
+          <input type="number" id="beforeVQI" min="0" max="5" step="0.5">
+          <details class="anchor-scale"><summary data-i18n="entry.anchor.summary">Anchor scale</summary>
+            <div class="scale-table">
+              <div><b>5</b><span data-i18n="entry.anchor.VQI.5">Exceptional — deep historical field, no pollution, total coherence</span></div>
+              <div><b>4</b><span data-i18n="entry.anchor.VQI.4">High — significant historical depth, minimal visual pollution</span></div>
+              <div><b>3</b><span data-i18n="entry.anchor.VQI.3">Neutral — mixed context, moderate pollution</span></div>
+              <div><b>2</b><span data-i18n="entry.anchor.VQI.2">Degraded — significant anachronistic elements</span></div>
+              <div><b>1</b><span data-i18n="entry.anchor.VQI.1">High pollution — synthetic environment, no historical legibility</span></div>
+              <span class="scale-source" data-i18n="entry.anchor.VQI.note">Average of 3 sub-scores (historical depth of field, spatial coherence, visual pollution), rounded to nearest 0.5. Appendix J v2.0, §J.4.</span>
+            </div>
+          </details>
+        </div>
+        <div>
+          <label class="field-label" data-i18n="entry.param.B2">B2 — Light <span class="unit">(0–5)</span></label>
+          <input type="number" id="beforeB2" min="0" max="5" step="0.5">
+          <details class="anchor-scale"><summary data-i18n="entry.anchor.summary">Anchor scale</summary>
+            <div class="scale-table">
+              <div><b>5</b><span data-i18n="entry.anchor.B2.5">Exceptional — light scenario fully intact as designed</span></div>
+              <div><b>4</b><span data-i18n="entry.anchor.B2.4">High — historically correct, minor deviations</span></div>
+              <div><b>3</b><span data-i18n="entry.anchor.B2.3">Neutral — partially intact, significant modifications present</span></div>
+              <div><b>2</b><span data-i18n="entry.anchor.B2.2">Degraded — major alterations to original light scenario</span></div>
+              <div><b>1</b><span data-i18n="entry.anchor.B2.1">Lost — light regime completely transformed</span></div>
+              <span class="scale-source" data-i18n="entry.anchor.B2.note">"Light Scenario" per Appendix J v2.0 — do not confuse with CI_Field_Guide_v2's older "B2 = Shadow gaps" naming, which predates Appendix J and is not used by this form. §J.4.</span>
+            </div>
+          </details>
+        </div>
+        <div>
+          <label class="field-label" data-i18n="entry.param.C1">C1 — Tactile <span class="unit">(0–5)</span></label>
+          <input type="number" id="beforeC1" min="0" max="5" step="0.5">
+          <details class="anchor-scale"><summary data-i18n="entry.anchor.summary">Anchor scale</summary>
+            <div class="scale-table">
+              <div><b>5</b><span data-i18n="entry.anchor.C1.5">Exceptional — rough limestone, aged timber, patinated bronze</span></div>
+              <div><b>4</b><span data-i18n="entry.anchor.C1.4">High — brick, unpolished concrete, terracotta</span></div>
+              <div><b>3</b><span data-i18n="entry.anchor.C1.3">Moderate — smooth concrete, aged plaster</span></div>
+              <div><b>2</b><span data-i18n="entry.anchor.C1.2">Low — painted metal, modern render</span></div>
+              <div><b>1</b><span data-i18n="entry.anchor.C1.1">Absent — PVC, anodised aluminium, plastic cladding</span></div>
+              <span class="scale-source">Appendix J v2.0, §J.4</span>
+            </div>
+          </details>
+        </div>
+        <div>
+          <label class="field-label" data-i18n="entry.param.C2">C2 — Smell <span class="unit">(0–5)</span></label>
+          <input type="number" id="beforeC2" min="0" max="5" step="0.5">
+          <details class="anchor-scale"><summary data-i18n="entry.anchor.summary">Anchor scale</summary>
+            <div class="scale-table">
+              <div><b>5</b><span data-i18n="entry.anchor.C2.5">Exceptional — earth, moss, aged stone, old timber, mineral dampness</span></div>
+              <div><b>4</b><span data-i18n="entry.anchor.C2.4">High — aged brick, uncoated concrete, natural clay</span></div>
+              <div><b>3</b><span data-i18n="entry.anchor.C2.3">Neutral — no dominant smell, or faint material scent</span></div>
+              <div><b>2</b><span data-i18n="entry.anchor.C2.2">Low — faint synthetic/chemical component present</span></div>
+              <div><b>1</b><span data-i18n="entry.anchor.C2.1">Synthetic/chemical — plastic, industrial solvents, artificial fragrance</span></div>
+              <span class="scale-source">Appendix J v2.0, §J.4</span>
+            </div>
+          </details>
+        </div>
+        <div><label class="field-label" data-i18n="entry.param.AD">AD <span class="readonly-badge" id="adSourceBadge" data-i18n="entry.fromRegistry">from registry</span></label><input type="number" id="beforeAD" min="0" max="1" step="0.01"></div>
+        <div><label class="field-label" data-i18n="entry.param.II">II <span class="readonly-badge" id="iiSourceBadge" data-i18n="entry.fromRegistry">from registry</span></label><input type="number" id="beforeII" min="0" max="100" step="1"></div>
+      </div>
+    </div>
+
+    <!-- STEP 3 — S / extra vars / E-parameters, built dynamically -->
+    <div class="card" id="paramsCard" style="display:none;">
+      <h2 data-i18n="entry.step3.title">3 · Intervention parameters</h2>
+      <div id="sFieldWrap" style="display:none; margin-bottom:16px;">
+        <label class="field-label" id="sFieldLabel" data-i18n="entry.sField.label">Coverage share (S)</label>
+        <div class="range-row">
+          <input type="range" id="sRange" min="0" max="100" step="1" value="50">
+          <output id="sRangeVal">50%</output>
+        </div>
+      </div>
+      <div id="extraVarsWrap"></div>
+      <div id="eParamsWrap"></div>
+      <p class="empty-note" id="a15Note" style="display:none;" data-i18n="entry.a15.note">A15 — Conservation without changes: every parameter stays as measured, ΔCI = 0. No further input needed.</p>
+    </div>
+
+    <!-- STEP 4 — calculate -->
+    <div class="card" id="calcCard" style="display:none;">
+      <h2 data-i18n="entry.step4.title">4 · Calculate</h2>
+      <div class="btn-row">
+        <button class="uibtn primary" id="calcBtn" data-i18n="entry.calcBtn">Calculate CI(after)</button>
+      </div>
+      <div class="result-box" id="resultBox" style="display:none; margin-top:16px;">
+        <div class="result-row"><span data-i18n="entry.result.ciBefore">CI (before)</span><b id="resCiBefore">—</b></div>
+        <div class="result-row"><span data-i18n="entry.result.ciAfter">CI (after)</span><b id="resCiAfter">—</b></div>
+        <div class="result-row delta"><span data-i18n="entry.result.delta">ΔCI</span><b id="resDelta">—</b></div>
+      </div>
+    </div>
+
+    <!-- STEP 5 — destination + submit -->
+    <div class="card" id="submitCard" style="display:none;">
+      <h2 data-i18n="entry.step5.title">5 · Record the entry</h2>
+      <div class="toggle-row">
+        <div class="toggle-btn active" id="destLogBtn" data-i18n="entry.dest.log">Journal entry (ZONE_INTERVENTION_LOG)</div>
+        <div class="toggle-btn" id="destScenarioBtn" data-i18n="entry.dest.scenario">Test scenario (TIA_SCENARIOS)</div>
+      </div>
+
+      <div class="unsupported-note" id="tptWarning" style="display:none;" data-i18n="entry.tptWarning">TPT_min_CI threshold hasn't been calculated for this zone yet (fewer than 5 measured objects). The intervention will still be logged, but automatic threshold checking isn't available.</div>
+
+      <div id="logFields">
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="dateField" data-i18n="entry.date.label">Date</label>
+            <input type="date" id="dateField">
+          </div>
+          <div>
+            <label class="field-label" for="statusField" data-i18n="entry.status.label">Status</label>
+            <select id="statusField">
+              <option value="draft" data-i18n="entry.status.draft">Draft</option>
+              <option value="approved" data-i18n="entry.status.approved">Approved</option>
+              <option value="implemented" data-i18n="entry.status.implemented">Implemented</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row single">
+        <div>
+          <label class="field-label" for="researcherField" data-i18n="entry.researcher.label">Researcher name</label>
+          <input type="text" id="researcherField" placeholder="—">
+        </div>
+      </div>
+      <div class="field-row single">
+        <div>
+          <label class="field-label" for="notesField" data-i18n="entry.notes.label">Notes (optional)</label>
+          <textarea id="notesField"></textarea>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="uibtn primary" id="submitBtn" disabled data-i18n="entry.submitBtn">Submit</button>
+      </div>
+      <div class="status-msg" id="submitStatus"></div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <div data-i18n="footer.org">Architectura Temporis Research Centre (ATRC) · Herceg Novi, Montenegro · Est. 2024</div>
+  <div data-i18n="footer.motto">Understanding before change</div>
+</footer>
+
+<script type="module">
+import { loadCatalog, findType, applyIntervention } from './pi-calc.js';
+
+// Same live backend as simulator.html / zone-editor — see
+// ACAP_AppsScript_v8_1.gs. Same REGISTRY_CSV publish as passport.html.
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxWlgW4Iqj6a2mjdO8I0f52XIVT8dqal0YnwM4z0CqJGxFT27SePt-QzFDImhd5QSGr/exec';
+const API_SECRET = 'hn-zones-secret-8k3f2m';
+const REGISTRY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
+// Same spreadsheet as REGISTRY_CSV, ZONES sheet — same URL explore.html uses as ZONES_CSV.
+const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1462679093&single=true&output=csv';
+
+// ZoneSelector_TZ (14aug2026): Zone 001 stays the default the form opens on,
+// but is no longer the only option — see zoneSelect, populated live from the
+// ZONES sheet below. DEFAULT_ZONE_ID/selectedZoneId replaces the old
+// hardcoded ZONE_ID constant everywhere it was used.
+const DEFAULT_ZONE_ID = 'ZN·ME·BJ·HN·001';
+let selectedZoneId = DEFAULT_ZONE_ID;
+
+let catalog = null;
+let zones = []; // [{zoneId, name, tptMinCi, ring}] — loaded from ZONES_CSV
+let zonesById = new Map();
+let allRegistryRows = []; // full PASSPORT_REGISTRY, unfiltered — filterZoneObjects() derives zoneObjects per selected zone
+let zoneObjects = []; // [{cpId, objectName, adCurrent, iiCurrent, ciCurrent}] — for the CURRENTLY selected zone only
+let selectedType = null;
+
+const el = id => document.getElementById(id);
+const zoneSelect = el('zoneSelect'), objectSelect = el('objectSelect'), typeSelect = el('typeSelect');
+const unsupportedNote = el('unsupportedNote');
+const beforeCard = el('beforeCard'), paramsCard = el('paramsCard'), calcCard = el('calcCard'), submitCard = el('submitCard');
+const sFieldWrap = el('sFieldWrap'), sFieldLabel = el('sFieldLabel'), sRange = el('sRange'), sRangeVal = el('sRangeVal');
+const extraVarsWrap = el('extraVarsWrap'), eParamsWrap = el('eParamsWrap'), a15Note = el('a15Note');
+const calcBtn = el('calcBtn'), resultBox = el('resultBox');
+const destLogBtn = el('destLogBtn'), destScenarioBtn = el('destScenarioBtn'), logFields = el('logFields');
+const submitBtn = el('submitBtn'), submitStatus = el('submitStatus');
+
+let destination = 'log'; // 'log' | 'scenario'
+let lastResult = null;
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD: live registry (for the object picker + AD/II auto-fill) and the
+// AT_ImpactMatrix catalog (for the type picker + calculation engine).
+// ═══════════════════════════════════════════════════════════════
+function loadRegistry() {
+  return new Promise((resolve, reject) => {
+    Papa.parse(REGISTRY_CSV + '&t=' + Date.now(), {
+      download: true, header: true, skipEmptyLines: true,
+      complete: (res) => { allRegistryRows = res.data || []; resolve(); },
+      error: reject,
+    });
+  });
+}
+
+/** Derives zoneObjects for the currently selected zone from the full
+ * registry — re-run on every zone change instead of re-fetching the CSV. */
+function filterZoneObjects() {
+  zoneObjects = allRegistryRows
+    .filter(r => r.Zone_ID === selectedZoneId && r.CP_ID)
+    .map(r => ({
+      cpId: r.CP_ID,
+      objectName: r.Object_Name,
+      adCurrent: parseFloat(r.AD_current),
+      iiCurrent: parseFloat(r.II_current),
+      ciCurrent: parseFloat(r.CI_current),
+      // needed to (a) draw existing objects as reference dots on the
+      // new-object picker map, (b) skip OSM footprints that are
+      // basically on top of an already-measured object
+      lat: parseFloat(r.GPS_Lat_anchor),
+      lng: parseFloat(r.GPS_Lon_anchor),
+    }));
+}
+
+/** Loads the ZONES sheet for the zone picker, the TPT_min_CI warning, and
+ * each zone's own boundary geometry (for the new-object map picker). Never
+ * rejects — an unreachable sheet shouldn't break the form, it just leaves
+ * the static Zone 001 option (already in the HTML) and the hardcoded
+ * DEFAULT_ZONE_RING fallback in place (see applyZoneGeometry()). */
+function loadZones() {
+  return new Promise((resolve) => {
+    Papa.parse(ZONES_CSV + '&t=' + Date.now(), {
+      download: true, header: true, skipEmptyLines: true,
+      complete: (res) => {
+        zones = (res.data || [])
+          .filter(r => r.Zone_ID)
+          .map(r => ({
+            zoneId: r.Zone_ID,
+            name: (r.Name || '').trim(),
+            tptMinCi: r.TPT_min_CI === '' || r.TPT_min_CI == null ? null : Number(r.TPT_min_CI),
+            ring: parseZoneRing(r.Polygon_GeoJSON),
+          }));
+        zonesById = new Map(zones.map(z => [z.zoneId, z]));
+        resolve();
+      },
+      error: () => resolve(),
+    });
+  });
+}
+
+/** ZONES.Polygon_GeoJSON -> [[lng,lat], ...] ring, same shape/convention as
+ * the old hardcoded ZONE_RING literal below. Null on anything unparsable,
+ * which updatePickerAvailabilityUI() treats as "no map picker for this
+ * zone" rather than a hard error. */
+function parseZoneRing(geoJsonStr) {
+  try {
+    const coords = JSON.parse(geoJsonStr).coordinates[0];
+    return (Array.isArray(coords) && coords.length >= 3) ? coords : null;
+  } catch (e) { return null; }
+}
+
+const NEW_OBJECT_VALUE = '__new__';
+
+function populateObjectSelect() {
+  objectSelect.innerHTML = '';
+  // Plain English, not data-i18n — same as every other JS-generated label in
+  // this form (type names, E-parameter labels): i18n.js only re-scans the
+  // DOM on a language-toggle click, so anything inserted after the initial
+  // page load wouldn't pick up a translation until the user toggles anyway.
+  const newOptionHtml = `<option value="${NEW_OBJECT_VALUE}">+ New / unlisted object (temporary)</option>`;
+  if (!zoneObjects.length) {
+    objectSelect.innerHTML = '<option value="">— no objects found for this zone —</option>' + newOptionHtml;
+    objectSelect.disabled = false;
+    return;
+  }
+  objectSelect.innerHTML = '<option value="">— select object —</option>' +
+    zoneObjects.map(o => `<option value="${o.cpId}">${o.objectName} (CI ${isNaN(o.ciCurrent) ? '—' : o.ciCurrent.toFixed(3)})</option>`).join('') +
+    newOptionHtml;
+  objectSelect.disabled = false;
+}
+
+function populateTypeSelect() {
+  typeSelect.innerHTML = '<option value="">— select intervention type —</option>';
+  const groupA = document.createElement('optgroup');
+  groupA.label = 'Group A — object';
+  const groupB = document.createElement('optgroup');
+  groupB.label = 'Group B — environment';
+  catalog.types.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    const disabledMark = t.supported === false ? ' (not supported yet)' : '';
+    opt.textContent = `${t.id} — ${t.name}${disabledMark}`;
+    if (t.supported === false) opt.disabled = true;
+    (t.group === 'B' ? groupB : groupA).appendChild(opt);
+  });
+  typeSelect.appendChild(groupA);
+  typeSelect.appendChild(groupB);
+  typeSelect.disabled = false;
+}
+
+Promise.all([loadRegistry(), loadZones(), loadCatalog('./AT_ImpactMatrix_structured_13aug2026.json')])
+  .then(([, , cat]) => {
+    catalog = cat;
+    populateZoneSelect();
+    applyZoneGeometry(selectedZoneId);
+    filterZoneObjects();
+    populateObjectSelect();
+    populateTypeSelect();
+    updateTptWarning();
+  })
+  .catch(err => {
+    objectSelect.innerHTML = '<option value="">— could not load —</option>';
+    typeSelect.innerHTML = '<option value="">— could not load —</option>';
+    console.error(err);
+  });
+
+// ═══════════════════════════════════════════════════════════════
+// ZONE SELECTION — ZoneSelector_TZ (14aug2026). Populates zoneSelect from
+// the live ZONES sheet, drives the object list + new-object map picker
+// geometry per selected zone, and the TPT_min_CI warning below.
+// ═══════════════════════════════════════════════════════════════
+
+/** Rebuilds zoneSelect's options from the live ZONES sheet. Shows "Name ·
+ * Zone_ID" when Name is a real human label; falls back to the bare Zone_ID
+ * when Name is empty or (true for every zone in the live sheet as of
+ * 14aug2026) just duplicates Zone_ID — no point showing the ID twice.
+ * Leaves the static Zone 001 option already in the HTML untouched if the
+ * sheet didn't load at all. */
+function populateZoneSelect() {
+  if (!zones.length) return;
+  zoneSelect.innerHTML = zones.map(z => {
+    const label = (z.name && z.name !== z.zoneId) ? `${z.name} · ${z.zoneId}` : z.zoneId;
+    return `<option value="${z.zoneId}">${label}</option>`;
+  }).join('');
+  zoneSelect.value = zonesById.has(selectedZoneId) ? selectedZoneId : zones[0].zoneId;
+  selectedZoneId = zoneSelect.value;
+}
+
+/** Sets zoneRing/zoneCenter for the selected zone — drives the new-object
+ * map picker (boundary, buffer, Overpass bbox, click-to-pick). Falls back
+ * to the known-good DEFAULT_ZONE_RING only for DEFAULT_ZONE_ID itself (so a
+ * ZONES_CSV outage never breaks the already-working Zone 001 flow); any
+ * other zone with no usable geometry just loses the map picker, not the
+ * whole form — see updatePickerAvailabilityUI(). */
+function applyZoneGeometry(zoneId) {
+  const z = zonesById.get(zoneId);
+  if (z && z.ring) {
+    zoneRing = z.ring;
+    zoneCenter = polygonCentroid(z.ring.map(([lng, lat]) => [lat, lng]));
+  } else if (zoneId === DEFAULT_ZONE_ID) {
+    zoneRing = DEFAULT_ZONE_RING;
+    zoneCenter = { lat: DEFAULT_CENTER_LAT, lng: DEFAULT_CENTER_LNG };
+  } else {
+    zoneRing = null;
+    zoneCenter = null;
+  }
+  updatePickerAvailabilityUI();
+}
+
+function updatePickerAvailabilityUI() {
+  const available = !!zoneRing;
+  el('loadBuildingsPickerBtn').style.display = available ? '' : 'none';
+  el('pickerMapStatus').style.display = available ? '' : 'none';
+  el('objectPickerMap').style.display = available ? '' : 'none';
+  el('pickerMapUnavailableNote').style.display = available ? 'none' : '';
+}
+
+/** Tears down the picker map's Leaflet instance so the next
+ * initObjectPickerMap() call rebuilds it against the NEW zone's geometry —
+ * the old memoized "if (pickerMap) return" pattern only made sense when
+ * there was exactly one possible zone. */
+function resetPickerMapForZoneChange() {
+  if (pickerMap) { pickerMap.remove(); pickerMap = null; }
+  pickerBuildingLayers.length = 0;
+  pickerManualMarker = null;
+  pickedPoint = null;
+  pickedPointDisplay.style.display = 'none';
+}
+
+/** Shown only while logging (not scenario-testing) to a zone whose
+ * TPT_min_CI isn't calculated yet — requirement 3/4 of ZoneSelector_TZ:
+ * warn, but never block the log entry itself. */
+function updateTptWarning() {
+  const z = zonesById.get(selectedZoneId);
+  const show = destination === 'log' && (!z || z.tptMinCi === null || z.tptMinCi === undefined);
+  el('tptWarning').style.display = show ? '' : 'none';
+}
+
+zoneSelect.addEventListener('change', () => {
+  selectedZoneId = zoneSelect.value;
+  applyZoneGeometry(selectedZoneId);
+  resetPickerMapForZoneChange();
+  filterZoneObjects();
+  populateObjectSelect();
+  newObjectPanel.style.display = 'none';
+  el('beforeAD').value = '';
+  el('beforeII').value = '';
+  refreshVisibility();
+  updateTptWarning();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// OBJECT SELECTION — auto-fill AD/II from the registry row, or reveal the
+// new/unlisted-object panel (map picker + text fallback).
+// ═══════════════════════════════════════════════════════════════
+const newObjectPanel = el('newObjectPanel');
+const newObjName = el('newObjName'), newObjLocationText = el('newObjLocationText');
+const pickedPointDisplay = el('pickedPointDisplay');
+
+function isNewObjectMode() { return objectSelect.value === NEW_OBJECT_VALUE; }
+
+function currentObject() {
+  return zoneObjects.find(o => o.cpId === objectSelect.value) || null;
+}
+
+/** Slugifies a name into the placeholder CP_ID scheme for unlisted objects —
+ * see the "(UNLISTED-...)" convention documented at submitLog() below. */
+function slugify(name) {
+  return String(name || 'object').trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'object';
+}
+
+/** Sets both source-badge texts defensively — 2026-08-14: a live browser
+ * test threw "Cannot set properties of null" here (el('adSourceBadge') or
+ * el('iiSourceBadge') came back null), aborting the whole change handler
+ * BEFORE initObjectPickerMap() ran below — which is why the map never
+ * initialized and the "Could not reach OpenStreetMap" message was a red
+ * herring (the fetch never even started). Every static check (id spelling,
+ * encoding, duplicate/Cyrillic-lookalike ids, tag balance, file sync) came
+ * back clean, so the exact trigger is still unconfirmed — this guard fixes
+ * the actual symptom (one bad DOM lookup must never be able to block map
+ * init) regardless of root cause, and initObjectPickerMap() is now called
+ * FIRST, before either badge is touched, so it can no longer be blocked by
+ * this at all even if the null reference recurs. */
+function setSourceBadges(text) {
+  const adBadge = el('adSourceBadge'), iiBadge = el('iiSourceBadge');
+  if (!adBadge || !iiBadge) {
+    console.warn('intervention-entry.html: adSourceBadge/iiSourceBadge not found in the DOM — skipping badge text update. This should not happen; check for a stale cached copy of this page (hard refresh: Ctrl+Shift+R).');
+    return;
+  }
+  adBadge.textContent = iiBadge.textContent = text;
+}
+
+objectSelect.addEventListener('change', () => {
+  newObjectPanel.style.display = isNewObjectMode() ? '' : 'none';
+  if (isNewObjectMode()) {
+    if (zoneRing) initObjectPickerMap();
+    el('beforeAD').value = '';
+    el('beforeII').value = '';
+    setSourceBadges('manual — new object');
+  } else {
+    const obj = currentObject();
+    if (obj) {
+      el('beforeAD').value = isNaN(obj.adCurrent) ? '' : obj.adCurrent;
+      el('beforeII').value = isNaN(obj.iiCurrent) ? '' : obj.iiCurrent;
+    }
+    setSourceBadges('from registry');
+  }
+  refreshVisibility();
+});
+newObjName.addEventListener('input', refreshVisibility);
+newObjLocationText.addEventListener('input', refreshVisibility);
+
+// ═══════════════════════════════════════════════════════════════
+// NEW/UNLISTED OBJECT MAP PICKER — ported from simulator.html's
+// loadUnmeasuredBuildings()/selectUnmeasuredBuilding() and the geometry
+// helpers it uses (ZONE_RING, ringBounds, pointInRing, polygonCentroid,
+// OVERPASS_URL), reused verbatim rather than rewritten. Purely local point
+// picking — no server round-trip until the whole form is submitted, unlike
+// simulator.html's live syncWithServer() on every click.
+// ═══════════════════════════════════════════════════════════════
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+// Zone 001's boundary (ZONES sheet, Polygon_GeoJSON) — same literal as
+// simulator.html, copied verbatim (not re-derived). Kept as a hardcoded
+// fallback (ZoneSelector_TZ, 14aug2026): applyZoneGeometry() falls back to
+// this for DEFAULT_ZONE_ID specifically if ZONES_CSV is unreachable, so a
+// sheet outage never breaks the already-working Zone 001 flow. Every OTHER
+// zone's geometry now comes live from ZONES.Polygon_GeoJSON via zoneRing.
+const DEFAULT_ZONE_RING = [[18.53786964512551,42.452779337455915],[18.537931400471525,42.45284450720106],[18.53852296654498,42.452619527687425],[18.5385119,42.452485],[18.5384661,42.4523134],[18.5383897,42.4521193],[18.5383897,42.4521193],[18.538099170612867,42.45170022270082],[18.538128681671225,42.451530066617885],[18.538091122142415,42.45135793150546],[18.537868461646017,42.451100826753134],[18.537855047528602,42.45087131159191],[18.53787919293995,42.450485486796325],[18.538083971998216,42.4502893475146],[18.5380692,42.4502754],[18.5379856,42.4501895],[18.5378899,42.450107],[18.537850993743803,42.450084134819825],[18.5377582,42.4500296],[18.5376043,42.4499754],[18.5375017,42.44996],[18.53748740792803,42.44996],[18.5374003,42.44996],[18.5372835,42.4499687],[18.5372356,42.449974],[18.5371604,42.4499905],[18.5370015,42.4500282],[18.536896312344684,42.45005384618961],[18.5368641,42.4500617],[18.536692,42.450118],[18.5365419,42.4501557],[18.536518719061064,42.450163040957804],[18.536449155236458,42.45009542610474],[18.53632574535606,42.44993318011155],[18.536019697690744,42.44980116101333],[18.53584551995198,42.44977884816701],[18.535741871664104,42.44988431040713],[18.535928687480084,42.45012510520437],[18.53625212601063,42.45034404110768],[18.5362561,42.4503656],[18.5363193,42.4504629],[18.5364068,42.4505867],[18.5365213,42.4507783],[18.536559481456337,42.450853192627946],[18.53666056334131,42.45110299281967],[18.536899688224775,42.45151271980305],[18.53697674181727,42.451798014516285],[18.536988571995465,42.45191780297464],[18.537123078492904,42.45211716338234],[18.5372092,42.4521109],[18.53724530431419,42.452120458017696],[18.5373161,42.4521392],[18.537359588517468,42.4521636041069],[18.5373815,42.4521759],[18.5374209,42.4522161],[18.5374977,42.4523446],[18.53754454220911,42.452419947895336],[18.5375562,42.4524387],[18.5377371,42.4526588],[18.537747767411567,42.45267000301382],[18.53787545697032,42.45278513416571],[18.53786964512551,42.452779337455915]];
+const DEFAULT_CENTER_LAT = 42.451752, DEFAULT_CENTER_LNG = 18.537204;
+let zoneRing = DEFAULT_ZONE_RING;
+let zoneCenter = { lat: DEFAULT_CENTER_LAT, lng: DEFAULT_CENTER_LNG };
+
+function ringBounds(ring, padRatio) {
+  padRatio = padRatio || 0;
+  let south = Infinity, north = -Infinity, west = Infinity, east = -Infinity;
+  ring.forEach(([lng, lat]) => {
+    if (lat < south) south = lat; if (lat > north) north = lat;
+    if (lng < west) west = lng; if (lng > east) east = lng;
+  });
+  const latPad = (north - south) * padRatio, lngPad = (east - west) * padRatio;
+  return { south: south - latPad, north: north + latPad, west: west - lngPad, east: east + lngPad };
+}
+
+function pointInRing(lng, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+function polygonCentroid(latlngs) {
+  let latSum = 0, lngSum = 0;
+  latlngs.forEach(([lat, lng]) => { latSum += lat; lngSum += lng; });
+  return { lat: latSum / latlngs.length, lng: lngSum / latlngs.length };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 50m SELECTION BUFFER — Sergei, 2026-08-14: objects just outside the
+// strict zone line still physically affect the zone through sightlines,
+// and on a subsequent survey of the NEIGHBOURING zone they naturally end
+// up over there instead — so no need to extend further than this.
+//
+// distanceToSegmentMeters/pointInPolygonWithTolerance already exist in
+// ACAP_AppsScript_v8_1.gs (lines ~1099-1146, built for GPS-accuracy
+// tolerance on zone-boundary checks) — ported here verbatim rather than
+// re-derived, only the argument order changed from ACAP's (lat,lon) to
+// this file's existing (lng,lat) convention (matches pointInRing above).
+// Used ONLY by the map picker below — this file never computes CI_zone,
+// so there's no "strict boundary" use of ZONE_RING to keep separate from.
+// ═══════════════════════════════════════════════════════════════
+const BUFFER_METERS = 50;
+
+/** Ported from ACAP_AppsScript_v8_1.gs's haversineMeters() — same formula. */
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Ported from ACAP_AppsScript_v8_1.gs's distanceToSegmentMeters() — same
+ * "sample 10 points along the segment, take the closest" approximation
+ * (not a full closest-point-on-segment projection): "good enough for a
+ * tolerance of tens of metres, not full geodesy" per that file's own
+ * comment, which is exactly this use case too. */
+function distanceToSegmentMeters(lng, lat, lng1, lat1, lng2, lat2) {
+  const STEPS = 10;
+  let minDist = Infinity;
+  for (let s = 0; s <= STEPS; s++) {
+    const t = s / STEPS;
+    const lat3 = lat1 + (lat2 - lat1) * t;
+    const lng3 = lng1 + (lng2 - lng1) * t;
+    const d = haversineMeters(lat, lng, lat3, lng3);
+    if (d < minDist) minDist = d;
+  }
+  return minDist;
+}
+
+function distanceToRingMeters(lng, lat, ring) {
+  let minDist = Infinity;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const d = distanceToSegmentMeters(lng, lat, ring[i][0], ring[i][1], ring[j][0], ring[j][1]);
+    if (d < minDist) minDist = d;
+  }
+  return minDist;
+}
+
+/** Ported from ACAP_AppsScript_v8_1.gs's pointInPolygonWithTolerance() —
+ * same "inside OR within toleranceMeters of the boundary" rule, reused here
+ * for the visibility buffer instead of GPS tolerance. */
+function pointNearRing(lng, lat, ring, toleranceMeters) {
+  if (pointInRing(lng, lat, ring)) return true;
+  return distanceToRingMeters(lng, lat, ring) <= toleranceMeters;
+}
+
+/** Approximate outward-offset polygon for the VISUAL buffer overlay only —
+ * the actual pointNearRing() selection check above never uses this, it
+ * tests distance-to-nearest-edge directly, which is exact regardless of
+ * polygon shape. This is a simple vertex-normal offset (average of the two
+ * adjacent edges' outward normals per vertex), not a real geodesic polygon
+ * buffer — this project has no geometry library for that, and for a
+ * roughly-convex zone boundary at this scale (a historic town core, a few
+ * hundred metres across) the approximation is visually accurate enough to
+ * show "roughly how far you can click." Validated against the real
+ * ZONE_RING (2026-08-14): 60/61 vertices land within ~0.1m of the target
+ * 50m offset; the one sharply concave vertex in this zone's boundary
+ * undershoots — a known, accepted limitation of vertex-normal offsetting
+ * at concave corners, not worth a full geometry library for a visual aid.
+ */
+function buildBufferRing(ring, meters) {
+  const pts = ring.slice();
+  if (pts.length > 1) {
+    const [flng, flat] = pts[0], [llng, llat] = pts[pts.length - 1];
+    if (flng === llng && flat === llat) pts.pop(); // drop explicit closing duplicate — its zero-length edge would skew that vertex's normal
+  }
+  const n = pts.length;
+  if (n < 3) return ring;
+
+  let area = 0; // shoelace sign tells us which normal rotation points outward, regardless of winding direction
+  for (let i = 0; i < n; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % n];
+    area += x1 * y2 - x2 * y1;
+  }
+  const ccw = area > 0;
+
+  const edgeNormal = ([ax, ay], [bx, by]) => {
+    const dx = bx - ax, dy = by - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    return ccw ? [dy / len, -dx / len] : [-dy / len, dx / len];
+  };
+
+  return pts.map(([lng, lat], i) => {
+    const n1 = edgeNormal(pts[(i - 1 + n) % n], [lng, lat]);
+    const n2 = edgeNormal([lng, lat], pts[(i + 1) % n]);
+    let nx = n1[0] + n2[0], ny = n1[1] + n2[1];
+    const nlen = Math.hypot(nx, ny) || 1;
+    nx /= nlen; ny /= nlen;
+    const latRad = lat * Math.PI / 180;
+    return [lng + (meters * nx) / (111320 * Math.cos(latRad)), lat + (meters * ny) / 111320];
+  });
+}
+
+let pickerMap = null;
+let pickerManualMarker = null;
+let pickedPoint = null; // {lat, lng, source: 'osm'|'manual'}
+const pickerBuildingLayers = [];
+
+function initObjectPickerMap() {
+  if (pickerMap) { setTimeout(() => pickerMap.invalidateSize(), 0); return; }
+  pickerMap = L.map('objectPickerMap', { zoomControl: true, attributionControl: true }).setView([zoneCenter.lat, zoneCenter.lng], 17);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 20,
+  }).addTo(pickerMap);
+  // 50m selection buffer, drawn as a donut (outer = offset ring, hole =
+  // strict zoneRing) so the translucent fill only covers the buffer band
+  // itself, not the zone interior — Leaflet supports multi-ring polygons
+  // (first ring = outer boundary, rest = holes) natively, no extra library.
+  const bufferRingLatLng = buildBufferRing(zoneRing, BUFFER_METERS).map(([lng, lat]) => [lat, lng]);
+  const zoneRingLatLng = zoneRing.map(([lng, lat]) => [lat, lng]);
+  L.polygon([bufferRingLatLng, zoneRingLatLng], {
+    fillOpacity: 0.10, fillColor: '#C8650A', color: '#C8650A', weight: 1.5, dashArray: '4 3', opacity: 0.55,
+  }).bindTooltip(`${BUFFER_METERS}m selection buffer — objects here still count toward this zone (visibility/sightline rationale)`, { sticky: true }).addTo(pickerMap);
+
+  L.polygon(zoneRingLatLng, { fillOpacity: 0, color: '#1b1e24', weight: 3, opacity: 0.5 }).addTo(pickerMap);
+
+  // Reference dots for already-measured objects — helps avoid re-adding one
+  // that's already in PASSPORT_REGISTRY under a proper CP_ID.
+  zoneObjects.forEach(o => {
+    if (isNaN(o.lat) || isNaN(o.lng)) return;
+    L.circleMarker([o.lat, o.lng], { radius: 5, weight: 1, color: '#fff', fillColor: '#555', fillOpacity: 1 })
+      .bindTooltip(o.objectName + ' (measured)', { direction: 'top' })
+      .addTo(pickerMap);
+  });
+
+  pickerMap.on('click', (e) => {
+    const { lat, lng } = e.latlng;
+    // Zone interior OR within the 50m visibility buffer — see BUFFER_METERS
+    // note above. Strictly outside even the buffer: ignore, same guard as
+    // simulator.html had for the strict boundary.
+    if (!pointNearRing(lng, lat, zoneRing, BUFFER_METERS)) return;
+    setManualPin(lat, lng);
+  });
+
+  setTimeout(() => pickerMap.invalidateSize(), 0);
+}
+
+function setPickedPoint(lat, lng, source, osmName) {
+  pickedPoint = { lat, lng, source };
+  if (osmName && !newObjName.value) newObjName.value = osmName;
+  pickedPointDisplay.style.display = '';
+  pickedPointDisplay.textContent = `${source === 'osm' ? 'OSM footprint' : 'Manual pin'}: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  refreshVisibility();
+}
+
+function setManualPin(lat, lng) {
+  if (pickerManualMarker) pickerMap.removeLayer(pickerManualMarker);
+  pickerManualMarker = L.marker([lat, lng]).addTo(pickerMap);
+  setPickedPoint(lat, lng, 'manual', null);
+}
+
+/** Ported from simulator.html's loadUnmeasuredBuildings(), same Overpass
+ * query/tag filter, adapted to just SELECT a footprint (no live server sync,
+ * no "hypothetical CI" concept — this is picking a real object's location,
+ * not simulating one). */
+async function loadBuildingsForPicker() {
+  const loadBtn = el('loadBuildingsPickerBtn');
+  const statusEl = el('pickerMapStatus');
+  // Guard, not just documentation: without this, a null pickerMap would
+  // throw inside the try/catch below and surface as "Could not reach
+  // OpenStreetMap" — a real but misleading message, since the fetch never
+  // even ran. This makes that failure mode diagnosable instead of looking
+  // like a network problem.
+  if (!pickerMap) {
+    statusEl.textContent = 'Map not initialized — try reselecting "+ New / unlisted object", or hard-refresh the page (Ctrl+Shift+R).';
+    return;
+  }
+  loadBtn.disabled = true;
+  statusEl.textContent = 'Fetching building footprints from OpenStreetMap…';
+
+  // Ratio-based padding (8% of the ring's own extent) isn't enough on its
+  // own here: for THIS zone (~230-320m across) 8% works out to only
+  // ~18-26m, less than the 50m selection buffer — Overpass would silently
+  // under-fetch the far side of the buffer. Pad by an absolute metre value
+  // instead (buffer + safety margin), which stays correct regardless of a
+  // given zone's own size (e.g. whatever Kotor's zone turns out to be).
+  const ringB = ringBounds(zoneRing, 0.02);
+  const midLatRad = ((ringB.south + ringB.north) / 2) * Math.PI / 180;
+  const padMeters = BUFFER_METERS + 20;
+  const latPad = padMeters / 111320;
+  const lngPad = padMeters / (111320 * Math.cos(midLatRad));
+  const b = {
+    south: ringB.south - latPad, north: ringB.north + latPad,
+    west: ringB.west - lngPad, east: ringB.east + lngPad,
+  };
+  const bbox = `${b.south},${b.west},${b.north},${b.east}`;
+  const query = `[out:json][timeout:20];(way["building"](${bbox}););out geom;`;
+
+  try {
+    const res = await fetch(OVERPASS_URL, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+    if (!res.ok) throw new Error('Overpass HTTP ' + res.status);
+    const data = await res.json();
+    const ways = (data.elements || []).filter(el2 => el2.type === 'way' && el2.geometry && el2.geometry.length >= 3);
+
+    let added = 0;
+    ways.forEach((way) => {
+      const latlngs = way.geometry.map(g => [g.lat, g.lon]);
+      const centroid = polygonCentroid(latlngs);
+      if (!pointNearRing(centroid.lng, centroid.lat, zoneRing, BUFFER_METERS)) return; // zone interior OR within the 50m buffer
+      const tooClose = zoneObjects.some(o => {
+        if (isNaN(o.lat) || isNaN(o.lng)) return false;
+        const dLat = (o.lat - centroid.lat) * 111320, dLng = (o.lng - centroid.lng) * 82170;
+        return Math.hypot(dLat, dLng) < 10;
+      });
+      if (tooClose) return;
+
+      const osmName = (way.tags && (way.tags.name || way.tags['addr:housenumber'])) || null;
+      const poly = L.polygon(latlngs, {
+        className: 'osm-building-hint', color: '#8a8a8a', weight: 1.2, dashArray: '3 2',
+        fillColor: '#8a8a8a', fillOpacity: 0.18, interactive: true,
+      }).addTo(pickerMap);
+      poly.bindTooltip(osmName || 'Unlisted footprint — click to select', { sticky: true });
+      poly.on('click', () => {
+        pickerBuildingLayers.forEach(p => p.setStyle({ color: '#8a8a8a', fillOpacity: 0.18 }));
+        poly.setStyle({ color: '#C8650A', fillOpacity: 0.32 });
+        setPickedPoint(centroid.lat, centroid.lng, 'osm', osmName);
+      });
+      pickerBuildingLayers.push(poly);
+      added++;
+    });
+
+    statusEl.textContent = added > 0
+      ? `${added} footprint${added > 1 ? 's' : ''} loaded — click one, or click empty ground for a manual pin.`
+      : 'No building footprints found here — click on the map to drop a manual pin.';
+  } catch (err) {
+    statusEl.textContent = 'Could not reach OpenStreetMap — click on the map to drop a manual pin instead.';
+  }
+  loadBtn.disabled = false;
+}
+
+el('loadBuildingsPickerBtn').addEventListener('click', loadBuildingsForPicker);
+
+// ═══════════════════════════════════════════════════════════════
+// TYPE SELECTION — build the dynamic S / extra-vars / E-parameter fields
+// ═══════════════════════════════════════════════════════════════
+typeSelect.addEventListener('change', () => {
+  selectedType = typeSelect.value ? findType(catalog, typeSelect.value) : null;
+  unsupportedNote.style.display = 'none';
+  if (selectedType && selectedType.supported === false) {
+    unsupportedNote.textContent = selectedType.unsupportedReason;
+    unsupportedNote.style.display = 'block';
+    selectedType = null;
+  }
+  buildDynamicFields();
+  refreshVisibility();
+});
+
+function buildDynamicFields() {
+  extraVarsWrap.innerHTML = '';
+  eParamsWrap.innerHTML = '';
+  sFieldWrap.style.display = 'none';
+  a15Note.style.display = 'none';
+  resultBox.style.display = 'none';
+  lastResult = null;
+  submitBtn.disabled = true;
+
+  if (!selectedType) return;
+
+  const isGradual = selectedType.classification === 'gradual' || selectedType.classification === 'gradual_resolved';
+  if (isGradual) {
+    sFieldWrap.style.display = '';
+    sFieldLabel.textContent = `S — coverage share (${selectedType.coverage_variable || 'S'})`;
+    sRange.value = 50;
+    sRangeVal.textContent = '50%';
+  }
+
+  (selectedType.extra_object_vars || []).forEach(v => {
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '14px';
+    wrap.innerHTML = `
+      <label class="field-label">${v.label}</label>
+      <input type="number" data-extravar="${v.var}" min="${v.min !== undefined ? v.min : ''}" max="${v.max !== undefined ? v.max : ''}" step="0.01">`;
+    extraVarsWrap.appendChild(wrap);
+  });
+
+  // 2026-08-14: every E-parameter slider now gets an explanation underneath
+  // (same visual role as .scale-source under Step 2's Anchor scale). Where
+  // the catalog has a real ep.note (sourced from AT_ImpactMatrix's own
+  // "Rule of change" column, ~16% of instances), show it verbatim with a
+  // source tag. Where it doesn't (~84% — the source document mostly gives
+  // only a short directional phrase, not a per-point breakdown of what -2
+  // vs -1 means; inventing that distinction per instance would mean making
+  // up methodology, so deliberately not doing that — see memory
+  // intervention-entry-form-tz), fall back to ONE generic explanation:
+  // Sergei's call, 2026-08-14, over writing 59 bespoke-but-fabricated notes.
+  // Its whole job is separating two things that are easy to conflate: this
+  // slider is a DELTA relative to the Step 2 value, not a fresh absolute
+  // score on the Step 2 anchor scale.
+  const EPARAM_GENERIC_NOTE = 'Δ — change relative to the current value (Step 2), not an absolute score. Negative degrades this parameter, positive improves it. For what the underlying 0–5 scale means, see the anchor scale in Step 2 above.';
+
+  (selectedType.e_parameters || []).forEach(ep => {
+    const [lo, hi] = ep.range;
+    const displayName = ep.param.replace(/_zone$/, '');
+    const noteHtml = ep.note
+      ? `${ep.note} <span class="eparam-note-source">(AT_ImpactMatrix)</span>`
+      : EPARAM_GENERIC_NOTE;
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '14px';
+    wrap.innerHTML = `
+      <label class="field-label">${displayName}</label>
+      <div class="range-row">
+        <input type="range" data-eparam="${ep.param}" min="${lo}" max="${hi}" step="0.5" value="${lo}">
+        <output>${lo}</output>
+      </div>
+      <div class="range-bounds"><span>${lo}</span><span>${hi}</span></div>
+      <div class="eparam-note">${noteHtml}</div>`;
+    const range = wrap.querySelector('input[type=range]');
+    const output = wrap.querySelector('output');
+    range.addEventListener('input', () => { output.textContent = range.value; });
+    eParamsWrap.appendChild(wrap);
+  });
+
+  if (!isGradual && !(selectedType.extra_object_vars || []).length && !(selectedType.e_parameters || []).length) {
+    a15Note.style.display = 'block'; // A15's own case, or any other zero-parameter type
+  }
+}
+
+sRange.addEventListener('input', () => { sRangeVal.textContent = sRange.value + '%'; });
+
+/** In new-object mode, a "valid" object needs a name AND either a map point
+ * (OSM footprint or manual pin) or the text fallback — matching the
+ * "coordinates OR just a text description, at minimum" requirement. */
+function hasValidNewObject() {
+  if (!isNewObjectMode()) return false;
+  const hasName = newObjName.value.trim().length > 0;
+  const hasPosition = !!pickedPoint || newObjLocationText.value.trim().length > 0;
+  return hasName && hasPosition;
+}
+
+function refreshVisibility() {
+  const hasObject = isNewObjectMode() ? hasValidNewObject() : !!objectSelect.value;
+  const hasType = !!selectedType;
+  beforeCard.style.display = hasObject ? '' : 'none';
+  paramsCard.style.display = (hasObject && hasType) ? '' : 'none';
+  calcCard.style.display = (hasObject && hasType) ? '' : 'none';
+  submitCard.style.display = 'none';
+  resultBox.style.display = 'none';
+  submitBtn.disabled = true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALCULATE
+// ═══════════════════════════════════════════════════════════════
+function collectBefore() {
+  return {
+    A1: parseFloat(el('beforeA1').value),
+    PMI: parseFloat(el('beforePMI').value),
+    VQI: parseFloat(el('beforeVQI').value),
+    B2: parseFloat(el('beforeB2').value),
+    C1: parseFloat(el('beforeC1').value),
+    C2: parseFloat(el('beforeC2').value),
+    AD: parseFloat(el('beforeAD').value),
+    II: parseFloat(el('beforeII').value),
+  };
+}
+
+function collectInputs() {
+  const inputs = { eDeltas: {}, extraVars: {} };
+  if (sFieldWrap.style.display !== 'none') inputs.S = parseFloat(sRange.value) / 100;
+  eParamsWrap.querySelectorAll('[data-eparam]').forEach(r => {
+    inputs.eDeltas[r.dataset.eparam] = parseFloat(r.value);
+  });
+  extraVarsWrap.querySelectorAll('[data-extravar]').forEach(inp => {
+    inputs.extraVars[inp.dataset.extravar] = parseFloat(inp.value);
+  });
+  return inputs;
+}
+
+function fmtDelta(d) {
+  const sign = d > 0 ? '+' : '';
+  const cls = d > 0.0005 ? 'pos' : d < -0.0005 ? 'neg' : 'zero';
+  return `<span class="${cls}">${sign}${d.toFixed(3)}</span>`;
+}
+
+calcBtn.addEventListener('click', () => {
+  const before = collectBefore();
+  const missing = Object.entries(before).filter(([, v]) => Number.isNaN(v));
+  if (missing.length) {
+    alert('Fill in every "current state" field before calculating (A1, PMI, VQI, B2, C1, C2, AD, II).');
+    return;
+  }
+  const inputs = collectInputs();
+  try {
+    lastResult = applyIntervention(selectedType, before, inputs);
+  } catch (err) {
+    alert(String(err.message || err));
+    return;
+  }
+  el('resCiBefore').textContent = lastResult.ciBefore.toFixed(3);
+  el('resCiAfter').textContent = lastResult.ciAfter.toFixed(3);
+  el('resDelta').innerHTML = fmtDelta(lastResult.deltaCI);
+  resultBox.style.display = '';
+  submitCard.style.display = '';
+  submitBtn.disabled = false;
+  el('dateField').valueAsDate = new Date();
+  submitStatus.textContent = '';
+  submitStatus.className = 'status-msg';
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DESTINATION TOGGLE — ZONE_INTERVENTION_LOG (dated journal row) vs
+// TIA_SCENARIOS (reuses the ALREADY-DEPLOYED computeTIA/save:true path —
+// a single-object scenario is just a one-key modify{} scenario, no backend
+// change needed for this branch).
+// ═══════════════════════════════════════════════════════════════
+destLogBtn.addEventListener('click', () => { destination = 'log'; destLogBtn.classList.add('active'); destScenarioBtn.classList.remove('active'); logFields.style.display = ''; updateTptWarning(); });
+destScenarioBtn.addEventListener('click', () => { destination = 'scenario'; destScenarioBtn.classList.add('active'); destLogBtn.classList.remove('active'); logFields.style.display = 'none'; updateTptWarning(); });
+
+/** Describes the picked position for the Notes field — ZONE_INTERVENTION_LOG
+ * has no GPS columns of its own (see ACAP_AppsScript_v8_1.gs §12), so for a
+ * new/unlisted object the rough position rides along in Notes instead. This
+ * is the "temporary bridge" — proper digitization with its own geometry
+ * field is KotorBaseline_TZ's job, not this form's. */
+function describeNewObjectPosition() {
+  if (pickedPoint) {
+    return `${pickedPoint.source === 'osm' ? 'OSM footprint centroid' : 'manual pin'} ${pickedPoint.lat.toFixed(6)}, ${pickedPoint.lng.toFixed(6)}`;
+  }
+  return `text location: "${newObjLocationText.value.trim()}"`;
+}
+
+async function submitLog() {
+  const isNew = isNewObjectMode();
+  const obj = isNew ? null : currentObject();
+  // "(UNLISTED-<slug>)" — deliberately different from computeTIA's own
+  // "(HYPOTHETICAL-N)" convention (simulator.html/ACAP_AppsScript_v8_1.gs):
+  // HYPOTHETICAL means "doesn't exist, testing a what-if"; UNLISTED means
+  // "physically exists, just not yet digitized under a real CP_ID" — not
+  // interchangeable, keep them visually distinct in the log.
+  const objectId = isNew ? `(UNLISTED-${slugify(newObjName.value)})` : obj.cpId;
+  const objectName = isNew ? newObjName.value.trim() : obj.objectName;
+  const notes = [
+    el('notesField').value || '',
+    isNew ? `[unlisted object, temporary ID — ${describeNewObjectPosition()}]` : '',
+  ].filter(Boolean).join(' ');
+
+  const payload = {
+    secret: API_SECRET,
+    action: 'logIntervention',
+    zoneId: selectedZoneId,
+    objectId,
+    objectName,
+    interventionType: selectedType.id,
+    newCiRaw: lastResult.ciAfter,
+    piAfter: lastResult.piAfter,
+    adAfter: lastResult.after.AD,
+    iiAfter: lastResult.after.II,
+    date: el('dateField').value,
+    status: el('statusField').value,
+    researcherName: el('researcherField').value || '',
+    notes,
+  };
+  const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
+  return res.json();
+}
+
+async function submitScenario() {
+  const isNew = isNewObjectMode();
+  const researcher = el('researcherField').value || 'unknown';
+  const noteSuffix = el('notesField').value ? ' · ' + el('notesField').value : '';
+
+  let scenario, objectLabel;
+  if (isNew) {
+    // computeTIA's scenario.add already exists precisely for "a point not in
+    // PASSPORT_REGISTRY" (see applyTiaScenario() in ACAP_AppsScript_v8_1.gs)
+    // — no backend change needed, this is the correct existing mechanism,
+    // cleaner than faking a modify{} entry against a placeholder cpId.
+    objectLabel = newObjName.value.trim();
+    scenario = {
+      add: [{
+        label: objectLabel,
+        ciRaw: lastResult.ciAfter,
+        lat: pickedPoint ? pickedPoint.lat : undefined,
+        lon: pickedPoint ? pickedPoint.lng : undefined,
+        // PSM omitted — server defaults to 1.0 (local), correct assumption
+        // for an as-yet-undesignated unlisted object.
+      }],
+    };
+  } else {
+    const obj = currentObject();
+    objectLabel = obj.objectName;
+    scenario = { modify: { [obj.cpId]: { ciRaw: lastResult.ciAfter } } };
+  }
+
+  const payload = {
+    secret: API_SECRET,
+    action: 'computeTIA',
+    zoneId: selectedZoneId,
+    scenario,
+    description: `intervention-entry.html test scenario · ${selectedType.id} on ${objectLabel}${isNew ? ' (unlisted)' : ''} · by ${researcher}${noteSuffix}`,
+    save: true,
+  };
+  const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
+  return res.json();
+}
+
+submitBtn.addEventListener('click', async () => {
+  if (!lastResult || !selectedType) return;
+  submitBtn.disabled = true;
+  submitStatus.textContent = 'Submitting…';
+  submitStatus.className = 'status-msg';
+  try {
+    const data = destination === 'log' ? await submitLog() : await submitScenario();
+    if (!data.ok) throw new Error(data.error || 'unknown error');
+    submitStatus.textContent = destination === 'log'
+      ? `Saved to ZONE_INTERVENTION_LOG — ${data.logId || ''}`
+      : `Saved to TIA_SCENARIOS — ${data.scenarioId || ''}`;
+    submitStatus.className = 'status-msg ok';
+  } catch (err) {
+    submitStatus.textContent = 'Could not submit — ' + (err.message || err) + '. Check your connection and try again.';
+    submitStatus.className = 'status-msg err';
+    submitBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

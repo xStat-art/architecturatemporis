@@ -214,7 +214,7 @@
 <body>
 
 <div class="app">
-  <div class="sandbox-banner">⚠ SANDBOX — <b>illustrative only.</b> Nothing you do here reads from or writes to the live CI registry.</div>
+  <div class="sandbox-banner">⚠ LIVE — connected to the real TIA backend (PASSPORT_REGISTRY via computeTIA). <b>Hypothetical:</b> nothing you do here is written back to the registry.</div>
 
   <div class="header">
     <div class="brand">
@@ -296,7 +296,7 @@
     </div>
 
     <div class="footnote">
-      Real zone boundary, real object coordinates and CI values, and the same colour science (400–700nm mapping, IDW power-2 interpolation) as the production Spectral CI Map. Intervention magnitudes are simplified/illustrative — not the production ΔCI protocol. Nothing here writes to the live registry. Requires an internet connection (CARTO tiles).
+      Real zone boundary, and real object coordinates, CI and PSM values, read live from PASSPORT_REGISTRY through the TIA backend (computeTIA) — same colour science (400–700nm mapping, IDW power-2 interpolation) as the production Spectral CI Map. CI_zone, ΔCI_zone and the decision verdict below are the real TIA computation (TIA_Article §5.5). Per-type intervention magnitudes (A2/A13/B6/…) are still a simplified stand-in for the full 25-type impact classification — pending. Nothing here writes to the live registry. Requires an internet connection (CARTO tiles + Apps Script backend).
     </div>
   </div>
 </div>
@@ -310,24 +310,22 @@ const ZONE_RING = [[18.53786964512551,42.452779337455915],[18.537931400471525,42
 
 const CENTER_LAT = 42.451752, CENTER_LNG = 18.537204;
 
-// Real measured objects, Zone 001 (Herceg Novi). Coordinates and CI
-// values match the live registry (ATRC · CI Field Data · 2026, ZONE
-// ZN·ME·BJ·HN·001). PSM = Protection Status Multiplier.
-const baseObjects = [
-  { id:'kanli',   name:'Kanli Kula Fortress',        ci:0.975, lat:42.452372, lng:18.538084, psm:1.2, kind:'measured' },
-  { id:'forte',   name:'Forte Mare Fortress',        ci:0.894, lat:42.450224, lng:18.536180, psm:1.5, kind:'measured' },
-  { id:'jeronim', name:'St. Jeronim',                ci:0.856, lat:42.450496, lng:18.537349, psm:1.2, kind:'measured' },
-  { id:'bella',   name:'Bellavista',                 ci:0.853, lat:42.451494, lng:18.537486, psm:1.2, kind:'measured' },
-  { id:'marka_v', name:'Marka Vojinovića',           ci:0.834, lat:42.451041, lng:18.537015, psm:1.2, kind:'measured' },
-  { id:'stepen',  name:'Stepenište Kralja Tvrtka I', ci:0.814, lat:42.451752, lng:18.537204, psm:1.2, kind:'measured' },
-  { id:'marka_c', name:'Marka Cara Street',          ci:0.746, lat:42.451060, lng:18.537451, psm:1.2, kind:'measured' },
-  { id:'clock',   name:'Clock Tower',                ci:0.746, lat:42.451551, lng:18.537208, psm:1.2, kind:'measured' },
-  { id:'zuta',    name:'Žuta kuća',                  ci:0.384, lat:42.451914, lng:18.537867, psm:1.0, kind:'measured' },
-];
+// v8.3: this used to hardcode the 9 Zone 001 pilot objects. The object
+// list now comes live from PASSPORT_REGISTRY via computeTIA (see
+// syncWithServer/applyServerState below) — objects is rebuilt from the
+// server response on every sync, never mutated locally.
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxWlgW4Iqj6a2mjdO8I0f52XIVT8dqal0YnwM4z0CqJGxFT27SePt-QzFDImhd5QSGr/exec';
+const API_SECRET = 'hn-zones-secret-8k3f2m';
+const ZONE_ID = 'ZN·ME·BJ·HN·001';
 
-// Working copy — interventions and added objects mutate this, resetAll()
-// restores it to baseObjects.
-let objects = baseObjects.map(o => ({...o}));
+let objects = [];
+
+// Hypothetical objects added this session (Add mode / unmeasured-building
+// click) — parallel array to currentScenario.add, same order, holding the
+// client-only bits the server doesn't need to know: a stable local id for
+// the Leaflet marker, and kind ('new' vs 'unmeasured') for marker style.
+let addLocalMeta = [];
+let currentScenario = { modify: {}, add: [] };
 
 const interventions = [
   { code:'A2',  label:'A2 — Material replacement (authentic)',      delta:+0.050, dir:'pos' },
@@ -345,11 +343,17 @@ const interventions = [
 
 // ═══════════════════════════════════════════════════════════════
 // REAL COLOR SCIENCE — ported verbatim from ATRC_CI_Map.html
-// (wavelengthToRGB / weightedToT / ciToColor / computeCIWeighted)
+// (wavelengthToRGB / weightedToT / ciToColor)
 // ═══════════════════════════════════════════════════════════════
 const PSM_MAX = 1.5, SPECTRUM_SPLIT = 0.8;
 
-function computeCIWeighted(ci, psm){
+// v8.3: this used to be the ONLY CI_weighted formula on the page. Now it's
+// a purely LOCAL approximation, used exclusively for instant visual
+// feedback while dragging the live-adjust slider (see
+// renderLiveAdjustCard) — never the displayed CI_zone/ΔCI/decision, which
+// always come from the server (computeTIA -> aggregateZoneCI,
+// ACAP_AppsScript_v8_1.gs section 11).
+function previewCIWeighted(ci, psm){
   const c = (psm===null || psm===undefined || isNaN(psm)) ? 1.0 : psm;
   return Math.min(ci*c, PSM_MAX);
 }
@@ -548,7 +552,10 @@ async function loadUnmeasuredBuildings(){
       // rectangle, not the actual zone outline
       if (!pointInRing(centroid.lng, centroid.lat, ZONE_RING)) return;
       // skip anything essentially on top of an already-measured object
-      const tooClose = baseObjects.some(o=>{
+      // (v8.3: objects is now the live server list, not the old hardcoded
+      // baseObjects — filtered to 'measured' so this doesn't also skip
+      // footprints near objects the user already placed this session)
+      const tooClose = objects.filter(o=>o.kind==='measured').some(o=>{
         const dLat=(o.lat-centroid.lat)*111320, dLng=(o.lng-centroid.lng)*82170;
         return Math.hypot(dLat,dLng) < 10;
       });
@@ -576,7 +583,7 @@ async function loadUnmeasuredBuildings(){
   loadBuildingsBtn.textContent = 'Reload buildings';
 }
 
-function selectUnmeasuredBuilding(poly, centroid, wayIdx){
+async function selectUnmeasuredBuilding(poly, centroid, wayIdx){
   const entry = buildingLayers.find(b=>b.wayIdx===wayIdx);
   // Already turned into a simulated object earlier this session — just
   // re-select it instead of adding a duplicate point.
@@ -585,13 +592,13 @@ function selectUnmeasuredBuilding(poly, centroid, wayIdx){
     if (obj){ renderLiveAdjustCard(obj); return; }
   }
   poly.setStyle({ color:'#C8650A', fillOpacity:0.32 });
-  const id = 'unm_' + wayIdx;
-  const obj = { id, name:'Unmeasured building (assumed baseline)', ci:0.50, lat:centroid.lat, lng:centroid.lng, psm:1.0, kind:'unmeasured' };
-  objects.push(obj);
+  const id = addHypotheticalObject(centroid.lat, centroid.lng, 0.50, 1.0, 'Unmeasured building (assumed baseline)', 'unmeasured');
   entry.objId = id;
-  const delta = recomputeAll();
-  showVerdict(delta);
-  renderLiveAdjustCard(obj, 'Baseline is an assumption (CI 0.50) — this building has not been field-measured. Adjust to explore how a renovation of it would move the zone.');
+  const data = await syncWithServer();
+  if (!data) return;
+  showVerdictFromServer(data.decision, data.deltaCIWeighted);
+  const obj = objects.find(o=>o.id===id);
+  if (obj) renderLiveAdjustCard(obj, 'Baseline is an assumption (CI 0.50) — this building has not been field-measured. Adjust to explore how a renovation of it would move the zone.');
 }
 
 
@@ -616,26 +623,27 @@ let mode = 'modify'; // 'modify' | 'add'
 let selectedObj = null;
 let newObjectCounter = 1;
 
-function zoneAvgWeighted(){
-  return objects.reduce((s,o)=> s+o.ciWeighted, 0) / objects.length;
-}
-
-function recomputeAll(){
-  objects.forEach(o=> o.ciWeighted = computeCIWeighted(o.ci, o.psm));
-
+// ═══════════════════════════════════════════════════════════════
+// RENDER — draws whatever object list it's given: the server-authoritative
+// `objects`, or a throw-away local preview built during a slider drag.
+// Purely a rendering function, doesn't know or care where ciWeighted
+// came from.
+// ═══════════════════════════════════════════════════════════════
+function renderMapFromObjects(renderObjects){
   const gridSize = 96;
-  const grid = computeIDWGrid(objects, zoneBounds, gridSize, 2);
+  const grid = computeIDWGrid(renderObjects, zoneBounds, gridSize, 2);
   const dataURL = renderGradientCanvas(grid, gridSize, ZONE_RING, zoneBounds);
 
   if (gradientOverlay) map.removeLayer(gradientOverlay);
   gradientOverlay = L.imageOverlay(dataURL, leafletZoneBounds, { opacity:0.6, interactive:false }).addTo(map);
 
-  // markers on top
-  objects.forEach(o=>{
+  const seenIds = {};
+  renderObjects.forEach(o=>{
+    seenIds[o.id] = true;
     if (!markerRefs[o.id]){
       const marker = L.circleMarker([o.lat,o.lng], {
         radius: o.kind==='new' ? 8 : 9, weight: o.kind==='new' ? 3 : 2,
-        color: o.kind==='new' ? '#fff' : '#fff',
+        color: '#fff',
         dashArray: o.kind==='new' ? '3 2' : null,
         fillColor: ciToColor(o.ciWeighted), fillOpacity:1, className:'obj-dot',
       }).addTo(map);
@@ -643,24 +651,124 @@ function recomputeAll(){
       markerRefs[o.id] = marker;
     }
     markerRefs[o.id].setStyle({ fillColor: ciToColor(o.ciWeighted) });
-    markerRefs[o.id].setTooltipContent ? null : null;
     markerRefs[o.id].bindTooltip(`${o.name} · CI ${o.ci.toFixed(3)} · PSM ${o.psm} · w ${o.ciWeighted.toFixed(3)}`, { direction:'top', offset:[0,-8] });
   });
+  // Drop markers for objects no longer in the list — nothing in this UI
+  // can currently exclude an object mid-session, but this keeps the
+  // function safe if that's ever added.
+  Object.keys(markerRefs).forEach(id=>{
+    if (!seenIds[id]){ map.removeLayer(markerRefs[id]); delete markerRefs[id]; }
+  });
 
-  const avg = zoneAvgWeighted();
-  ciZoneValueEl.textContent = avg.toFixed(3);
-  const delta = avg - CI_ZONE_BASELINE;
-  deltaTagEl.textContent = (delta>=0?'+':'') + 'ΔCI ' + delta.toFixed(3);
-  deltaTagEl.className = 'delta-tag mono show ' + (delta>0.0005?'pos': delta<-0.0005?'neg':'');
-  ciZoneValueEl.style.color = delta>0.0005 ? 'var(--good)' : delta<-0.0005 ? 'var(--bad)' : 'var(--white)';
-
-  const measuredCount = objects.filter(o=>o.kind==='measured').length;
-  const newCount = objects.filter(o=>o.kind==='new').length;
+  const measuredCount = renderObjects.filter(o=>o.kind==='measured').length;
+  const newCount = renderObjects.length - measuredCount;
   zoneCountEl.textContent = newCount>0
     ? `${measuredCount} measured + ${newCount} simulated object${newCount>1?'s':''}`
     : `${measuredCount} measured objects`;
+}
 
-  return delta;
+// ═══════════════════════════════════════════════════════════════
+// SERVER SYNC — single source of truth for CI_zone/ΔCI/decision. Sends
+// the full accumulated scenario every time; the server re-derives "before"
+// fresh from PASSPORT_REGISTRY on each call (computeDeltaCI), so this is
+// always a clean recompute, never an incremental client-side patch.
+// ═══════════════════════════════════════════════════════════════
+let busy = false;
+
+function showFetchError(msg){
+  selectedCard.innerHTML = `<div class="empty" style="color:var(--bad)">Live backend error: ${msg || 'unknown error'}. Check your connection and try again.</div>`;
+}
+
+async function syncWithServer(){
+  if (busy) return null; // one in-flight request at a time — avoids races on fast repeated actions
+  busy = true;
+  try {
+    const res = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      body: JSON.stringify({ secret: API_SECRET, action: 'computeTIA', zoneId: ZONE_ID, scenario: currentScenario, save: false })
+    });
+    const data = await res.json();
+    if (!data.ok){ showFetchError(data.error); return null; }
+    applyServerState(data);
+    return data;
+  } catch(err){
+    showFetchError(String(err));
+    return null;
+  } finally {
+    busy = false;
+  }
+}
+
+/** Rebuilds `objects` from the server response and redraws map/header. */
+function applyServerState(data){
+  const measured = data.objectsAfter.filter(o => String(o.cpId).indexOf('(HYPOTHETICAL-') !== 0);
+  const hypothetical = data.objectsAfter.filter(o => String(o.cpId).indexOf('(HYPOTHETICAL-') === 0);
+
+  const nextObjects = measured.map(o => ({
+    id: o.cpId, name: o.objectName, ci: o.ciRaw, ciWeighted: o.ciWeighted,
+    psm: o.PSM, lat: o.lat, lng: o.lon, kind: 'measured'
+  }));
+  // Hypothetical entries come back in the same order scenario.add was sent
+  // in (applyTiaScenario appends them after the measured pass) — zip by
+  // index against addLocalMeta to recover the local marker id/kind/name.
+  hypothetical.forEach((o, i) => {
+    const meta = addLocalMeta[i] || { id: 'new_' + (i + 1), kind: 'new' };
+    nextObjects.push({
+      id: meta.id, name: o.objectName, ci: o.ciRaw, ciWeighted: o.ciWeighted,
+      psm: o.PSM, lat: o.lat, lng: o.lon, kind: meta.kind
+    });
+  });
+  objects = nextObjects;
+
+  const avg = data.ciZoneWeightedAfter;
+  const delta = data.deltaCIWeighted;
+  ciZoneValueEl.textContent = avg===null ? '—' : avg.toFixed(3);
+  deltaTagEl.textContent = delta===null ? 'Δ—' : (delta>=0?'+':'') + 'ΔCI ' + delta.toFixed(3);
+  deltaTagEl.className = 'delta-tag mono show ' + (delta>0.0005?'pos': delta<-0.0005?'neg':'');
+  ciZoneValueEl.style.color = delta>0.0005 ? 'var(--good)' : delta<-0.0005 ? 'var(--bad)' : 'var(--white)';
+
+  renderMapFromObjects(objects);
+}
+
+/** Registers a new hypothetical object in the current scenario — does not itself talk to the server. */
+function addHypotheticalObject(lat, lng, ci, psm, label, kind){
+  const id = 'new_' + (newObjectCounter++);
+  addLocalMeta.push({ id, kind });
+  currentScenario.add.push({ label, ciRaw: ci, PSM: psm, lat: lat, lon: lng });
+  return id;
+}
+
+/**
+ * Verdict, driven by the server's decision (classifyDeltaCI, TIA_Article
+ * table 4.2 — five bands: Approved / Approved with monitoring /
+ * Compensatory measures required / Project revision required / Rejected).
+ * Kept in the page's original three visual categories (ok/warn/bad) —
+ * the real five-way label is still shown in the note, nothing is hidden.
+ */
+function showVerdictFromServer(decision, delta){
+  if (decision === null || delta === null) return;
+  verdictBox.classList.remove('ok','warn','bad');
+  const deltaStr = (delta>=0?'+':'') + delta.toFixed(3);
+  let tag, text, note, cls;
+  if (decision === 'Approved'){
+    cls='ok'; tag='Admissible';
+    text=`ΔCI_zone ${deltaStr} (cumulative from baseline) — no erosion of accumulated chronity.`;
+    note='TIA decision: Approved — no further conditions.';
+  } else if (decision === 'Approved with monitoring' || decision === 'Compensatory measures required'){
+    cls='warn'; tag='Minor reduction';
+    text=`ΔCI_zone ${deltaStr} is negative, within the correction threshold.`;
+    note = decision === 'Approved with monitoring'
+      ? 'TIA decision: Approved with monitoring.'
+      : 'TIA decision: Compensatory measures required before approval.';
+  } else {
+    cls='bad'; tag='Significant reduction';
+    text=`ΔCI_zone ${deltaStr} exceeds the minor-correction threshold.`;
+    note = decision === 'Rejected'
+      ? 'TIA decision: Rejected — the concept requires revision before further review.'
+      : 'TIA decision: Project revision required before further review.';
+  }
+  verdictBox.classList.add(cls,'show');
+  verdictTag.textContent = tag; verdictText.textContent = text; verdictNote.textContent = note;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -680,8 +788,6 @@ function buildLegend(){
 // ═══════════════════════════════════════════════════════════════
 // UI WIRING
 // ═══════════════════════════════════════════════════════════════
-const CI_ZONE_BASELINE = baseObjects.reduce((s,o)=> s+computeCIWeighted(o.ci,o.psm), 0) / baseObjects.length;
-
 const selectedCard = document.getElementById('selectedCard');
 const interventionSelect = document.getElementById('interventionSelect');
 const interventionBlock = document.getElementById('interventionBlock');
@@ -747,44 +853,46 @@ function selectObject(id){
   verdictBox.classList.remove('show','ok','warn','bad');
 }
 
-function applyIntervention(){
+async function applyIntervention(){
   const code = interventionSelect.value;
   if (!selectedObj || !code) return;
   const iv = interventions.find(i=>i.code===code);
-  selectedObj.ci = Math.max(0, Math.min(1, selectedObj.ci + iv.delta));
+  const newCi = Math.max(0, Math.min(1, selectedObj.ci + iv.delta));
 
-  const delta = recomputeAll();
-  selectedCard.querySelector('.stat-row b').textContent = selectedObj.ci.toFixed(3);
-  const bEls = selectedCard.querySelectorAll('b');
-  bEls[2].textContent = selectedObj.ciWeighted.toFixed(3);
-
-  showVerdict(delta);
-}
-
-function showVerdict(delta){
-  verdictBox.classList.remove('ok','warn','bad');
-  let tag, text, note, cls;
-  if (delta >= 0){
-    cls='ok'; tag='Admissible';
-    text='ΔCI_zone ≥ 0 (cumulative from baseline) — no erosion of accumulated chronity.';
-    note='Under the TIA decision table, this is approved without further conditions.';
-  } else if (delta >= -0.05){
-    cls='warn'; tag='Minor reduction';
-    text='ΔCI_zone is slightly negative, within the minor-correction threshold.';
-    note='Recommendation: correct material or interface detailing before approval.';
+  // NB (2026-08-12): this is a full overwrite of modify[id], not a merge —
+  // safe here only because it always touches the same single key (ciRaw),
+  // recomputed from newCi = selectedObj.ci + delta where selectedObj.ci is
+  // already the last server-confirmed value. A future UI editing PI/AD/II
+  // as separate fields would need real merge logic (see the "ОСОЗНАННОЕ
+  // ОГРАНИЧЕНИЕ" note on applyTiaScenario in ACAP_AppsScript_v8_1.gs) —
+  // this pattern would silently drop an earlier different-field edit.
+  if (selectedObj.kind === 'measured'){
+    currentScenario.modify[selectedObj.id] = { ciRaw: newCi };
   } else {
-    cls='bad'; tag='Significant reduction';
-    text='ΔCI_zone exceeds the minor-correction threshold.';
-    note='Recommendation: the concept requires revision before further review.';
+    const idx = addLocalMeta.findIndex(m => m.id === selectedObj.id);
+    if (idx !== -1) currentScenario.add[idx].ciRaw = newCi;
   }
-  verdictBox.classList.add(cls,'show');
-  verdictTag.textContent = tag; verdictText.textContent = text; verdictNote.textContent = note;
+
+  applyBtn.disabled = true;
+  const data = await syncWithServer();
+  applyBtn.disabled = false;
+  if (!data) return;
+
+  const refreshed = objects.find(o=>o.id===selectedObj.id);
+  if (refreshed){
+    selectedObj = refreshed;
+    selectedCard.querySelector('.stat-row b').textContent = selectedObj.ci.toFixed(3);
+    const bEls = selectedCard.querySelectorAll('b');
+    bEls[2].textContent = selectedObj.ciWeighted.toFixed(3);
+  }
+  showVerdictFromServer(data.decision, data.deltaCIWeighted);
 }
 
-function resetAll(){
+async function resetAll(){
   Object.values(markerRefs).forEach(m=> map.removeLayer(m));
   for (const k in markerRefs) delete markerRefs[k];
-  objects = baseObjects.map(o=>({...o}));
+  currentScenario = { modify: {}, add: [] };
+  addLocalMeta = [];
   newObjectCounter = 1;
   selectedObj = null;
   if (addModeMarker){ map.removeLayer(addModeMarker); addModeMarker=null; }
@@ -793,7 +901,7 @@ function resetAll(){
     b.objId = null;
     b.layer.setStyle({ color:'#8a8a8a', fillOpacity:0.18 });
   });
-  recomputeAll();
+  await syncWithServer();
   selectedCard.innerHTML = '<div class="empty">Click a point on the map to select an object.</div>';
   interventionSelect.innerHTML = '<option value="">— select an object first —</option>';
   interventionSelect.disabled = true;
@@ -885,13 +993,13 @@ map.on('click', (e)=>{
 
 let liveAdjustTimer = null;
 
-function placeNewObject(lat, lng, ci, psm, label){
-  const id = 'new_' + (newObjectCounter++);
-  const obj = { id, name: label || `Hypothetical object ${newObjectCounter-1}`, ci, lat, lng, psm, kind:'new' };
-  objects.push(obj);
-  const delta = recomputeAll();
-  showVerdict(delta);
-  renderLiveAdjustCard(obj);
+async function placeNewObject(lat, lng, ci, psm, label){
+  const id = addHypotheticalObject(lat, lng, ci, psm, label || `Hypothetical object ${newObjectCounter}`, 'new');
+  const data = await syncWithServer();
+  if (!data) return;
+  showVerdictFromServer(data.decision, data.deltaCIWeighted);
+  const obj = objects.find(o=>o.id===id);
+  if (obj) renderLiveAdjustCard(obj);
 }
 
 function renderLiveAdjustCard(obj, note){
@@ -906,22 +1014,39 @@ function renderLiveAdjustCard(obj, note){
   `;
   const range = document.getElementById('liveCiRange');
   const val = document.getElementById('liveCiVal');
+
+  // 'input' fires continuously while dragging — kept purely local (no
+  // network call per pixel): a throttled LOCAL preview of the whole
+  // gradient via previewCIWeighted(), so the drag still feels live. The
+  // authoritative recompute (computeTIA) fires once on 'change' below,
+  // when the user releases the slider.
   range.addEventListener('input', ()=>{
     const newCi = parseFloat(range.value);
-    obj.ci = newCi;
     val.textContent = newCi.toFixed(3);
-
-    // Instant feedback on the object's own dot while dragging...
-    const marker = markerRefs[obj.id];
-    if (marker) marker.setStyle({ fillColor: ciToColor(computeCIWeighted(newCi, obj.psm)) });
-
-    // ...and the full zone gradient recompute, throttled so a fast drag
-    // doesn't fire 96×96 IDW + canvas export on every pixel of movement.
     clearTimeout(liveAdjustTimer);
     liveAdjustTimer = setTimeout(()=>{
-      const delta = recomputeAll();
-      showVerdict(delta);
+      const previewObjects = objects.map(o => o.id===obj.id
+        ? { ...o, ci: newCi, ciWeighted: previewCIWeighted(newCi, o.psm) }
+        : o);
+      renderMapFromObjects(previewObjects);
     }, 60);
+  });
+
+  range.addEventListener('change', async ()=>{
+    const newCi = parseFloat(range.value);
+    // Same full-overwrite-not-merge pattern as applyIntervention() above —
+    // safe here for the same reason (single key, always ciRaw).
+    if (obj.kind === 'measured'){
+      currentScenario.modify[obj.id] = { ciRaw: newCi };
+    } else {
+      const idx = addLocalMeta.findIndex(m => m.id === obj.id);
+      if (idx !== -1) currentScenario.add[idx].ciRaw = newCi;
+    }
+    const data = await syncWithServer();
+    if (!data) return;
+    showVerdictFromServer(data.decision, data.deltaCIWeighted);
+    const refreshed = objects.find(o=>o.id===obj.id);
+    if (refreshed) renderLiveAdjustCard(refreshed, note);
   });
 }
 
@@ -934,10 +1059,18 @@ window.__confirmAddObject = function(lat, lng){
 };
 
 // ═══════════════════════════════════════════════════════════════
-// INIT
+// INIT — the first live sync populates `objects` from PASSPORT_REGISTRY
+// before anything object-related is drawn. The zone polygon itself
+// (ZONE_RING) doesn't need to wait — it's static geometry, not CI data.
 // ═══════════════════════════════════════════════════════════════
 buildLegend();
-map.whenReady(()=>{ recomputeAll(); });
+map.whenReady(async ()=>{
+  selectedCard.innerHTML = '<div class="empty">Loading live zone data…</div>';
+  const data = await syncWithServer();
+  selectedCard.innerHTML = data
+    ? '<div class="empty">Click a point on the map to select an object.</div>'
+    : '<div class="empty" style="color:var(--bad)">Could not load live zone data — reload to try again.</div>';
+});
 </script>
 
 </body>
