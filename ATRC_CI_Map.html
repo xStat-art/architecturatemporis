@@ -2809,6 +2809,9 @@ function addZoneCasing(hull) {
 // не будет пересчитана без hull-фоллбэка.
 // Включить зону обратно: убрать её короткий код (OWNER·NNN) из массива
 // ниже, или обнулить весь массив (HIDDEN_GEOMETRY_ZONES = []).
+// ЭТОТ СПИСОК ДОЛЖЕН СОВПАДАТЬ С HIDDEN_GEOMETRY_ZONES в explore.html
+// (20 авг 2026: продублирован там явно, т.к. explore.html не подключает
+// i18n.js и общего JS-модуля между файлами нет) — при правке обновить оба.
 const HIDDEN_GEOMETRY_ZONES = ['BA·002', 'HN·010', 'KR·002', 'KR·004', 'KU·002', 'LE·004', 'SK·002', 'ZE·002'];
 
 function renderZones(zonesMap, drawnZones, fitBounds) {

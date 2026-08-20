@@ -716,6 +716,18 @@ function renderZoneShape(zoneId, objects) {
       iconAnchor:[40,16]}),interactive:false}).addTo(hullLayer);
 }
 
+// ── Рендер-фильтр для зон с известной проблемной геометрией ────────────
+// Порт из ATRC_CI_Map.html (20 авг 2026): explore.html не подключает
+// i18n.js и не имеет с ATRC_CI_Map.html общего JS-модуля, поэтому список
+// продублирован здесь явно, а не импортирован.
+// ЭТОТ СПИСОК ДОЛЖЕН СОВПАДАТЬ С HIDDEN_GEOMETRY_ZONES в ATRC_CI_Map.html —
+// при следующей правке одного массива обновить и второй.
+// Причина фильтра: у этих 8 периферийных зон Polygon_GeoJSON в живой
+// таблице — convex hull через разрыв (см. комментарий у HIDDEN_GEOMETRY_ZONES
+// в ATRC_CI_Map.html). Живая таблица ZONES не меняется, это чисто
+// рендер-фильтр. Включить зону обратно: убрать её код из массива ниже.
+const HIDDEN_GEOMETRY_ZONES = ['BA·002', 'HN·010', 'KR·002', 'KR·004', 'KU·002', 'LE·004', 'SK·002', 'ZE·002'];
+
 // v8.1: та же правка, что в ATRC_CI_Map.html — fitBounds раньше срабатывал
 // на КАЖДОЕ автообновление (каждые 60с), перечёркивая ручной пан/зум, пока
 // кто-то рассматривает конкретный город на карте. Теперь только на первой
@@ -741,7 +753,8 @@ function renderMap(objects, fitBounds) {
     if(!zones[z]) zones[z]=[];
     zones[z].push(o);
   });
-  const zoneIds = Array.from(new Set([...Object.keys(zones), ...Object.keys(drawnZones)]));
+  const zoneIds = Array.from(new Set([...Object.keys(zones), ...Object.keys(drawnZones)]))
+    .filter(zoneId => !HIDDEN_GEOMETRY_ZONES.some(code => zoneId.endsWith('·' + code)));
   zoneIds.forEach(zoneId=>{ renderZoneShape(zoneId, zones[zoneId] || []); });
 
   if (!objects.length && zoneIds.length === 0) return;
