@@ -238,7 +238,13 @@
 </footer>
 
 <script type="module">
-  import { renderTIABar, computeZoneStats } from './tia-bar.js';
+  // Regression fix 20 Aug 2026: tia-bar.js was rewritten 19 Aug for the
+  // 24 Aug Kotor demo (before/after TIA-scenario bar, no longer exports
+  // computeZoneStats) — importing the old name here threw on load and
+  // blanked this whole chart. This pilot view still uses the original
+  // outlier-vs-zone-mean concept, so it now imports its own frozen copy
+  // instead of tracking tia-bar.js's new API. See tia-bar-legacy.js header.
+  import { renderTIABar, computeZoneStats } from './tia-bar-legacy.js';
 
   // Zone 001 pilot measurement set — same nine objects as
   // ATRC_CI_Field_Data · 2026, Object_Name / CI_current / PSM_current.
