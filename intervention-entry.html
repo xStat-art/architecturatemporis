@@ -488,7 +488,7 @@
 </footer>
 
 <script type="module">
-import { loadCatalog, findType, applyIntervention } from './pi-calc.js';
+import { loadCatalog, findType, applyIntervention } from './pi-calc.js?v=20260823';
 
 // Same live backend as simulator.html / zone-editor — see
 // ACAP_AppsScript_v8_1.gs. Same REGISTRY_CSV publish as passport.html.
@@ -634,7 +634,7 @@ function populateTypeSelect() {
   typeSelect.disabled = false;
 }
 
-Promise.all([loadRegistry(), loadZones(), loadCatalog('./AT_ImpactMatrix_structured_13aug2026.json')])
+Promise.all([loadRegistry(), loadZones(), loadCatalog('./AT_ImpactMatrix_structured_13aug2026.json?v=20260823')])
   .then(([, , cat]) => {
     catalog = cat;
     populateZoneSelect();

@@ -1,0 +1,382 @@
+{
+  "meta": {
+    "source": "01_ATRC_Methodology/Topics/TIA/Matrix/AT_ImpactMatrix_EN.docx (v1.0)",
+    "date_compiled": "2026-08-13",
+    "purpose": "Структурированный источник истины для расчёта реальных (не симуляторных) записей ZONE_INTERVENTION_LOG. Путь: свежая оценка текущих 6 компонентов PI объекта (A1/PMI/VQI/B2/C1/C2 — PASSPORT_REGISTRY хранит только агрегат PI_current, не компоненты) + S (доля охвата, только для gradual) + E-параметры (диапазон из этого файла) -> пересчёт компонентов по R-формулам -> computePI() (Appendix J v2.0, портировано из ACAP_AppsScript_v8_1.gs) -> AD/II (из PASSPORT_REGISTRY, пересчитаны только если у типа есть собственная R-формула для AD/II) -> computeCI().",
+    "pi_formula_source": "ACAP_AppsScript_v8_1.gs, function computePI() — PI_raw = A1*1.0 + PMI*2.0 + VQI*1.5 + B2*1.5 + C1*0.75 + C2*0.75; PI = (PI_raw/37.5)*25. Подтверждено 2026-08-13 как формула, реально работающая в живом продакшене (см. memory pi-aggregation-formula-conflict, RESOLVED).",
+    "no_formula_convention": "Если для параметра (PMI/VQI/B2/C1/C2/A1/AD/II) у типа нет ни R- ни E-формулы в этом файле (т.е. в исходнике стоял маркер N) — параметр остаётся РАВНЫМ своему текущему значению, без изменений.",
+    "resolved_ambiguities": {
+      "A7": "S_elem = (геометрическая доля элемента от объекта) x (доля этого элемента, реально затронутая вмешательством, по умолчанию 1.0 при полном сносе). Подтверждено Сергеем 13 авг 2026.",
+      "B9": "S_uncovered = та же логика, что A7. Подтверждено Сергеем 13 авг 2026.",
+      "B5": "Классифицирован как gradual: доля площади зоны под инфраструктурой (S_infra/S_zone), не подсчёт дискретных объектов. Подтверждено Сергеем 13 авг 2026.",
+      "B9_PMI_zone_marker": "Проверено 13 авг 2026 против сырого XML исходника (EN и RU) — маркер E для PMI_zone НЕ опечатка (последовательное цветовое кодирование, 208 ячеек без исключений). Содержательная причина: PMI_hidden — состояние скрытой поверхности, не может быть рассчитано из документации, только оценено экспертно после раскрытия."
+    },
+    "naming_note_B2_vs_B_HR": "Тип вмешательства 'High-rise construction in buffer zone' переименован из B2/B2type в B_HR в этом файле и в коде — совпадал с именем параметра CI 'B2' (световой режим). Параметр B2 остаётся 'B2' везде. В прозе методических документов для человека-читателя тип по-прежнему называется 'B2' — переименование только в структурированных данных/коде.",
+    "unsupported_types_note": "A11, A12 и B_HR исключены из формы intervention-entry.html в этой итерации (13 авг 2026) — см. поле 'supported'/'unsupportedReason' на каждом. Это НЕ вмешательства в объект, а добавление нового здания в зону (A11, B_HR) или снос целого объекта (A12) — не укладываются в схему ZONE_INTERVENTION_LOG 'один объект -> новое CI объекта'. Уже существующий backend-концепт scenario.add/scenario.exclude (computeTIA) мог бы это покрыть в будущей итерации, здесь не подключено.",
+    "note_on_simulator": "simulator.html НЕ использует эту структуру, остаётся на прямом вводе итогового CI ползунком, намеренно отвязан от реального расчёта."
+  },
+  "types": [
+    {
+      "id": "A1", "group": "A", "name": "Replacement of surface material, non-authentic",
+      "classification": "gradual", "coverage_variable": "S", "uncertainty": 0.02, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S) + 1*S"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S) + 1*S"},
+        {"param": "AD", "formula": "AD_new = AD_old - S*(share_of_AB_replaced)", "note": "AD_old взят из PASSPORT_REGISTRY.AD_current; share_of_AB_replaced по умолчанию = S, если не введено отдельно"}
+      ],
+      "e_parameters": [
+        {"param": "VQI", "range": [-2, -1], "note": "-1 visible, -2 dominant"},
+        {"param": "B2", "range": [-1, -1], "note": "if glazing/window profile changed"}
+      ]
+    },
+    {
+      "id": "A2", "group": "A", "name": "Replacement of surface material, authentic",
+      "classification": "gradual", "coverage_variable": "S", "uncertainty": 0.02, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = 2 (fresh) -> growth per Ad model", "note": "упрощение: PMI_new = PMI_old*(1-S) + 2*S"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S) + 4*S"},
+        {"param": "AD", "formula": "AD_new = AD_old + S*(share_D_or_C_to_A_replaced)", "note": "share по умолчанию = S"}
+      ],
+      "e_parameters": [
+        {"param": "VQI", "range": [0, 1]},
+        {"param": "B2", "range": [0, 1]}
+      ]
+    },
+    {
+      "id": "A3", "group": "A", "name": "Restoration with authentic material",
+      "classification": "gradual", "coverage_variable": "S", "uncertainty": 0.02, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = 2 (fresh restoration); T+15yrs -> PMI 4", "note": "упрощение: PMI_new = PMI_old*(1-S) + 2*S"},
+        {"param": "AD", "formula": "AD_new = AD_old + S*(share_D_to_A)", "note": "share по умолчанию = S"}
+      ],
+      "e_parameters": [
+        {"param": "VQI", "range": [0, 1]}
+      ]
+    },
+    {
+      "id": "A4", "group": "A", "name": "Restoration with non-authentic material",
+      "classification": "gradual", "coverage_variable": "S", "uncertainty": 0.02, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S) + 2*S"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S) + 2*S"},
+        {"param": "AD", "formula": "AD_new = AD_old - S*(share_AB_to_CD)", "note": "share по умолчанию = S"}
+      ],
+      "e_parameters": [
+        {"param": "VQI", "range": [-1, 0]},
+        {"param": "C2", "range": [-1, -1], "note": "during drying period, temporary"}
+      ]
+    },
+    {
+      "id": "A5", "group": "A", "name": "Addition of floor / volume",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.04, "supported": true,
+      "extra_object_vars": [
+        {"var": "V_old", "label": "Существующий объём объекта, м³", "type": "number", "min": 0},
+        {"var": "V_add", "label": "Добавляемый объём, м³", "type": "number", "min": 0}
+      ],
+      "r_parameters": [
+        {"param": "AD", "formula": "AD_new = (AD_old*V_old + AD_new_part*V_add)/(V_old+V_add)", "note": "AD_new_part — доля аутентичности НОВОГО объёма (обычно низкая/0 для типовой надстройки — запрашивается отдельно или принимается 0 по умолчанию)"},
+        {"param": "II", "formula": "II_new = II_old - (V_add/(V_old+V_add) * 30)"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-1, 0]},
+        {"param": "VQI", "range": [-2, -1], "note": "depends on height and contrast"},
+        {"param": "B2", "range": [-1, 0]}
+      ]
+    },
+    {
+      "id": "A6", "group": "A", "name": "Extension to historic building",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.03, "supported": true,
+      "r_parameters": [],
+      "notes": "AD_zone_new = (AD_zone*n + AD_new)/(n+1) в исходнике — это ЗОНАЛЬНЫЙ агрегат (новый зональный доминант), не меняет AD/II САМОГО объекта (surfaces unaffected). В этой форме AD/II объекта остаются как есть (unchanged), зональный эффект не пересчитывается в этой итерации.",
+      "e_parameters": [
+        {"param": "A1", "range": [0, 1], "note": "direction only, no formula given"},
+        {"param": "VQI", "range": [-2, 2]},
+        {"param": "B2", "range": [-1, 0]}
+      ]
+    },
+    {
+      "id": "A7", "group": "A", "name": "Demolition of historic element",
+      "classification": "gradual_resolved", "coverage_variable": "S_elem",
+      "coverage_definition": "S_elem = (geometric share of element in object) * (share of that element actually affected, default 1.0 for full demolition)",
+      "uncertainty": 0.02, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S_elem)"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S_elem)"},
+        {"param": "AD", "formula": "AD_new = AD_old*(1-S_elem)", "note": "упрощено от исходной зональной формулы (AD_old*A_total - A_elem)/(A_total - A_elem) до объектного эквивалента"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-1, 0]},
+        {"param": "VQI", "range": [-2, -1]},
+        {"param": "B2", "range": [-1, 0]}
+      ],
+      "notes": "Especially critical for elements with PMI=5. Irreversible."
+    },
+    {
+      "id": "A8", "group": "A", "name": "Installation of equipment",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.02, "supported": true,
+      "r_parameters": [],
+      "e_parameters": [
+        {"param": "A1", "range": [-1, 0], "note": "e.g. for AC installation"},
+        {"param": "VQI", "range": [-2, -1], "note": "depending on visibility"},
+        {"param": "B2", "range": [-1, 0]},
+        {"param": "C2", "range": [-1, 0]}
+      ],
+      "notes": "Reversible intervention: removal restores original condition. ICOMOS FULL."
+    },
+    {
+      "id": "A9", "group": "A", "name": "Change of light regime",
+      "classification": "gradual", "coverage_variable": "S_win", "uncertainty": 0.02, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S_win) + 1*S_win"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S_win) + 1*S_win"},
+        {"param": "AD", "formula": "AD_new = AD_old - S_win*(share_AB_to_D)", "note": "share по умолчанию = S_win"}
+      ],
+      "e_parameters": [
+        {"param": "VQI", "range": [-2, -1]},
+        {"param": "B2", "range": [-2, -1], "note": "key parameter, primary carrier of object's eidos"}
+      ]
+    },
+    {
+      "id": "A10", "group": "A", "name": "Change of function without change of shell",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.03, "supported": true,
+      "r_parameters": [],
+      "e_parameters": [
+        {"param": "A1", "range": [-2, 0]},
+        {"param": "VQI", "range": [-1, 0]},
+        {"param": "B2", "range": [-1, 0]},
+        {"param": "C2", "range": [-1, 0]}
+      ],
+      "notes": "Pure E-parameters, no R-formulas at all."
+    },
+    {
+      "id": "A11", "group": "A", "name": "New construction on vacant plot within zone",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.04,
+      "supported": false,
+      "unsupportedReason": "Добавление НОВОГО здания в зону, не вмешательство в существующий объект — не укладывается в схему ZONE_INTERVENTION_LOG 'объект -> новое CI'. Требует отдельного workflow (аналог computeTIA scenario.add), не реализовано в этой итерации.",
+      "r_parameters": [
+        {"param": "AD_zone", "formula": "AD_zone_new = (AD_zone*n + AD_new)/(n+1)"},
+        {"param": "II", "formula": "II -= (S_new/S_zone * 50)"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-1, 0]},
+        {"param": "VQI", "range": [-2, 2]},
+        {"param": "B2", "range": [-1, 0]}
+      ]
+    },
+    {
+      "id": "A12", "group": "A", "name": "Demolition of historic building",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.03,
+      "supported": false,
+      "unsupportedReason": "Снос ЦЕЛОГО объекта (объект перестаёт существовать), не изменение его CI — не укладывается в схему ZONE_INTERVENTION_LOG 'объект -> новое CI'. Требует отдельного workflow (аналог computeTIA scenario.exclude), не реализовано в этой итерации.",
+      "r_parameters": [
+        {"param": "PMI_zone", "formula": "PMI_zone -= (PMI_obj * weight_in_zone)"},
+        {"param": "AD_zone", "formula": "AD_zone_new = (AD_zone*n - AD_obj)/(n-1)"},
+        {"param": "II", "formula": "II -= (S_obj/S_zone * 100)"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-1, 0]},
+        {"param": "VQI", "range": [-3, -2]},
+        {"param": "B2", "range": [-1, 0]}
+      ],
+      "notes": "Irreversible - ICOMOS ZERO. Delta CI always negative. Exception: demolition of late anachronistic type-D addition, see B9."
+    },
+    {
+      "id": "A13", "group": "A", "name": "Mechanical/chemical cleaning (patina removal)",
+      "classification": "gradual", "coverage_variable": "S", "uncertainty": 0.03, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S) + 1*S"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S) + 1*S"}
+      ],
+      "e_parameters": [
+        {"param": "VQI", "range": [-1, -1]},
+        {"param": "C2", "range": [-1, -1], "note": "for 1-3 months, temporary"}
+      ],
+      "notes": "Critical: AD unchanged (same material), but PMI drops from 4-5 to 1. Proves PMI necessity as separate parameter from AD."
+    },
+    {
+      "id": "A14", "group": "A", "name": "Artificial ageing / patina imitation",
+      "classification": "gradual", "coverage_variable": "S", "uncertainty": 0.05, "supported": true,
+      "pmiWeightOverride": 0.5,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S) + 3*S", "note": "флаг pseudo-chronity (PMI*), вес x0.5 применяется на этапе computePI для этого типа — см. поле pmiWeightOverride на этом объекте"}
+      ],
+      "e_parameters": [
+        {"param": "VQI", "range": [0, 1]},
+        {"param": "C1", "range": [0, 1]},
+        {"param": "C2", "range": [-1, -1], "note": "during application, temporary"}
+      ],
+      "notes": "Highest uncertainty in the matrix (0.05). PMI* marker: chronity created artificially, pseudo-chronity. ΔCI may be formally positive but methodologically flagged."
+    },
+    {
+      "id": "A15", "group": "A", "name": "Conservation / stabilisation without changes",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.01, "supported": true,
+      "r_parameters": [], "e_parameters": [],
+      "notes": "All parameters unchanged. Delta CI = 0. The only type with zero impact on all parameters."
+    },
+    {
+      "id": "B1", "group": "B", "name": "New road / car park in historic zone",
+      "classification": "gradual", "coverage_variable": "S_road", "uncertainty": 0.04, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S_road) + 1*S_road"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S_road) + 1*S_road"},
+        {"param": "AD", "formula": "AD_new = AD_old - S_road*(historically_authentic_paving)", "note": "упрощено от зональной формулы к объектному эквиваленту; historically_authentic_paving по умолчанию = 1"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-2, -1]},
+        {"param": "VQI", "range": [-2, -1]},
+        {"param": "B2", "range": [-1, 0]},
+        {"param": "C2", "range": [-1, -1]}
+      ],
+      "notes": "Формула исходника зональная (_zone суффиксы) — применена здесь к выбранному объекту как приближение, тот же принцип что simulator.html уже использует для Group B типов."
+    },
+    {
+      "id": "B_HR", "group": "B", "name": "High-rise construction in buffer zone",
+      "formerly": "B2 / B2type",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.05,
+      "supported": false,
+      "unsupportedReason": "Добавление НОВОГО здания (высотки) в буферную зону, не вмешательство в существующий объект — та же причина, что A11. Требует отдельного workflow, не реализовано в этой итерации.",
+      "r_parameters": [
+        {"param": "AD_zone", "formula": "AD_zone_new = (AD_zone*n + AD_new)/(n+1)"},
+        {"param": "II", "formula": "II -= (S_new/S_zone * 30)"}
+      ],
+      "e_parameters": [
+        {"param": "A1_zone", "range": [-1, 0]},
+        {"param": "VQI_zone", "range": [-3, -1], "note": "depends on height and position"},
+        {"param": "B2_zone", "range": [-2, 0]}
+      ],
+      "notes": "Maximum uncertainty in the matrix (0.05). Renamed from B2/B2type 13aug2026 to avoid collision with CI parameter B2 (light regime) — see meta.naming_note_B2_vs_B_HR."
+    },
+    {
+      "id": "B3", "group": "B", "name": "Densification of built fabric",
+      "classification": "gradual", "coverage_variable": null, "uncertainty": 0.04, "supported": true,
+      "extra_object_vars": [
+        {"var": "S_new_over_zone", "label": "Доля площади зоны, занимаемая новыми объёмами (S_new/S_zone), 0–1", "type": "number", "min": 0, "max": 1}
+      ],
+      "r_parameters": [
+        {"param": "II", "formula": "II_new = II_old - (S_new_over_zone * 40)"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-1, 0]},
+        {"param": "VQI", "range": [-2, -1]},
+        {"param": "B2", "range": [-1, 0]}
+      ],
+      "notes": "IMPORTANT for cumulative work: cumulative effect especially dangerous — each individual record may give delta CI > -0.05, but sum over 10 years -> delta CI_zone = -0.3. This is the explicit textual justification for ZONE_INTERVENTION_LOG / cumulative tracking (see cumulative-impact-threshold-tz). AD_zone formula (uses n, k) not applied at object level here."
+    },
+    {
+      "id": "B4", "group": "B", "name": "Change of pedestrian route",
+      "classification": "gradual", "coverage_variable": null, "uncertainty": 0.03, "supported": true,
+      "extra_object_vars": [
+        {"var": "L_closed_over_total", "label": "Доля длины маршрутной сети, закрытая/изменённая (L_closed/L_total), 0–1", "type": "number", "min": 0, "max": 1}
+      ],
+      "r_parameters": [
+        {"param": "II", "formula": "II_new = II_old - (L_closed_over_total * 20)"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-1, 1]},
+        {"param": "VQI", "range": [-1, 0]}
+      ]
+    },
+    {
+      "id": "B5", "group": "B", "name": "Tourist infrastructure",
+      "classification": "gradual_resolved", "coverage_variable": "S_infra",
+      "coverage_definition": "S_infra/S_zone = share of zone area covered by tourist infrastructure (not a count of discrete objects). Resolved 13 Aug 2026.",
+      "uncertainty": 0.03, "supported": true,
+      "r_parameters": [
+        {"param": "AD", "formula": "AD_new = AD_old - (S_infra * AD_impact)", "note": "AD_impact по умолчанию = 1 если не задано отдельно; упрощено от зональной формулы к объектному эквиваленту"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-1, 0]},
+        {"param": "VQI", "range": [-2, -1]},
+        {"param": "B2", "range": [-1, 0]},
+        {"param": "C2", "range": [-1, 0]}
+      ],
+      "notes": "Temporary nature: if dismantled, CI_zone recovers. ICOMOS HIGH (reversible)."
+    },
+    {
+      "id": "B6", "group": "B", "name": "Demolition of historic district",
+      "classification": "gradual", "coverage_variable": "S_demolished_over_zone", "uncertainty": 0.05, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S_demolished_over_zone)", "note": "упрощено от зональной суммы к объектному эквиваленту"},
+        {"param": "II", "formula": "II_new = II_old - (S_demolished_over_zone * 100)"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-2, -1]},
+        {"param": "VQI", "range": [-3, -2]},
+        {"param": "B2", "range": [-2, -1]}
+      ],
+      "notes": "Catastrophic intervention. ICOMOS ZERO. coverage_variable здесь — доля площади КВАРТАЛА снесённая, применяется к выбранному объекту как приближение (тот же принцип, что simulator.html уже использует для Group B)."
+    },
+    {
+      "id": "B7a", "group": "B", "name": "Landscaping with authentic materials",
+      "classification": "gradual", "coverage_variable": "S", "uncertainty": 0.03, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S) + 2*S", "note": "упрощение от 'PMI_new = 2 (T=0) -> growth per Ad model'"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S) + 4*S"},
+        {"param": "AD", "formula": "AD_new = AD_old + S*(share_A_in_new_surface)", "note": "share по умолчанию = S"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [0, 1]},
+        {"param": "VQI", "range": [1, 2]},
+        {"param": "B2", "range": [0, 1]},
+        {"param": "C2", "range": [0, 1]}
+      ]
+    },
+    {
+      "id": "B7b", "group": "B", "name": "Landscaping with non-authentic materials",
+      "classification": "gradual", "coverage_variable": "S", "uncertainty": 0.02, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old*(1-S) + 1*S"},
+        {"param": "C1", "formula": "C1_new = C1_old*(1-S) + 1*S"},
+        {"param": "AD", "formula": "AD_new = AD_old - S*(historically_authentic_surface)", "note": "по умолчанию = S"}
+      ],
+      "e_parameters": [
+        {"param": "VQI", "range": [-2, -1]}
+      ],
+      "notes": "Herceg Novi case: historic cobbles replaced with concrete tiles, street PMI 4 to 1."
+    },
+    {
+      "id": "B8", "group": "B", "name": "Change of functional zoning",
+      "classification": "gradual", "coverage_variable": null, "uncertainty": 0.04, "supported": true,
+      "extra_object_vars": [
+        {"var": "S_rezone_over_zone", "label": "Доля площади зоны, затронутая перезонированием (S_rezone/S_zone), 0–1", "type": "number", "min": 0, "max": 1}
+      ],
+      "r_parameters": [
+        {"param": "II", "formula": "II_new = II_old - (S_rezone_over_zone * 15)"}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [-2, 0]},
+        {"param": "VQI", "range": [-1, 0]},
+        {"param": "B2", "range": [-1, 0]},
+        {"param": "C2", "range": [-1, 0]}
+      ]
+    },
+    {
+      "id": "B9", "group": "B", "name": "Removal of anachronistic element",
+      "classification": "gradual_resolved", "coverage_variable": "S_uncovered",
+      "coverage_definition": "Same logic as A7: geometric share of element x share actually affected, default 1.0 for full removal. Resolved 13 Aug 2026.",
+      "uncertainty": 0.03, "supported": true,
+      "r_parameters": [
+        {"param": "PMI", "formula": "PMI_new = PMI_old + (PMI_hidden - PMI_old)*S_uncovered", "note": "PMI_hidden — экспертная оценка (E), не R, см. meta.resolved_ambiguities.B9_PMI_zone_marker; запрашивается как доп. поле"}
+      ],
+      "extra_object_vars": [
+        {"var": "PMI_hidden", "label": "Ожидаемая/выявленная патина скрытой поверхности после устранения элемента (1–5)", "type": "number", "min": 1, "max": 5}
+      ],
+      "e_parameters": [
+        {"param": "A1", "range": [0, 1]},
+        {"param": "VQI", "range": [1, 2]},
+        {"param": "B2", "range": [0, 1]}
+      ],
+      "notes": "Especially effective when anachronistic element had AD=0 and VQI=1. Reversibility: FULL. AD_zone formula (uses n) not applied at object level here."
+    },
+    {
+      "id": "B10", "group": "B", "name": "Restoration of visual chronity of the environment",
+      "classification": "categorical", "coverage_variable": null, "uncertainty": 0.04, "supported": true,
+      "r_parameters": [],
+      "e_parameters": [
+        {"param": "VQI", "range": [1, 2]},
+        {"param": "B2", "range": [0, 1]}
+      ],
+      "notes": "UNIQUE TYPE: only intervention where visual chronity is restored without changing material chronity. No S-type formula exists at all. Herceg Novi case: estimated CI_zone gain approx +0.08 to +0.12."
+    }
+  ]
+}
