@@ -617,7 +617,7 @@ function renderConfirmMap(data) {
     confirmMapInstance = L.map('confirmMap', { zoomControl: false, attributionControl: false });
     // Design rule: карта — всегда светлая подложка (CARTO light_all), даже
     // при тёмном UI вокруг — тёмные тайлы нечитаемы на солнце в поле.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2mrb_1_8d0061170a68bac41c1887dc', {
       subdomains: 'abcd', maxZoom: 20
     }).addTo(confirmMapInstance);
   }

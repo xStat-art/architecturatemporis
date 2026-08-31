@@ -513,7 +513,7 @@ function parseGPS(text) {
 // ── Map init ──────────────────────────────────────────────────────────────────
 
 const map = L.map('map', {center:[42.4534,18.5312], zoom:4});
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2mrb_1_8d0061170a68bac41c1887dc',
   {attribution:'© OpenStreetMap © CARTO', maxZoom:19}).addTo(map);
 
 let markersLayer = L.layerGroup().addTo(map);

@@ -958,7 +958,7 @@ const pickerBuildingLayers = [];
 function initObjectPickerMap() {
   if (pickerMap) { setTimeout(() => pickerMap.invalidateSize(), 0); return; }
   pickerMap = L.map('objectPickerMap', { zoomControl: true, attributionControl: true }).setView([zoneCenter.lat, zoneCenter.lng], 17);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2mrb_1_8d0061170a68bac41c1887dc', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 20,
   }).addTo(pickerMap);
   // 50m selection buffer, drawn as a donut (outer = offset ring, hole =

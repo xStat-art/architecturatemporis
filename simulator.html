@@ -606,7 +606,7 @@ async function selectUnmeasuredBuilding(poly, centroid, wayIdx){
 // MAP SETUP
 // ═══════════════════════════════════════════════════════════════
 const map = L.map('leafletMap', { zoomControl:true, attributionControl:true }).setView([CENTER_LAT, CENTER_LNG], 17);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2mrb_1_8d0061170a68bac41c1887dc', {
   attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains:'abcd', maxZoom:20,
 }).addTo(map);
 
