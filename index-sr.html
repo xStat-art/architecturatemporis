@@ -361,6 +361,7 @@
   .about-link:hover { color: var(--white); }
   .about-stats { display: flex; flex-direction: column; gap: 1px; background: var(--grey-2); border: 1px solid var(--grey-2); align-self: start; }
   .astat  { background: var(--dark); padding: 20px 28px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .team-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; background: var(--grey-2); border: 1px solid var(--grey-2); }
   .astat-lbl { font-size: 11px; letter-spacing: 1px; color: var(--grey-3); text-transform: uppercase; white-space: nowrap; }
   .astat-val { font-size: 14px; font-weight: bold; color: var(--white); text-align: right; }
 
@@ -404,7 +405,7 @@
     .section-wrap { padding: 72px 0; }
     .prob-grid,.stats-row,.params-grid,.entropy-grid,
     .layers-grid,.pilot-grid,.phases,.rm-bottom,
-    .about-grid,.contact-grid,.atu-grid { grid-template-columns: 1fr; }
+    .about-grid,.contact-grid,.atu-grid,.team-grid { grid-template-columns: 1fr; }
     .passport-block { flex-direction: column; gap: 20px; }
     .pipeline { grid-template-columns: 1fr; }
     .pipe-arrow { transform: rotate(90deg); }
@@ -1135,7 +1136,7 @@
     <div style="margin-top:64px;">
       <div style="font-size:11px;letter-spacing:4px;color:var(--grey-3);text-transform:uppercase;
         margin-bottom:32px;padding-bottom:16px;border-bottom:1px solid var(--grey-2);">Istraživački tim</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--grey-2);border:1px solid var(--grey-2);">
+      <div class="team-grid">
 
         <div style="background:var(--dark);padding:36px;">
           <img src="images/team/sergei-tatarnikov.jpg" alt="Sergei Tatarnikov" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;margin-bottom:20px;">
