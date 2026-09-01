@@ -1650,7 +1650,7 @@ function snapContourToExistingZones(points, excludeZoneId) {
 // no separate page.
 // ═══════════════════════════════════════════════════════════════
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxWlgW4Iqj6a2mjdO8I0f52XIVT8dqal0YnwM4z0CqJGxFT27SePt-QzFDImhd5QSGr/exec';
-const API_SECRET = 'hn-zones-secret-8k3f2m';
+const API_SECRET = '2NcQ,)(8k3f2m'; // v8.7: ротация секрета перед пилотом в Которе
 
 let editZones = [];       // zones drawn/edited THIS session, not yet necessarily synced
 let drawing = false;
@@ -2588,13 +2588,16 @@ function renderSavedZoneList(){
  * Удаление уже сохранённой зоны из листа ZONES (не путать с удалением
  * несинхронизированной зоны из editZones — то делается локально без
  * подтверждения секретом, см. кнопку data-action="delete" выше).
- * v8.1: намеренно НЕ хранит секрет удаления нигде в коде страницы —
- * запрашивает его через prompt() при каждом нажатии, чтобы просмотр
- * исходного кода страницы ("view source") не давал доступа к нему, в
- * отличие от обычного API_SECRET, который в коде страницы есть. Если
- * сервер сообщает, что на зону всё ещё ссылаются записи в
- * PASSPORT_REGISTRY (linkedCount > 0), показывает это явно и требует
- * второго, осознанного подтверждения перед принудительным удалением.
+ * v8.1: намеренно НЕ хранит секрет нигде в коде страницы — запрашивает его
+ * через prompt() при каждом нажатии, чтобы просмотр исходного кода страницы
+ * ("view source") не давал доступа к нему, в отличие от обычного
+ * API_SECRET, который в коде страницы есть. Если сервер сообщает, что на
+ * зону всё ещё ссылаются записи в PASSPORT_REGISTRY (linkedCount > 0),
+ * показывает это явно и требует второго, осознанного подтверждения перед
+ * принудительным удалением.
+ * v8.7: поле переименовано deleteSecret -> adminSecret (тот же секрет
+ * теперь также используется при перезаписи существующей зоны и при
+ * "Recalculate Zone Assignments", см. syncZonesToSheet/recalculateZoneAssignments).
  */
 async function deleteSavedZone(zoneId) {
   const zone = lastDrawnZones[zoneId];
@@ -2603,13 +2606,13 @@ async function deleteSavedZone(zoneId) {
   if (!confirm(`Delete saved zone ${label}? This removes its row from the ZONES sheet and cannot be undone from here.`)) {
     return;
   }
-  const deleteSecret = prompt('Enter the delete secret to confirm:');
-  if (!deleteSecret) return; // отмена или пустой ввод — ничего не делаем
+  const adminSecret = prompt('Enter the admin secret to confirm:');
+  if (!adminSecret) return; // отмена или пустой ввод — ничего не делаем
 
   async function callDelete(force) {
     const res = await fetch(WEBAPP_URL, {
       method: 'POST',
-      body: JSON.stringify({ secret: API_SECRET, deleteSecret, action: 'deleteZone', zoneId, force: !!force })
+      body: JSON.stringify({ secret: API_SECRET, adminSecret, action: 'deleteZone', zoneId, force: !!force })
     });
     return res.json();
   }
@@ -2675,12 +2678,25 @@ function setEdStatus(elId, cls, html){
 
 async function syncZonesToSheet(){
   if(!editZones.length) return;
+
+  // v8.7: сервер теперь требует adminSecret для перезаписи УЖЕ существующего
+  // Zone_ID (см. changelog v8.7 в .gs) — создание новых зон им не защищено
+  // и не требует секрета, как и раньше. Спрашиваем один раз за весь батч,
+  // если хотя бы одна из отправляемых зон уже существует на сервере.
+  const overwritesExisting = editZones.some(z => lastDrawnZones[z.zn_id]);
+  let adminSecret;
+  if (overwritesExisting) {
+    adminSecret = prompt('One or more of these zones already exist on the server. Enter the admin secret to overwrite them (new zones in the same batch don\'t need it):');
+    if (!adminSecret) return; // отмена — не отправляем ничего, чтобы не запутать частичным результатом
+  }
+
   const syncBtn = document.getElementById('syncBtn');
   syncBtn.disabled = true;
   setEdStatus('syncStatus', 'busy', t('map.sync.sending', { n: editZones.length }));
 
   const payload = {
     secret: API_SECRET,
+    adminSecret: adminSecret,
     action: 'saveZones',
     zones: editZones.map(z => ({
       zoneId: z.zn_id, name: z.name, cityCode: z.cityCode, regionCode: z.regionCode,
@@ -2693,10 +2709,25 @@ async function syncZonesToSheet(){
     const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
     const data = await res.json();
     if(data.ok){
-      editZones.forEach(z => z.synced = true);
+      // v8.7: handleSaveZones() отвечает ok:true даже если ОТДЕЛЬНЫЕ зоны
+      // в батче были заблокированы (перезапись существующей без верного
+      // adminSecret) — top-level data.ok больше не значит "все зоны
+      // сохранены", нужно разбирать per-zone results[].error.
+      const blocked = (data.results || []).filter(r => r.error);
+      const savedOk = (data.results || []).filter(r => !r.error);
+
+      editZones.forEach(z => {
+        if (!blocked.some(r => r.zoneId === z.zn_id)) z.synced = true;
+      });
       renderEditZoneList();
-      const priorLines = (data.results||[]).map(r => t('map.sync.priorLine', { zoneId: r.zoneId, value: r.priorCI!=null ? t('map.sync.priorCiValue', { ci: r.priorCI }) : t('map.sync.noPrior') })).join(' · ');
-      setEdStatus('syncStatus', 'ok', t('map.sync.saved', { n: data.saved, priorLines: priorLines }));
+
+      const priorLines = savedOk.map(r => t('map.sync.priorLine', { zoneId: r.zoneId, value: r.priorCI!=null ? t('map.sync.priorCiValue', { ci: r.priorCI }) : t('map.sync.noPrior') })).join(' · ');
+      if (blocked.length) {
+        setEdStatus('syncStatus', 'err',
+          `Saved ${savedOk.length}/${data.results.length}. Blocked (wrong/missing admin secret, not saved): ${blocked.map(r => r.zoneId).join(', ')}.`);
+      } else {
+        setEdStatus('syncStatus', 'ok', t('map.sync.saved', { n: data.saved, priorLines: priorLines }));
+      }
       loadData(); // refresh live map with newly saved zones
     } else {
       setEdStatus('syncStatus', 'err', t('map.sync.err', { error: data.error }));
@@ -2710,11 +2741,16 @@ async function syncZonesToSheet(){
 
 async function recalculateZoneAssignments(){
   if(!confirm(t('map.confirm.recalcAll'))) return;
+  // v8.7: редкое админ-действие (перепривязывает Zone_ID у ВСЕХ строк
+  // PASSPORT_REGISTRY разом) — теперь требует adminSecret, тот же, что и
+  // deleteZone/перезапись зоны, не только общий API_SECRET.
+  const adminSecret = prompt('Enter the admin secret to confirm:');
+  if (!adminSecret) return;
   const recalcBtn = document.getElementById('recalcBtn');
   recalcBtn.disabled = true;
   setEdStatus('recalcStatus', 'busy', t('map.recalc.busy'));
   try {
-    const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify({ secret: API_SECRET, action: 'recalculateZones' }) });
+    const res = await fetch(WEBAPP_URL, { method: 'POST', body: JSON.stringify({ secret: API_SECRET, adminSecret, action: 'recalculateZones' }) });
     const data = await res.json();
     if(data.ok){
       if(data.changed === 0){ setEdStatus('recalcStatus', 'ok', t('map.recalc.noChanges')); }
