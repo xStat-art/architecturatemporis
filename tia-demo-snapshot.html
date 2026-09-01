@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIA Demo Snapshot — ATRC</title>
+<meta name="description" content="Static, non-interactive snapshot of a Temporis Impact Assessment scenario — fallback for the live TIA Simulator.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #0A0A0A;
+    --dark:    #111111;
+    --panel:   #1C1C1C;
+    --panel-2: #262626;
+    --line:    #303030;
+    --white:   #F8F8F6;
+    --grey-3:  #8a8a8a;
+    --grey-4:  #A0A0A0;
+    --orange:  #C8650A;
+    --orange-bright: #E8791A;
+    --good:    #3BC46B;
+    --font-display: 'Arial Black','Helvetica Neue',Arial,sans-serif;
+    --font-body:    Arial,'Helvetica Neue',sans-serif;
+    --font-mono:    'Courier New',Courier,monospace;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--dark);
+    color: var(--white);
+    min-height: 100vh;
+    padding: 0 0 64px;
+  }
+
+  .top-bar {
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+  }
+  .top-bar-logo { font-size: 11px; letter-spacing: 3px; color: var(--grey-3); text-transform: uppercase; }
+  .top-bar-logo span { color: var(--orange); }
+  .back-link { font-size: 11px; letter-spacing: 1.5px; color: var(--grey-3); text-decoration: none; text-transform: uppercase; }
+  .back-link:hover { color: var(--white); }
+
+  /* Explicit, impossible-to-miss "this is not live" banner — the whole
+     reason this page exists is to stand in for the live simulator, and
+     nobody should mistake it for the real thing if this ever gets shared
+     out of context. */
+  .snapshot-banner {
+    background: #2a1a06; border-bottom: 1px solid #4a2e0a; color: #F2A93B;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
+    text-align: center; padding: 10px 16px;
+  }
+  .snapshot-banner b { color: #fff; }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 24px 0; }
+
+  .eyebrow { font-size: 11px; letter-spacing: 2px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 8px; }
+  h1 { font-family: var(--font-display); font-size: 28px; margin-bottom: 12px; }
+  .lede { color: var(--grey-4); font-size: 14.5px; line-height: 1.6; max-width: 620px; margin-bottom: 36px; }
+  .lede b { color: var(--white); }
+
+  .compare {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px;
+    align-items: center;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 28px 24px; margin-bottom: 22px;
+  }
+  .compare-col { text-align: center; }
+  .compare-label { font-size: 10.5px; letter-spacing: 1.5px; color: var(--grey-3); text-transform: uppercase; margin-bottom: 10px; }
+  .compare-value { font-family: var(--font-mono); font-size: 34px; font-weight: 700; }
+  .compare-sub { font-size: 12px; color: var(--grey-4); margin-top: 6px; }
+  .compare-arrow { font-size: 22px; color: var(--orange); }
+
+  .delta-row {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-bottom: 30px;
+  }
+  .delta-tag {
+    font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+    padding: 6px 14px; border-radius: 6px;
+    background: rgba(59,196,107,.15); color: var(--good);
+  }
+  .decision-tag {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700;
+    padding: 6px 14px; border-radius: 6px;
+    background: rgba(59,196,107,.12); color: var(--good); border: 1px solid rgba(59,196,107,.35);
+  }
+
+  .scenario-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 22px 24px; margin-bottom: 22px;
+  }
+  .scenario-card h2 { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--grey-3); margin-bottom: 14px; }
+  .object-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-top: 1px solid var(--line);
+  }
+  .object-row:first-of-type { border-top: none; }
+  .object-name { font-weight: 700; font-size: 14.5px; }
+  .object-note { font-size: 11.5px; color: var(--grey-4); margin-top: 2px; }
+  .object-ci { font-family: var(--font-mono); font-size: 14px; text-align: right; white-space: nowrap; }
+  .object-ci .from { color: var(--grey-4); }
+  .object-ci .to { color: var(--good); font-weight: 700; }
+
+  .methodology-note {
+    font-size: 12px; color: var(--grey-3); line-height: 1.7;
+    border-top: 1px solid var(--line); padding-top: 18px;
+  }
+  .methodology-note a { color: var(--orange); text-decoration: none; }
+  .methodology-note a:hover { text-decoration: underline; }
+
+  footer {
+    max-width: 760px; margin: 40px auto 0; padding: 0 24px;
+    font-size: 10.5px; letter-spacing: 1px; color: #444; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-logo">AT<span>RC</span> · Architectura Temporis Research Centre</div>
+  <a href="kotor-preview.html" class="back-link">← Back</a>
+</div>
+
+<div class="snapshot-banner">
+  <b>Static snapshot</b> — captured 1 Sept 2026, not connected to the live registry.
+  For the interactive, real-time version, use the live TIA Simulator.
+</div>
+
+<div class="wrap">
+  <div class="eyebrow">Temporis Impact Assessment · Herceg Novi Old Town, Zone 001</div>
+  <h1>One restoration, measured zone-wide</h1>
+  <p class="lede">
+    <b>Žuta kuća</b> is currently the lowest-scoring object in the zone — a building whose
+    condition pulls the whole zone's reading down. This snapshot shows what the same
+    Chronity Index methodology used across this platform predicts if it were sympathetically
+    restored, holding every other measured object in the zone unchanged.
+  </p>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label">CI_zone (weighted) — before</div>
+      <div class="compare-value">0.968</div>
+      <div class="compare-sub">Current measured state, 9 objects</div>
+    </div>
+    <div class="compare-arrow">→</div>
+    <div class="compare-col">
+      <div class="compare-label">CI_zone (weighted) — after</div>
+      <div class="compare-value" style="color:var(--good);">1.003</div>
+      <div class="compare-sub">With Žuta kuća restored</div>
+    </div>
+  </div>
+
+  <div class="delta-row">
+    <span class="delta-tag">ΔCI +0.035</span>
+    <span class="decision-tag">Decision: Approved</span>
+  </div>
+
+  <div class="scenario-card">
+    <h2>What changed</h2>
+    <div class="object-row">
+      <div>
+        <div class="object-name">Žuta kuća</div>
+        <div class="object-note">Hypothetical restoration — material replacement + integrity repair, modeled per Appendix J.4</div>
+      </div>
+      <div class="object-ci"><span class="from">0.384</span> → <span class="to">0.700</span></div>
+    </div>
+    <div class="object-row">
+      <div>
+        <div class="object-name">All other 8 objects</div>
+        <div class="object-note">Unchanged — same measured values as the live registry</div>
+      </div>
+      <div class="object-ci"><span class="from">—</span></div>
+    </div>
+  </div>
+
+  <p class="methodology-note">
+    This is one hypothetical scenario computed by the same server-side ΔCI engine
+    (Appendix J v2.0, TIA_Article §5.5 — PSM applied per object before zone averaging)
+    behind the live <a href="simulator.html">TIA Simulator</a>. Numbers are frozen here as a
+    fallback in case the live sheet is temporarily slow to load — nothing on this page is
+    editable or connected to any server.
+  </p>
+</div>
+
+<footer>Architectura Temporis Research Centre — Chronity Index methodology, v13.0 (2026)</footer>
+
+</body>
+</html>

@@ -545,6 +545,19 @@
   }
   .btn-edit-toggle:hover, .btn-edit-toggle.active { background:#c55a11; color:#fff; }
 
+  /* v8.7: гостевой режим для показа муниципалитету Котора — "← Field" и
+     "✎ Edit Zones" скрыты по умолчанию через CSS (не через JS после
+     рендера, чтобы не было доли секунды, когда кнопка видна), показываются
+     только явным ?admin=1 в URL (см. скрипт внизу страницы). Это не барьер
+     безопасности — сама панель редактирования всё ещё в исходном коде
+     страницы, и её можно открыть через ?edit=1 или консоль браузера, а
+     деструктивные действия и так требуют adminSecret на сервере (v8.7,
+     см. changelog в .gs). Это только про то, чтобы обычная ссылка на карту
+     не показывала посторонним кнопки, явно не для них. */
+  /* !important: у ссылки "← Field" есть свой инлайн style="display:inline-block"
+     (специфичность инлайн-стиля иначе перебила бы этот класс). */
+  .admin-only{ display:none !important; }
+
   /* Prior-CI (unmeasured zone) label style — no numbers, just Zone_ID + priority note */
   .zone-label-prior{ text-align:center; }
   .zone-label-prior .zl-pill{ display:inline-block; max-width:130px; background:rgba(20,20,20,0.82); border-radius:3px; padding:3px 8px; white-space:normal; }
@@ -606,9 +619,9 @@
     <div class="title" data-i18n="map.title">Spectral CI Map</div>
   </div>
   <div class="header-right">
-    <a class="btn-edit-toggle" href="field.html" style="text-decoration:none; display:inline-block;" data-i18n="map.backToField">← Field</a>
+    <a class="btn-edit-toggle admin-only" id="backToFieldLink" href="field.html" style="text-decoration:none; display:inline-block;" data-i18n="map.backToField">← Field</a>
     <div class="status-dot" id="statusDot"></div>
-    <button class="btn-edit-toggle" id="editToggleBtn" onclick="toggleEditMode()" data-i18n="map.editZones">✎ Edit Zones</button>
+    <button class="btn-edit-toggle admin-only" id="editToggleBtn" onclick="toggleEditMode()" data-i18n="map.editZones">✎ Edit Zones</button>
     <button class="btn-refresh" onclick="loadData()" data-i18n="map.refresh">↻ Refresh</button>
     <div class="lang-toggle">
       <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
@@ -3295,6 +3308,18 @@ setInterval(() => {
   }
   loadData();
 }, AUTO_REFRESH_MS);
+
+// v8.7: гостевой режим для показа муниципалитету Котора — по умолчанию
+// (обычная ссылка на карту, без параметров) "← Field" и "✎ Edit Zones"
+// скрыты через CSS-класс .admin-only (display:none!important). Показываются
+// только при явном ?admin=1 в URL — тогда снимаем класс с обоих элементов.
+// НЕ барьер безопасности: сама панель редактирования всё ещё в исходном
+// коде страницы и открывается через ?edit=1 ниже независимо от этого
+// параметра — деструктивные действия и так требуют adminSecret на сервере.
+if (new URLSearchParams(location.search).get('admin') === '1') {
+  document.getElementById('editToggleBtn').classList.remove('admin-only');
+  document.getElementById('backToFieldLink').classList.remove('admin-only');
+}
 
 // Deep link: ATRC_CI_Map.html?edit=1 opens the Edit Zones panel directly
 // (used by the "Zone Editor" card on field-workspace.html).
