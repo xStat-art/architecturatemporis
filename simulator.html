@@ -6,6 +6,7 @@
 <title>TIA Live Simulator — Zone 001 (Sandbox)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
     --bg: #0a0a0a;
@@ -303,12 +304,28 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-// REAL ZONE GEOMETRY — ZN·ME·BJ·HN·001, from the ZONES sheet
-// (Polygon_GeoJSON column), pasted verbatim.
+// DEFAULT (fallback) ZONE GEOMETRY — ZN·ME·BJ·HN·001, from the ZONES sheet
+// (Polygon_GeoJSON column), pasted verbatim. Resolved instantly (no
+// network wait) whenever the page loads with no ?zone= at all, or with
+// ?zone= equal to this same zone — see resolveZoneGeometry() below for
+// any other zone.
 // ═══════════════════════════════════════════════════════════════
-const ZONE_RING = [[18.53786964512551,42.452779337455915],[18.537931400471525,42.45284450720106],[18.53852296654498,42.452619527687425],[18.5385119,42.452485],[18.5384661,42.4523134],[18.5383897,42.4521193],[18.5383897,42.4521193],[18.538099170612867,42.45170022270082],[18.538128681671225,42.451530066617885],[18.538091122142415,42.45135793150546],[18.537868461646017,42.451100826753134],[18.537855047528602,42.45087131159191],[18.53787919293995,42.450485486796325],[18.538083971998216,42.4502893475146],[18.5380692,42.4502754],[18.5379856,42.4501895],[18.5378899,42.450107],[18.537850993743803,42.450084134819825],[18.5377582,42.4500296],[18.5376043,42.4499754],[18.5375017,42.44996],[18.53748740792803,42.44996],[18.5374003,42.44996],[18.5372835,42.4499687],[18.5372356,42.449974],[18.5371604,42.4499905],[18.5370015,42.4500282],[18.536896312344684,42.45005384618961],[18.5368641,42.4500617],[18.536692,42.450118],[18.5365419,42.4501557],[18.536518719061064,42.450163040957804],[18.536449155236458,42.45009542610474],[18.53632574535606,42.44993318011155],[18.536019697690744,42.44980116101333],[18.53584551995198,42.44977884816701],[18.535741871664104,42.44988431040713],[18.535928687480084,42.45012510520437],[18.53625212601063,42.45034404110768],[18.5362561,42.4503656],[18.5363193,42.4504629],[18.5364068,42.4505867],[18.5365213,42.4507783],[18.536559481456337,42.450853192627946],[18.53666056334131,42.45110299281967],[18.536899688224775,42.45151271980305],[18.53697674181727,42.451798014516285],[18.536988571995465,42.45191780297464],[18.537123078492904,42.45211716338234],[18.5372092,42.4521109],[18.53724530431419,42.452120458017696],[18.5373161,42.4521392],[18.537359588517468,42.4521636041069],[18.5373815,42.4521759],[18.5374209,42.4522161],[18.5374977,42.4523446],[18.53754454220911,42.452419947895336],[18.5375562,42.4524387],[18.5377371,42.4526588],[18.537747767411567,42.45267000301382],[18.53787545697032,42.45278513416571],[18.53786964512551,42.452779337455915]];
+const DEFAULT_ZONE_ID = 'ZN·ME·BJ·HN·001';
+const DEFAULT_ZONE_RING = [[18.53786964512551,42.452779337455915],[18.537931400471525,42.45284450720106],[18.53852296654498,42.452619527687425],[18.5385119,42.452485],[18.5384661,42.4523134],[18.5383897,42.4521193],[18.5383897,42.4521193],[18.538099170612867,42.45170022270082],[18.538128681671225,42.451530066617885],[18.538091122142415,42.45135793150546],[18.537868461646017,42.451100826753134],[18.537855047528602,42.45087131159191],[18.53787919293995,42.450485486796325],[18.538083971998216,42.4502893475146],[18.5380692,42.4502754],[18.5379856,42.4501895],[18.5378899,42.450107],[18.537850993743803,42.450084134819825],[18.5377582,42.4500296],[18.5376043,42.4499754],[18.5375017,42.44996],[18.53748740792803,42.44996],[18.5374003,42.44996],[18.5372835,42.4499687],[18.5372356,42.449974],[18.5371604,42.4499905],[18.5370015,42.4500282],[18.536896312344684,42.45005384618961],[18.5368641,42.4500617],[18.536692,42.450118],[18.5365419,42.4501557],[18.536518719061064,42.450163040957804],[18.536449155236458,42.45009542610474],[18.53632574535606,42.44993318011155],[18.536019697690744,42.44980116101333],[18.53584551995198,42.44977884816701],[18.535741871664104,42.44988431040713],[18.535928687480084,42.45012510520437],[18.53625212601063,42.45034404110768],[18.5362561,42.4503656],[18.5363193,42.4504629],[18.5364068,42.4505867],[18.5365213,42.4507783],[18.536559481456337,42.450853192627946],[18.53666056334131,42.45110299281967],[18.536899688224775,42.45151271980305],[18.53697674181727,42.451798014516285],[18.536988571995465,42.45191780297464],[18.537123078492904,42.45211716338234],[18.5372092,42.4521109],[18.53724530431419,42.452120458017696],[18.5373161,42.4521392],[18.537359588517468,42.4521636041069],[18.5373815,42.4521759],[18.5374209,42.4522161],[18.5374977,42.4523446],[18.53754454220911,42.452419947895336],[18.5375562,42.4524387],[18.5377371,42.4526588],[18.537747767411567,42.45267000301382],[18.53787545697032,42.45278513416571],[18.53786964512551,42.452779337455915]];
 
-const CENTER_LAT = 42.451752, CENTER_LNG = 18.537204;
+const DEFAULT_CENTER_LAT = 42.451752, DEFAULT_CENTER_LNG = 18.537204;
+
+// ZoneParam_TIA (3sep2026): zone is now a URL parameter, same
+// URLSearchParams convention already used by registry.html's ?city= and
+// passport.html's ?id= — not a second way of doing this. No ?zone= at all
+// keeps this page's original behaviour unchanged (default pilot zone,
+// resolved with no network round-trip, exactly as before this change).
+const ZONE_ID = new URLSearchParams(location.search).get('zone') || DEFAULT_ZONE_ID;
+
+// Same published ZONES sheet CSV intervention-entry.html's zone picker
+// reads (applyZoneGeometry/loadZones there) — one source of truth for
+// Polygon_GeoJSON, not a second copy of it.
+const ZONES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1462679093&single=true&output=csv';
 
 // v8.3: this used to hardcode the 9 Zone 001 pilot objects. The object
 // list now comes live from PASSPORT_REGISTRY via computeTIA (see
@@ -316,7 +333,6 @@ const CENTER_LAT = 42.451752, CENTER_LNG = 18.537204;
 // server response on every sync, never mutated locally.
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxWlgW4Iqj6a2mjdO8I0f52XIVT8dqal0YnwM4z0CqJGxFT27SePt-QzFDImhd5QSGr/exec';
 const API_SECRET = '2NcQ,)(8k3f2m'; // v8.7: ротация секрета перед пилотом в Которе
-const ZONE_ID = 'ZN·ME·BJ·HN·001';
 
 let objects = [];
 
@@ -530,6 +546,10 @@ function polygonCentroid(latlngs){
 }
 
 async function loadUnmeasuredBuildings(){
+  if (!map || !zoneBounds){
+    buildingsStatus.textContent = 'Zone geometry not loaded yet.';
+    return;
+  }
   loadBuildingsBtn.disabled = true;
   buildingsStatus.textContent = 'Fetching building footprints from OpenStreetMap…';
 
@@ -603,18 +623,50 @@ async function selectUnmeasuredBuilding(poly, centroid, wayIdx){
 
 
 // ═══════════════════════════════════════════════════════════════
-// MAP SETUP
+// ZONE GEOMETRY RESOLUTION — ZoneParam_TIA (3sep2026). parseZoneRing is
+// the same parser intervention-entry.html uses for the ZONES sheet's
+// Polygon_GeoJSON column (same shape convention as DEFAULT_ZONE_RING
+// above), not a second, diverging implementation.
 // ═══════════════════════════════════════════════════════════════
-const map = L.map('leafletMap', { zoomControl:true, attributionControl:true }).setView([CENTER_LAT, CENTER_LNG], 17);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2mrb_1_8d0061170a68bac41c1887dc', {
-  attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains:'abcd', maxZoom:20,
-}).addTo(map);
+function parseZoneRing(geoJsonStr){
+  try {
+    const coords = JSON.parse(geoJsonStr).coordinates[0];
+    return (Array.isArray(coords) && coords.length >= 3) ? coords : null;
+  } catch(e) { return null; }
+}
 
-const zoneBounds = ringBounds(ZONE_RING, 0.08);
-const leafletZoneBounds = L.latLngBounds([zoneBounds.south, zoneBounds.west],[zoneBounds.north, zoneBounds.east]);
+/** Resolves {ring, centerLat, centerLng} for zoneId. The default pilot
+ * zone resolves immediately from DEFAULT_ZONE_RING — no network wait,
+ * same as this page's behaviour before ?zone= existed. Any other zone is
+ * looked up live in the ZONES sheet; resolves to null if that zone has no
+ * usable Polygon_GeoJSON yet (not drawn, or not synced) — callers must
+ * treat null as "show a message", never assume a ring exists. */
+async function resolveZoneGeometry(zoneId){
+  if (zoneId === DEFAULT_ZONE_ID){
+    return { ring: DEFAULT_ZONE_RING, centerLat: DEFAULT_CENTER_LAT, centerLng: DEFAULT_CENTER_LNG };
+  }
+  return new Promise((resolve)=>{
+    Papa.parse(ZONES_CSV + '&t=' + Date.now(), {
+      download: true, header: true, skipEmptyLines: true,
+      complete: (res)=>{
+        const row = (res.data || []).find(r => r.Zone_ID === zoneId);
+        const ring = row ? parseZoneRing(row.Polygon_GeoJSON) : null;
+        if (!ring){ resolve(null); return; }
+        const centroid = polygonCentroid(ring.map(([lng,lat])=>[lat,lng]));
+        resolve({ ring, centerLat: centroid.lat, centerLng: centroid.lng });
+      },
+      error: ()=> resolve(null),
+    });
+  });
+}
 
-L.polygon(ZONE_RING.map(([lng,lat])=>[lat,lng]), { fillOpacity:0, color:'#1b1e24', weight:3, opacity:0.5 }).addTo(map);
-
+// ═══════════════════════════════════════════════════════════════
+// MAP SETUP — deferred until zone geometry resolves (see
+// resolveZoneGeometry above and boot() at the bottom of this file).
+// map/ZONE_RING/zoneBounds/leafletZoneBounds are declared here as `let`,
+// assigned inside initZone() once geometry is confirmed.
+// ═══════════════════════════════════════════════════════════════
+let map, ZONE_RING, zoneBounds, leafletZoneBounds;
 let gradientOverlay = null;
 const markerRefs = {};
 let addModeMarker = null;
@@ -622,6 +674,21 @@ let addPending = false;
 let mode = 'modify'; // 'modify' | 'add'
 let selectedObj = null;
 let newObjectCounter = 1;
+
+/** Builds the Leaflet map and draws the zone outline. Only called once
+ * resolveZoneGeometry() has returned real geometry — see boot(). */
+function initZone(geometry){
+  ZONE_RING = geometry.ring;
+  map = L.map('leafletMap', { zoomControl:true, attributionControl:true }).setView([geometry.centerLat, geometry.centerLng], 17);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains:'abcd', maxZoom:20,
+  }).addTo(map);
+
+  zoneBounds = ringBounds(ZONE_RING, 0.08);
+  leafletZoneBounds = L.latLngBounds([zoneBounds.south, zoneBounds.west],[zoneBounds.north, zoneBounds.east]);
+
+  L.polygon(ZONE_RING.map(([lng,lat])=>[lat,lng]), { fillOpacity:0, color:'#1b1e24', weight:3, opacity:0.5 }).addTo(map);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // RENDER — draws whatever object list it's given: the server-authoritative
@@ -805,11 +872,24 @@ const legendTicks = document.getElementById('legendTicks');
 const loadBuildingsBtn = document.getElementById('loadBuildingsBtn');
 const buildingsStatus = document.getElementById('buildingsStatus');
 loadBuildingsBtn.addEventListener('click', loadUnmeasuredBuildings);
+// Disabled until zone geometry resolves (see boot()) — both touch map/
+// zoneBounds, which don't exist yet for a non-default ?zone= mid-fetch.
+loadBuildingsBtn.disabled = true;
 const modeModifyBtn = document.getElementById('modeModify');
 const modeAddBtn = document.getElementById('modeAdd');
 const modeHint = document.getElementById('modeHint');
 const presetRow = document.getElementById('presetRow');
 const presetButtons = Array.from(document.querySelectorAll('.preset-btn'));
+resetBtn.disabled = true; // same reason as loadBuildingsBtn above — resetAll() touches map/markerRefs
+
+// Reflect the actual zone in the header/tab title as soon as ZONE_ID is
+// known, before geometry resolves — so a wrong "Herceg Novi" label never
+// shows for a ?zone= that isn't the default. Default zone: untouched,
+// same text as before this change.
+if (ZONE_ID !== DEFAULT_ZONE_ID){
+  document.title = `TIA Live Simulator — ${ZONE_ID} (Sandbox)`;
+  document.querySelector('.brand .sub').textContent = `Zone ${ZONE_ID} · Sandbox`;
+}
 
 const PRESETS = {
   construction:   { ci:0.35, psm:1.0, label:'New construction' },
@@ -940,6 +1020,11 @@ modeAddBtn.addEventListener('click', ()=> setMode('add'));
 applyBtn.addEventListener('click', applyIntervention);
 resetBtn.addEventListener('click', resetAll);
 
+/** Wires the "click inside the zone to place a hypothetical object"
+ * handler. Called only from boot(), once initZone() has created `map` —
+ * this used to run unconditionally at parse time, back when ZONE_RING/map
+ * were always synchronous constants. */
+function wireMapClickHandler(){
 map.on('click', (e)=>{
   if (mode!=='add') return;
   const { lat, lng } = e.latlng;
@@ -990,6 +1075,7 @@ map.on('click', (e)=>{
     if (range) range.addEventListener('input', ()=> val.textContent = parseFloat(range.value).toFixed(3));
   }, 30);
 });
+}
 
 let liveAdjustTimer = null;
 
@@ -1059,18 +1145,55 @@ window.__confirmAddObject = function(lat, lng){
 };
 
 // ═══════════════════════════════════════════════════════════════
-// INIT — the first live sync populates `objects` from PASSPORT_REGISTRY
-// before anything object-related is drawn. The zone polygon itself
-// (ZONE_RING) doesn't need to wait — it's static geometry, not CI data.
+// BOOT — ZoneParam_TIA (3sep2026). Resolves the requested zone's geometry
+// first (instantly for the default pilot zone, live from ZONES_CSV for
+// any other ?zone=), then either starts the map/simulator normally or
+// shows a clear "no boundary yet" state — see showZoneUnavailable(). The
+// old unconditional `buildLegend(); map.whenReady(...)` below only runs
+// once geometry is confirmed; the first live sync still populates
+// `objects` from PASSPORT_REGISTRY before anything object-related draws.
 // ═══════════════════════════════════════════════════════════════
-buildLegend();
-map.whenReady(async ()=>{
-  selectedCard.innerHTML = '<div class="empty">Loading live zone data…</div>';
-  const data = await syncWithServer();
-  selectedCard.innerHTML = data
-    ? '<div class="empty">Click a point on the map to select an object.</div>'
-    : '<div class="empty" style="color:var(--bad)">Could not load live zone data — reload to try again.</div>';
-});
+async function boot(){
+  const geometry = await resolveZoneGeometry(ZONE_ID);
+  if (!geometry){
+    showZoneUnavailable();
+    return;
+  }
+  initZone(geometry);
+  wireMapClickHandler();
+  loadBuildingsBtn.disabled = false;
+  resetBtn.disabled = false;
+  buildLegend();
+  map.whenReady(async ()=>{
+    selectedCard.innerHTML = '<div class="empty">Loading live zone data…</div>';
+    const data = await syncWithServer();
+    selectedCard.innerHTML = data
+      ? '<div class="empty">Click a point on the map to select an object.</div>'
+      : '<div class="empty" style="color:var(--bad)">Could not load live zone data — reload to try again.</div>';
+  });
+}
+
+/** Degraded state for a ?zone= that isn't the default and has no usable
+ * Polygon_GeoJSON in the live ZONES sheet yet (not drawn, or not synced).
+ * No map gets created — nothing here assumes ZONE_RING/map exist. Mirrors
+ * intervention-entry.html's updatePickerAvailabilityUI(): hide the
+ * feature, explain why, never throw. Overwriting .map-wrap also removes
+ * the buildings-loader control and the legend, both its children, so
+ * there's nothing dangling for the user to click into a dead feature. */
+function showZoneUnavailable(){
+  document.querySelector('.map-wrap').innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:32px;text-align:center;color:var(--grey);font-size:14px;line-height:1.6;">' +
+    'This zone (<b style="color:var(--white)">' + ZONE_ID + '</b>) doesn\'t have a saved boundary in the live registry yet, so the TIA simulator can\'t run here.<br><br>' +
+    'Draw its outline first with the "✎ Edit Zones" tool in ATRC_CI_Map.html, then reload this page.</div>';
+  interventionBlock.style.display = 'none';
+  applyBtn.style.display = 'none';
+  presetRow.classList.remove('show');
+  selectedCard.innerHTML = '<div class="empty">No zone boundary — see message on the map.</div>';
+  zoneCountEl.textContent = 'No geometry for this zone';
+  ciZoneValueEl.textContent = '—';
+}
+
+boot();
 </script>
 
 </body>
