@@ -680,7 +680,7 @@ let newObjectCounter = 1;
 function initZone(geometry){
   ZONE_RING = geometry.ring;
   map = L.map('leafletMap', { zoomControl:true, attributionControl:true }).setView([geometry.centerLat, geometry.centerLng], 17);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2mrb_1_8d0061170a68bac41c1887dc', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains:'abcd', maxZoom:20,
   }).addTo(map);
 
