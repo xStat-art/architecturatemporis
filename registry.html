@@ -893,6 +893,32 @@ function updateStats(records) {
   document.getElementById('statAvgCI').textContent     = avgCI;
 }
 
+// v8.7: URL-параметр ?city=KO задаёт фильтр по городу раз и навсегда — не
+// нужно менять ссылку при добавлении новых зон того же города в реестр
+// (в отличие от фильтрации по конкретному Zone_ID). Город уже извлекается
+// из самого CP_ID через extractCountryCity() (3-й сегмент), отдельная
+// колонка City_Code из листа ZONES для этого не нужна — просто подставляем
+// значение в уже существующий select #filterCity и применяем фильтры.
+function applyCityFromUrl() {
+  const city = new URLSearchParams(location.search).get('city');
+  if (!city) return;
+  const cityUpper = city.toUpperCase();
+  const cityEl = document.getElementById('filterCity');
+
+  // Если для этого города пока нет ни одной записи в реестре, populateSelects()
+  // ещё не создал для него <option> — обычное select.value='KO' в этом случае
+  // молча ничего не делает (остаётся "All cities"), и вместо честного "0
+  // objects" город тихо показал бы ВСЕ объекты без фильтра вообще. Для
+  // города-пилота на старте (Котор до первого измерения) это был бы прямо
+  // противоположный ожидаемому результат, поэтому опцию создаём сами.
+  if (![...cityEl.options].some(o => o.value === cityUpper)) {
+    const opt = document.createElement('option');
+    opt.value = cityUpper; opt.textContent = cityUpper;
+    cityEl.appendChild(opt);
+  }
+  cityEl.value = cityUpper;
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
   try {
@@ -919,8 +945,9 @@ async function init() {
     }
 
     populateSelects(allRecords);
+    applyCityFromUrl();
     updateStats(allRecords);
-    renderTable(getSorted(allRecords));
+    applyFilters();
 
   } catch(err) {
     document.getElementById('loadingState').style.display = 'none';
@@ -939,8 +966,9 @@ async function init() {
       Audit_Count: '1',
     }];
     populateSelects(allRecords);
+    applyCityFromUrl();
     updateStats(allRecords);
-    renderTable(getSorted(allRecords));
+    applyFilters();
   }
 }
 
