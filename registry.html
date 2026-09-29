@@ -145,6 +145,11 @@
     gap: 2px;
   }
 
+  /* v8.12: облегчённые точки AD — отдельный показатель, отделён чертой от CI-статистики */
+  .stat-density { margin-left: auto; padding-left: 24px; border-left: 1px dashed var(--border); text-decoration: none; }
+  .stat-density .stat-value { color: #c9a27a; }
+  @media (max-width: 700px) { .stat-density { margin-left: 0; padding-left: 0; border-left: none; } }
+
   .stat-value {
     font-family: var(--mono);
     font-size: 20px;
@@ -549,6 +554,10 @@
     <span class="stat-value" id="statAvgCI">—</span>
     <span class="stat-label" data-i18n="registry.stat.avgCi">Avg CI</span>
   </div>
+  <a class="stat stat-density" href="ATRC_CI_Map.html?ad=1" id="statDensityLink">
+    <span class="stat-value" id="statDensity">—</span>
+    <span class="stat-label" data-i18n="registry.stat.density">Light AD points · not in CI ↗</span>
+  </a>
 </div>
 
 <!-- FILTERS -->
@@ -639,10 +648,25 @@
   </div>
 </footer>
 
-<script src="i18n.js?v=20260819"></script>
+<script src="i18n.js?v=20260929"></script>
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTy8xKcJNvAidXuhUzITooZZtzXlyfoxZtX7_q5p7K9iptOtpWNjkV3oyTyDUvmDN4cdR_9JYcvyh2b/pub?gid=1239668298&single=true&output=csv';
+
+// v8.12: облегчённые точки AD (раздел 16 .gs) — только счётчик, в таблицу
+// паспортов и в Avg CI не попадают. Тот же Web App, что у field.html/карты.
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxWlgW4Iqj6a2mjdO8I0f52XIVT8dqal0YnwM4z0CqJGxFT27SePt-QzFDImhd5QSGr/exec';
+const API_SECRET = '2NcQ,)(8k3f2m'; // = CONFIG.API_SECRET, soft barrier, не авторизация
+
+function loadDensityCount() {
+  fetch(WEBAPP_URL + '?action=densityPoints&secret=' + encodeURIComponent(API_SECRET))
+    .then(r => r.json())
+    .then(d => {
+      if (!d || !d.ok) return; // старый деплой без раздела 16 — оставляем "—"
+      document.getElementById('statDensity').textContent = d.points.length;
+    })
+    .catch(() => {});
+}
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 let allRecords = [];
@@ -742,7 +766,7 @@ function renderTable(records) {
       <td><span class="cp-id">${displayID}</span></td>
       <td>
         <div class="obj-name">${r.Object_Name || '—'}</div>
-        <div class="obj-architect" style="color:#666;">${r.Audit_Count || 1} audit${(r.Audit_Count||1)!='1'?'s':''}</div>
+        <div class="obj-architect" style="color:#666;">${r.Audit_Count || 1} independent measurement${(r.Audit_Count||1)!='1'?'s':''}</div>
       </td>
       <td class="hide-mobile">
         <div class="loc-city" style="font-family:monospace;font-size:11px;">${gps}</div>
@@ -948,6 +972,7 @@ async function init() {
     applyCityFromUrl();
     updateStats(allRecords);
     applyFilters();
+    loadDensityCount();
 
   } catch(err) {
     document.getElementById('loadingState').style.display = 'none';

@@ -152,6 +152,8 @@
      the split-note and the 5-row category breakdown hide until tapped
      to add .expanded. */
   .legend:not(.expanded) { padding: 12px 16px; min-width: 0; }
+  /* v8.12: в режиме AD-слоя заливка зон цветом CI/декоративным цветом скрыта, чтобы не смешиваться с AD-поверхностью; контур и подпись остаются */
+  body.ad-mode path.zone-fill { fill-opacity: 0 !important; }
   .legend:not(.expanded) .legend-title { margin-bottom: 8px; }
   .legend:not(.expanded) .legend-labels { margin-bottom: 0; }
   .legend:not(.expanded) .legend-split-note,
@@ -622,6 +624,7 @@
     <a class="btn-edit-toggle admin-only" id="backToFieldLink" href="field.html" style="text-decoration:none; display:inline-block;" data-i18n="map.backToField">← Field</a>
     <div class="status-dot" id="statusDot"></div>
     <button class="btn-edit-toggle admin-only" id="editToggleBtn" onclick="toggleEditMode()" data-i18n="map.editZones">✎ Edit Zones</button>
+    <button class="btn-edit-toggle" id="adToggleBtn" onclick="toggleAdSurface()" data-i18n="map.ad.toggle">AD layer</button>
     <button class="btn-refresh" onclick="loadData()" data-i18n="map.refresh">↻ Refresh</button>
     <div class="lang-toggle">
       <button type="button" class="lang-toggle-btn" data-lang="en" data-i18n="lang.toggle.en">EN</button>
@@ -794,7 +797,18 @@
   </div>
 </div>
 
-<script src="i18n.js?v=20260819"></script>
+<!-- v8.12: легенда AD-слоя, показывается вместо легенды CI, пока слой включён -->
+<div class="legend expanded" id="adLegend" style="display:none;">
+  <div class="legend-title"><span data-i18n="map.ad.legendTitle">Authenticity Density (AD) · density layer</span></div>
+  <div class="legend-spectrum-wrap">
+    <div class="legend-spectrum" style="background:linear-gradient(to right, rgb(242,222,189), rgb(217,160,92), rgb(158,90,36), rgb(84,42,12));"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;letter-spacing:1px;margin:6px 0 4px;"><span>D 0.15</span><span>C 0.40</span><span>B 0.65</span><span>A 0.80</span></div>
+  <div class="legend-split-note" data-i18n="map.ad.legendNote">Separate from CI. Squares = light points (AD + photo only, no passport, not in any CI); dashed = access limited. Surface also uses AD of fully measured objects.</div>
+  <div class="legend-split-note" id="adLegendCount"></div>
+</div>
+
+<script src="i18n.js?v=20260929"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // CONFIG — замени на свой Spreadsheet ID
@@ -1167,8 +1181,10 @@ function groupByZone(objects) {
 // exportable, comparable over time, and structured for future ML use
 // (see exportGradientSnapshot below).
 // ═══════════════════════════════════════════════════════════════
-function computeIDWGrid(points, bounds, gridSize, power) {
+function computeIDWGrid(points, bounds, gridSize, power, valueOf) {
   power = power || 2;
+  // v8.12: valueOf — чем интерполировать; по умолчанию CI_weighted, AD-слой передаёт свой
+  valueOf = valueOf || (p => p.ciWeighted);
   const south = bounds.getSouth(), north = bounds.getNorth();
   const west  = bounds.getWest(),  east  = bounds.getEast();
   const grid = [];
@@ -1180,9 +1196,9 @@ function computeIDWGrid(points, bounds, gridSize, power) {
       let wSum = 0, vSum = 0, exact = null;
       for (const p of points) {
         const d = Math.hypot(p.lat - lat, p.lng - lng);
-        if (d < 1e-7) { exact = p.ciWeighted; break; }
+        if (d < 1e-7) { exact = valueOf(p); break; }
         const w = 1 / Math.pow(d, power);
-        wSum += w; vSum += w * p.ciWeighted;
+        wSum += w; vSum += w * valueOf(p);
       }
       row.push(exact !== null ? exact : (wSum ? vSum / wSum : null));
     }
@@ -1193,7 +1209,8 @@ function computeIDWGrid(points, bounds, gridSize, power) {
 
 // Render the IDW grid to a canvas, clipped to the zone's convex hull shape,
 // and return a data URL suitable for a Leaflet ImageOverlay.
-function renderGradientCanvas(grid, gridSize, hullGeoJSON, bounds) {
+function renderGradientCanvas(grid, gridSize, hullGeoJSON, bounds, colorOf) {
+  colorOf = colorOf || ciToColor; // v8.12: AD-слой передаёт adToColor, не спектр CI
   // 400px раньше давал заметную мягкую кайму по краю после того, как canvas
   // растягивался на реальный размер зоны — особенно на новых, более
   // детальных (42-вершинных) контурах после доработки OSM-снаппинга.
@@ -1222,7 +1239,7 @@ function renderGradientCanvas(grid, gridSize, hullGeoJSON, bounds) {
     for (let j = 0; j < gridSize; j++) {
       const v = grid[i][j];
       if (v === null) continue;
-      rawCtx.fillStyle = ciToColor(v);
+      rawCtx.fillStyle = colorOf(v);
       const x = j * cell;
       const y = size - (i + 1) * cell; // flip: grid row 0 = south, canvas y=0 = north
       rawCtx.fillRect(x, y - 0.5, cell + 1, cell + 1);
@@ -1332,6 +1349,109 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=
 let markersLayer  = L.layerGroup().addTo(map);
 let hullLayer      = L.layerGroup().addTo(map);
 let gradientLayer  = L.layerGroup().addTo(map);
+
+// ═══════════════════════════════════════════════════════════════
+// v8.12: AD-СЛОЙ ПЛОТНОСТИ — отдельная поверхность, не смешивается с CI.
+// Источник: облегчённые точки (лист DENSITY_POINTS, только AD + фото, в
+// CI не входят, паспортов не имеют) плюс AD_current полностью измеренных
+// объектов той же зоны. Своя шкала (песок -> умбра), намеренно не спектр
+// CI: одинаковый цвет на двух слоях не должен читаться как одно и то же
+// число. Включается кнопкой в шапке; пока включён, CI-градиент скрыт
+// (маркеры CI остаются), чтобы две поверхности не накладывались.
+// ═══════════════════════════════════════════════════════════════
+const AD_RAMP = [[0.15, [242, 222, 189]], [0.40, [217, 160, 92]], [0.65, [158, 90, 36]], [0.80, [84, 42, 12]]];
+function adToColor(ad) {
+  const v = Math.max(AD_RAMP[0][0], Math.min(AD_RAMP[AD_RAMP.length - 1][0], ad));
+  for (let i = 0; i < AD_RAMP.length - 1; i++) {
+    const [a0, c0] = AD_RAMP[i], [a1, c1] = AD_RAMP[i + 1];
+    if (v <= a1) {
+      const t = (v - a0) / (a1 - a0);
+      return `rgb(${c0.map((c, k) => Math.round(c + (c1[k] - c) * t)).join(',')})`;
+    }
+  }
+  return `rgb(${AD_RAMP[AD_RAMP.length - 1][1].join(',')})`;
+}
+
+let adLayer = L.layerGroup();
+let adSurfaceOn = false;
+let densityPoints = null;     // null = ещё не загружали
+let lastZonesMapForAd = {};   // zoneId -> измеренные объекты (из renderZones)
+
+function refreshDensityPoints() {
+  return fetch(WEBAPP_URL + '?action=densityPoints&secret=' + encodeURIComponent(API_SECRET))
+    .then(r => r.json())
+    .then(d => { densityPoints = (d && d.ok && d.points) ? d.points : []; })
+    .catch(() => { if (densityPoints === null) densityPoints = []; })
+    .then(() => { if (adSurfaceOn) renderAdLayer(); });
+}
+
+function parseAdValue(v) {
+  const n = parseFloat(String(v === undefined || v === null ? '' : v).replace(',', '.'));
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : null;
+}
+
+function renderAdLayer() {
+  adLayer.clearLayers();
+  if (!adSurfaceOn) return;
+  const pts = densityPoints || [];
+  const zoneIds = new Set([...pts.map(p => p.zoneId).filter(Boolean), ...Object.keys(lastZonesMapForAd)]);
+
+  zoneIds.forEach(zoneId => {
+    if (HIDDEN_GEOMETRY_ZONES.some(code => zoneId.endsWith('·' + code))) return;
+    const drawn = lastDrawnZones && lastDrawnZones[zoneId];
+    if (!drawn || !drawn.ring) return; // без контура поверхность не обрезать — только маркеры ниже
+    const values = pts.filter(p => p.zoneId === zoneId).map(p => ({ lat: p.lat, lng: p.lon, ad: p.ad }))
+      .concat((lastZonesMapForAd[zoneId] || [])
+        .map(o => ({ lat: o.lat, lng: o.lng, ad: parseAdValue(o.ad) }))
+        .filter(o => o.ad !== null));
+    if (values.length < 3) return; // тот же порог, что у CI-градиента (STAGE 3)
+    const hull = { type: 'Feature', geometry: { type: 'Polygon', coordinates: [drawn.ring.map(p => [p[1], p[0]])] } };
+    const bounds = L.geoJSON(hull).getBounds().pad(0.08);
+    const grid = computeIDWGrid(values, bounds, 128, 2, p => p.ad);
+    const dataURL = renderGradientCanvas(grid, 128, hull, bounds, adToColor);
+    L.imageOverlay(dataURL, bounds, { opacity: 0.6, interactive: false }).addTo(adLayer);
+  });
+
+  pts.forEach(p => {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
+    const col = adToColor(p.ad);
+    const border = p.accessLimited ? '2px dashed #1a1a1a' : '2px solid #1a1a1a';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:12px;height:12px;background:${col};border:${border};box-sizing:border-box;"></div>`,
+      iconSize: [12, 12], iconAnchor: [6, 6]
+    });
+    const photo = p.photoId ? `<div class="popup-row"><span>Photo</span><span><a href="https://drive.google.com/file/d/${encodeURIComponent(p.photoId)}/view" target="_blank" rel="noopener">open ↗</a></span></div>` : '';
+    L.marker([p.lat, p.lon], { icon }).bindPopup(`
+      <div class="popup-content">
+        <div class="popup-name">${t('map.ad.pointTitle')}</div>
+        <div class="popup-ci" style="color:${col}">AD ${Number(p.ad).toFixed(2)} · ${p.adCategory}</div>
+        <div class="popup-cat">${t('map.ad.notInCi')}</div>
+        <div class="popup-row"><span>ID</span><span>${p.pointId}</span></div>
+        ${p.accessLimited ? `<div class="popup-row"><span>!</span><span>${t('map.ad.accessLimited')}</span></div>` : ''}
+        ${p.date ? `<div class="popup-row"><span>Date</span><span>${p.date}</span></div>` : ''}
+        ${photo}
+      </div>`, { maxWidth: 220 }).addTo(adLayer);
+  });
+  const cnt = document.getElementById('adLegendCount');
+  if (cnt) cnt.textContent = t('map.ad.count', { n: pts.length });
+}
+
+function toggleAdSurface() {
+  adSurfaceOn = !adSurfaceOn;
+  document.getElementById('adToggleBtn').classList.toggle('active', adSurfaceOn);
+  document.getElementById('adLegend').style.display = adSurfaceOn ? 'block' : 'none';
+  document.body.classList.toggle('ad-mode', adSurfaceOn);
+  document.querySelector('.legend:not(#adLegend)').style.display = adSurfaceOn ? 'none' : '';
+  if (adSurfaceOn) {
+    map.removeLayer(gradientLayer);
+    adLayer.addTo(map);
+    if (densityPoints === null) refreshDensityPoints(); else renderAdLayer();
+  } else {
+    map.removeLayer(adLayer);
+    gradientLayer.addTo(map);
+  }
+}
 
 // v8.2: подписи зон должны визуально мельчать при отдалении (zoom out) —
 // иначе на дальнем масштабе, где на экране одновременно видно много зон
@@ -2863,6 +2983,24 @@ function addZoneCasing(hull) {
 // i18n.js и общего JS-модуля между файлами нет) — при правке обновить оба.
 const HIDDEN_GEOMETRY_ZONES = ['BA·002', 'HN·010', 'KR·002', 'KR·004', 'KU·002', 'LE·004', 'SK·002', 'ZE·002'];
 
+// v8.12: зоны с CI_Method=typology — число берётся с сервера
+// (doGet action=zoneTypologyCI, раздел 15 .gs): взвешенное по площади
+// пятна застройки среднее страт, а не простое среднее всех точек.
+// Покрытие (доля площади измеренных типологий) пишется прямо в подписи.
+let typologyCIByZone = {};
+function typologyInfo(zoneId, drawn) {
+  if (!drawn || drawn.ciMethod !== 'typology') return null;
+  const r = typologyCIByZone[zoneId];
+  if (!r || r.ciZoneWeighted === null || r.ciZoneWeighted === undefined) {
+    return { ci: null, text: 'Typology zone · CI pending' };
+  }
+  const cov = Math.round((r.coverage || 0) * 100);
+  return {
+    ci: r.ciZoneWeighted,
+    text: `CI_zone (w) ${r.ciZoneWeighted.toFixed(3)} · typology · ${cov}% of footprint${r.complete ? '' : ' · incomplete'}`
+  };
+}
+
 function renderZones(zonesMap, drawnZones, fitBounds) {
   if (fitBounds === undefined) fitBounds = true;
   markersLayer.clearLayers();
@@ -2961,7 +3099,10 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
     if (objects.length >= 3) {
       // ── STAGE 3: real IDW gradient ──────────────────────────
       const avgCIWeighted = objects.reduce((s,o) => s + o.ciWeighted, 0) / objects.length;
-      const color = ciToHex(avgCIWeighted);
+      const typo = typologyInfo(zoneId, drawn);
+      const labelCI = typo ? typo.ci : avgCIWeighted;
+      const color = labelCI !== null ? ciToHex(labelCI) : '#aaaaaa';
+      const labelText = typo ? typo.text : `CI_zone (w) ${avgCIWeighted.toFixed(3)} · ${objects.length} pts`;
       if (zoneId.endsWith('002')) console.warn(`[DEBUG ${zoneId}] STAGE 3, objects.length=${objects.length}, avgCIWeighted=${avgCIWeighted}, color=${color}`);
       const bounds = hullBounds.pad(0.08);
       // v7.14: сетка увеличена с 48 до 128 — вычисление IDW почти ничего не
@@ -2985,7 +3126,7 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
           className: 'zone-label',
           html: `<div style="text-align:center;background:rgba(20,20,20,0.82);border-radius:4px;padding:4px 10px;display:inline-block;">
                    <div style="color:#fff;font-size:9px;letter-spacing:1.5px;font-weight:700;">${zoneId}</div>
-                   <div style="color:${color};font-size:10px;letter-spacing:2px;margin-bottom:2px;font-weight:700;text-shadow:0 0 3px rgba(0,0,0,0.6);">CI_zone (w) ${avgCIWeighted.toFixed(3)} · ${objects.length} pts</div>
+                   <div style="color:${color};font-size:10px;letter-spacing:2px;margin-bottom:2px;font-weight:700;text-shadow:0 0 3px rgba(0,0,0,0.6);">${labelText}</div>
                    <div style="color:rgba(255,255,255,0.7);font-size:8px;letter-spacing:1px;font-family:monospace;margin-bottom:4px;">σ ${signature.stddev} · ∇ ${signature.gradient_magnitude} · #${signature.hash}</div>
                    <button onclick="exportGradientSnapshot('${zoneId.replace(/'/g,"\\'")}')" style="pointer-events:auto;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.08);border:1px solid ${color};color:${color};padding:2px 8px;cursor:pointer;">⬇ Export gradient</button>
                  </div>`,
@@ -3000,14 +3141,14 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
       if (zoneId.endsWith('002')) console.warn(`[DEBUG ${zoneId}] STAGE 2, objects.length=${objects.length}, avgCIWeighted=${avgCIWeighted}, color=${color}`);
       addZoneCasing(hull);
       L.geoJSON(hull, {
-        style: { fillColor: color, fillOpacity: 0.45, color, weight: 1.4, opacity: 0.95, dashArray: '4 4' },
+        style: { fillColor: color, fillOpacity: 0.45, color, weight: 1.4, opacity: 0.95, dashArray: '4 4', className: 'zone-fill' },
       }).addTo(hullLayer);
       L.marker([cLat, cLng], {
         icon: L.divIcon({
           className: 'zone-label-prior',
           html: tightFit
             ? `<div class="zl-pill-compact"><div class="zl-id-compact">${zoneId}</div></div>`
-            : `<div class="zl-pill"><div class="zl-id">${zoneId}</div><div class="zl-note">${objects.length} measurement${objects.length>1?'s':''} · not enough for CI_zone yet</div></div>`,
+            : `<div class="zl-pill"><div class="zl-id">${zoneId}</div><div class="zl-note">${typologyInfo(zoneId, drawn) ? typologyInfo(zoneId, drawn).text : objects.length + ' measurement' + (objects.length>1?'s':'') + ' · not enough for CI_zone yet'}</div></div>`,
           iconAnchor: tightFit ? [30, -4] : [60, -6], iconSize: tightFit ? [60, 18] : [120, 30],
         }), interactive: false,
       }).addTo(hullLayer);
@@ -3030,7 +3171,7 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
       if (zoneId.endsWith('002')) console.warn(`[DEBUG ${zoneId}] STAGE 1, objects.length=${objects.length}, priorCI=${priorCI}, color=${color}`);
       addZoneCasing(hull);
       L.geoJSON(hull, {
-        style: { fillColor: color, fillOpacity: isCentral ? 0.5 : 0.35, color, weight: 1.4, opacity: 0.9, dashArray: '2 6' },
+        style: { fillColor: color, fillOpacity: isCentral ? 0.5 : 0.35, color, weight: 1.4, opacity: 0.9, dashArray: '2 6', className: 'zone-fill' },
       }).addTo(hullLayer);
       L.marker([cLat, cLng], {
         icon: L.divIcon({
@@ -3087,6 +3228,10 @@ function renderZones(zonesMap, drawnZones, fitBounds) {
   } else {
     document.getElementById('statsPanel').style.display = 'none';
   }
+
+  // v8.12: AD-слой строится поверх тех же объектов/зон, что и CI
+  lastZonesMapForAd = zonesMap;
+  if (adSurfaceOn) renderAdLayer();
 
   // Fit bounds to whatever we have — objects if any, else drawn zones.
   // v8.1: только когда явно попросили (см. комментарий у renderZones выше) —
@@ -3161,7 +3306,9 @@ function loadZonesSheet(callback) {
           // v8.7: fallback-маркер для зон без Polygon_GeoJSON и без ≥3 полевых
           // измерений — см. ZoneTessellation_TZ, раздел "Отрисовка на карте".
           centerLat: Number.isFinite(centerLatNum) ? centerLatNum : null,
-          centerLng: Number.isFinite(centerLngNum) ? centerLngNum : null
+          centerLng: Number.isFinite(centerLngNum) ? centerLngNum : null,
+          // v8.12: 'typology' -> CI зоны считает сервер по стратам (раздел 15 .gs)
+          ciMethod: String(row['CI_Method'] || '').trim().toLowerCase() === 'typology' ? 'typology' : 'full'
         };
       });
       callback(zones);
@@ -3224,7 +3371,17 @@ function loadData() {
     lastDrawnZones = drawnZones;
     renderSavedZoneList();
 
-    Papa.parse(REGISTRY_CSV + '&t=' + Date.now(), {
+    // v8.12: CI typology-зон считает сервер; спрашиваем только если такие зоны есть.
+    // Сбой сети не блокирует карту: подпись покажет "CI pending".
+    const needTypology = Object.keys(drawnZones).some(z => drawnZones[z].ciMethod === 'typology');
+    const typologyReady = needTypology
+      ? fetch(WEBAPP_URL + '?action=zoneTypologyCI&secret=' + encodeURIComponent(API_SECRET))
+          .then(r => r.json()).then(d => { typologyCIByZone = (d && d.ok && d.zones) ? d.zones : {}; })
+          .catch(() => { typologyCIByZone = {}; })
+      : Promise.resolve();
+    if (adSurfaceOn) refreshDensityPoints();
+
+    typologyReady.then(() => Papa.parse(REGISTRY_CSV + '&t=' + Date.now(), {
       download: true,
       header: true,
       skipEmptyLines: true,
@@ -3276,7 +3433,7 @@ function loadData() {
         renderZones(groupByZone(DEMO_DATA), {}, shouldFit);
         didInitialFit = true;
       }
-    });
+    }));
   });
 }
 
@@ -3319,6 +3476,11 @@ setInterval(() => {
 if (new URLSearchParams(location.search).get('admin') === '1') {
   document.getElementById('editToggleBtn').classList.remove('admin-only');
   document.getElementById('backToFieldLink').classList.remove('admin-only');
+}
+
+// v8.12: ?ad=1 открывает карту сразу с AD-слоем (ссылка из registry.html)
+if (new URLSearchParams(location.search).get('ad') === '1') {
+  toggleAdSurface();
 }
 
 // Deep link: ATRC_CI_Map.html?edit=1 opens the Edit Zones panel directly
