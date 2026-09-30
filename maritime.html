@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maritime View Profile · ATRC</title>
+<!--
+  v8.13 (30 Sep 2026). Профиль вида застройки с воды по листу MARITIME_POINTS
+  (раздел 17 .gs, doGet action=maritimePoints). Логика рендера перенесена из
+  прототипа (artifact GbDu3tidEmt3wu75kHouai): цвет линии = высота значения
+  (вертикальный градиент), три слоя глубины в одном пространстве, заливка
+  только у берега, порог 2 + 2.5·exp(-d/3). Отличия от прототипа по ТЗ: без
+  сглаживания (прямые отрезки), обзорная лента + детальный график участка,
+  вертикальные штрихи вместо маркеров. Самостоятельный показатель, с CI зоны
+  не смешивается.
+-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:        #0e0e0e;
+    --bg2:       #161616;
+    --bg3:       #1e1e1e;
+    --border:    #2a2a2a;
+    --text:      #d4d0c8;
+    --text-dim:  #666;
+    --text-mid:  #999;
+    --accent:    #c55a11;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+  .logo { font-family: var(--mono); font-size: 13px; letter-spacing: 3px; color: var(--text); text-decoration: none; }
+  .logo span { color: var(--accent); }
+  h1 { font-size: 20px; font-weight: 400; margin-top: 6px; }
+  .intro { color: var(--text-mid); font-size: 13px; max-width: 640px; margin-top: 4px; }
+  .lang-toggle { display: flex; gap: 4px; }
+  .lang-toggle-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); font-family: var(--mono); font-size: 11px; padding: 4px 8px; cursor: pointer; }
+  .lang-toggle-btn.active { color: var(--text); background: var(--bg3); border-color: var(--text-dim); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .controls label { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; display: block; margin-bottom: 4px; }
+  select { background: var(--bg2); color: var(--text); border: 1px solid var(--border); padding: 8px 10px; font-family: var(--mono); font-size: 12px; min-width: 150px; }
+
+  .card { background: var(--bg2); border: 1px solid var(--border); padding: 16px; margin-bottom: 16px; }
+  .card-title { font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 8px; }
+  .card-title b { color: var(--text-mid); font-weight: 500; }
+
+  #strip { display: block; width: 100%; height: 34px; cursor: pointer; }
+  #strip:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+  .chart-box { position: relative; width: 100%; height: 340px; }
+  #chart { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+
+  .tip { position: absolute; pointer-events: none; background: #141414; border: 1px solid var(--accent); padding: 8px 10px; font-size: 12px; max-width: 260px; display: none; z-index: 5; }
+  .tip .k { font-family: var(--mono); color: var(--text-mid); font-size: 11px; }
+  .tip .flag { color: #e0473f; font-family: var(--mono); font-size: 10px; letter-spacing: 1px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--text-mid); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { display: inline-block; width: 22px; height: 3px; }
+  .note { font-size: 12px; color: var(--text-mid); margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 10px; }
+
+  .status { font-family: var(--mono); font-size: 12px; color: var(--text-mid); padding: 12px 0; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: top; }
+  th { font-family: var(--mono); font-weight: 500; font-size: 10px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+  td.num { font-family: var(--mono); }
+  td.wrap { white-space: normal; min-width: 180px; }
+  td a { color: var(--accent); }
+  .flag-cell { color: #e0473f; font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <a class="logo" href="index.html">AT<span>RC</span></a>
+      <h1 data-i18n="mp.subtitle">Maritime View Profile</h1>
+      <p class="intro" data-i18n="mp.intro">Bay of Kotor coast as seen from the sea. Points come from the field launcher. A separate indicator: it never enters any zone CI.</p>
+    </div>
+    <div class="lang-toggle">
+      <button type="button" class="lang-toggle-btn" data-lang="en">EN</button>
+      <button type="button" class="lang-toggle-btn" data-lang="sr">SR</button>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div>
+      <label for="zoneSel">Zone</label>
+      <select id="zoneSel"><option value="" data-i18n="mp.zoneAll">All zones</option></select>
+    </div>
+    <div>
+      <label for="segSel" data-i18n="mp.segLen">Segment length</label>
+      <select id="segSel">
+        <option value="0.5">0.5 km</option>
+        <option value="1">1 km</option>
+        <option value="2" selected>2 km</option>
+        <option value="5">5 km</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="status" id="status">Loading points…</div>
+
+  <div id="content" style="display:none;">
+    <div class="card">
+      <div class="card-title"><span data-i18n="mp.overview">Coast overview · tap a segment</span><b id="stripRange"></b></div>
+      <canvas id="strip" tabindex="0" role="img" aria-label="Coast overview strip: one cell per segment, coloured by mean connectivity"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span data-i18n="mp.detail">Selected segment</span><b id="segLabel"></b></div>
+      <div class="chart-box">
+        <canvas id="chart" role="img" aria-label="Connectivity along the coast by depth layer for the selected segment"></canvas>
+        <div class="tip" id="tip"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <p class="note" data-i18n="mp.thresholdNote">The dashed threshold curve is a TEMPORARY placeholder. The decay constant and the core/plateau values are pending calibration with Boris Ilijanić; whether the threshold differs by layer is also open.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span data-i18n="mp.points">Points</span><b id="tableCount"></b></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>km</th><th>layer</th><th>label</th><th>hist.</th><th>conn.</th><th>break</th><th>note</th><th>photos</th><th>ID</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="i18n.js?v=20260930"></script>
+<script>
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxWlgW4Iqj6a2mjdO8I0f52XIVT8dqal0YnwM4z0CqJGxFT27SePt-QzFDImhd5QSGr/exec';
+const API_SECRET = '2NcQ,)(8k3f2m'; // = CONFIG.API_SECRET в .gs, как в field.html / registry.html
+
+// ── Порог: затухание от кора, та же форма, что CSF channel A ──────────────
+// ВРЕМЕННАЯ ЗАГЛУШКА из прототипа, НЕ финальная калибровка. Константа
+// затухания и опорные значения ждут калибровки с Борисом Илияничем; открыт
+// и вопрос, должен ли порог различаться по слоям (сейчас один на все).
+const THRESHOLD = { plateau: 2.0, coreExcess: 2.5, decayKm: 3.0 };
+function thresholdAt(km) {
+  return THRESHOLD.plateau + THRESHOLD.coreExcess * Math.exp(-Math.abs(km) / THRESHOLD.decayKm);
+}
+
+// ── Слои: стопы градиента по ВЫСОТЕ значения (1 худшее … 5 лучшее) ────────
+// Значения из прототипа. Ближний слой ярче, толще и с заливкой; дальние
+// тоньше и приглушены (воздушная перспектива), но с полным перепадом по высоте.
+const LAYERS = [
+  { name: 'Shore',         width: 3,    fillRGB: '29,158,117', stops: [[0, '#e0473f'], [1, '#e0473f'], [3, '#e0b400'], [5, '#1d9e75']] },
+  { name: 'Behind road',   width: 1.75, fillRGB: null,         stops: [[0, '#a5615c'], [1, '#a5615c'], [3, '#a38f4e'], [5, '#4d8a76']] },
+  { name: 'Third plane',   width: 1.25, fillRGB: null,         stops: [[0, '#6e514f'], [1, '#6e514f'], [3, '#6d6448'], [5, '#455e56']] }
+];
+const Y_MIN = 0, Y_MAX = 5;
+// Разрыв в данных: соседние точки одного слоя дальше GAP_KM соединяются
+// пунктиром. Так редкий замер не читается как ровный участок и не путается
+// с настоящим резким вмешательством (оно помечено флагом отдельно).
+const GAP_KM = 0.5;
+
+let allPoints = [];
+let points = [];          // после фильтра по зоне
+let segments = [];        // [{ a, b, mean, n, hasBreak }]
+let selSeg = 0;
+let hitList = [];         // точки детального графика в пикселях, для подсказки
+
+// ── Цвет ─────────────────────────────────────────────────────────────────
+function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+function colorAt(stops, v) {
+  if (v <= stops[0][0]) return stops[0][1];
+  for (let i = 1; i < stops.length; i++) {
+    if (v <= stops[i][0]) {
+      const [v0, c0] = stops[i - 1], [v1, c1] = stops[i];
+      const f = (v - v0) / (v1 - v0), a = hexToRgb(c0), b = hexToRgb(c1);
+      return 'rgb(' + a.map((x, k) => Math.round(x + (b[k] - x) * f)).join(',') + ')';
+    }
+  }
+  return stops[stops.length - 1][1];
+}
+
+// ── Данные ───────────────────────────────────────────────────────────────
+function loadPoints() {
+  const url = WEBAPP_URL + '?action=maritimePoints&secret=' + encodeURIComponent(API_SECRET);
+  return fetch(url).then(r => r.json()).then(d => {
+    if (!d || !d.ok) throw new Error((d && d.error) || 'bad response');
+    return d.points || [];
+  });
+}
+
+function setPoints(list) {
+  allPoints = (list || []).filter(p => isFinite(p.km) && [0, 1, 2].includes(p.layer) && isFinite(p.conn));
+  const zoneSel = document.getElementById('zoneSel');
+  const current = zoneSel.value;
+  const zones = Array.from(new Set(allPoints.map(p => p.zoneId || ''))).sort();
+  zoneSel.querySelectorAll('option:not([data-i18n])').forEach(o => o.remove());
+  zones.forEach(z => {
+    const o = document.createElement('option');
+    o.value = z || '__none'; o.textContent = z || 'NOZONE';
+    zoneSel.appendChild(o);
+  });
+  zoneSel.value = zones.includes(current) || current === '__none' ? current : '';
+  applyFilter(true);
+}
+
+function applyFilter(pickDefault) {
+  const z = document.getElementById('zoneSel').value;
+  points = allPoints.filter(p => !z || (z === '__none' ? !p.zoneId : p.zoneId === z));
+  const status = document.getElementById('status');
+  if (!points.length) {
+    status.style.display = 'block';
+    setStatus('mp.empty');
+    document.getElementById('content').style.display = 'none';
+    return;
+  }
+  status.style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+  buildSegments();
+  if (pickDefault || selSeg >= segments.length) selSeg = defaultSegment();
+  renderAll();
+}
+
+// Сегменты фиксированной длины по всей протяжённости; среднее по берегу
+// (он и есть фасад с воды), если на участке нет береговых точек, по всем слоям.
+function buildSegments() {
+  const len = Number(document.getElementById('segSel').value);
+  const kms = points.map(p => p.km);
+  const start = Math.floor(Math.min(...kms) / len) * len;
+  const end = Math.max(start + len, Math.ceil((Math.max(...kms) + 1e-9) / len) * len);
+  segments = [];
+  for (let a = start; a < end - 1e-9; a += len) {
+    const b = a + len;
+    const last = b >= end - 1e-9;
+    const inSeg = points.filter(p => p.km >= a && (p.km < b || (last && p.km <= b)));
+    const shore = inSeg.filter(p => p.layer === 0);
+    const base = shore.length ? shore : inSeg;
+    segments.push({
+      a: round3(a), b: round3(b), n: inSeg.length, last: last,
+      mean: base.length ? base.reduce((s, p) => s + p.conn, 0) / base.length : null,
+      shoreOnly: shore.length > 0,
+      hasBreak: inSeg.some(p => p.intervention)
+    });
+  }
+}
+// полуинтервал [a, b), последний участок включает правый край
+function inSeg(p, s) { return p.km >= s.a && (p.km < s.b || (s.last && p.km <= s.b)); }
+function round3(x) { return Math.round(x * 1000) / 1000; }
+function defaultSegment() {
+  const withBreak = segments.findIndex(s => s.hasBreak);
+  if (withBreak >= 0) return withBreak;
+  const withData = segments.findIndex(s => s.n > 0);
+  return withData >= 0 ? withData : 0;
+}
+
+// ── Canvas с учётом плотности пикселей ────────────────────────────────────
+function prepCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+// ── Обзорная лента: без осей, цвет = среднее сегмента ─────────────────────
+function renderStrip() {
+  const canvas = document.getElementById('strip');
+  const { ctx, w, h } = prepCanvas(canvas);
+  const n = segments.length, gap = n > 40 ? 0 : 2;
+  const cw = (w - gap * (n - 1)) / n;
+  const top = 6, ch = h - 12;
+  segments.forEach((s, i) => {
+    const x = i * (cw + gap);
+    if (s.mean === null) {
+      ctx.fillStyle = '#1b1b1b'; ctx.fillRect(x, top, cw, ch);
+      ctx.save(); ctx.beginPath(); ctx.rect(x, top, cw, ch); ctx.clip();
+      ctx.strokeStyle = '#2c2c2c'; ctx.lineWidth = 1;
+      for (let k = -ch; k < cw; k += 6) { ctx.beginPath(); ctx.moveTo(x + k, top + ch); ctx.lineTo(x + k + ch, top); ctx.stroke(); }
+      ctx.restore();
+    } else {
+      ctx.fillStyle = colorAt(LAYERS[0].stops, s.mean);
+      ctx.globalAlpha = s.shoreOnly ? 1 : 0.55; // нет береговых точек = оценка по дальним слоям, бледнее
+      ctx.fillRect(x, top, cw, ch);
+      ctx.globalAlpha = 1;
+    }
+    if (s.hasBreak) { // штрих вмешательства над ячейкой
+      points.filter(p => p.intervention && inSeg(p, s)).forEach(p => {
+        const px = x + (p.km - s.a) / (s.b - s.a) * cw;
+        ctx.fillStyle = '#f2f0ec'; ctx.fillRect(Math.round(px) - 0.5, 0, 1.5, top + ch * 0.4);
+      });
+    }
+    if (i === selSeg) {
+      ctx.strokeStyle = '#c55a11'; ctx.lineWidth = 2;
+      ctx.strokeRect(x + 1, top - 3, cw - 2, ch + 6);
+    }
+  });
+  const first = segments[0], last = segments[segments.length - 1];
+  document.getElementById('stripRange').textContent = first.a + ' … ' + last.b + ' km';
+}
+
+function segIndexAt(clientX) {
+  const canvas = document.getElementById('strip');
+  const r = canvas.getBoundingClientRect();
+  const i = Math.floor((clientX - r.left) / r.width * segments.length);
+  return Math.max(0, Math.min(segments.length - 1, i));
+}
+
+// ── Детальный график выбранного участка ───────────────────────────────────
+function renderChart() {
+  const canvas = document.getElementById('chart');
+  const { ctx, w, h } = prepCanvas(canvas);
+  const seg = segments[selSeg];
+  const pad = { l: 34, r: 12, t: 30, b: 40 };
+  const x0 = pad.l, x1 = w - pad.r, yTop = pad.t, yBot = h - pad.b;
+  const X = km => x0 + (km - seg.a) / (seg.b - seg.a) * (x1 - x0);
+  const Y = v => yBot - (v - Y_MIN) / (Y_MAX - Y_MIN) * (yBot - yTop);
+
+  // сетка и оси
+  ctx.font = '11px "IBM Plex Mono", monospace';
+  ctx.fillStyle = '#666'; ctx.strokeStyle = '#1f1f1f'; ctx.lineWidth = 1;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = 1; v <= 5; v++) {
+    ctx.beginPath(); ctx.moveTo(x0, Y(v) + 0.5); ctx.lineTo(x1, Y(v) + 0.5); ctx.stroke();
+    ctx.fillText(String(v), x0 - 8, Y(v));
+  }
+  ctx.strokeStyle = '#333';
+  ctx.beginPath(); ctx.moveTo(x0, yBot + 0.5); ctx.lineTo(x1, yBot + 0.5); ctx.stroke();
+  const step = niceStep((seg.b - seg.a) / Math.max(2, Math.floor((x1 - x0) / 80)));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let k = Math.ceil(seg.a / step - 1e-9) * step; k <= seg.b + 1e-9; k += step) {
+    ctx.beginPath(); ctx.moveTo(X(k) + 0.5, yBot); ctx.lineTo(X(k) + 0.5, yBot + 4); ctx.stroke();
+    ctx.fillText(fmtKm(k), X(k), yBot + 16);
+  }
+  ctx.fillStyle = '#999'; ctx.textAlign = 'right';
+  ctx.fillText('distance from core, km', x1, h - 12);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0, yTop - 24, x1 - x0, yBot - yTop + 24 + 14); ctx.clip();
+
+  // порог (временный)
+  ctx.setLineDash([6, 4]); ctx.strokeStyle = '#6a6a62'; ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  for (let i = 0; i <= 80; i++) {
+    const km = seg.a + (seg.b - seg.a) * i / 80;
+    i ? ctx.lineTo(X(km), Y(thresholdAt(km))) : ctx.moveTo(X(km), Y(thresholdAt(km)));
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+
+  hitList = [];
+  // от дальнего к ближнему: берег рисуется поверх
+  for (let L = 2; L >= 0; L--) {
+    const lp = points.filter(p => p.layer === L).sort((p, q) => p.km - q.km);
+    if (!lp.length) continue;
+    // берём по одной соседней точке за краями участка, чтобы линия доходила до края
+    let iA = lp.findIndex(p => p.km >= seg.a); if (iA < 0) iA = lp.length;
+    let iB = lp.length - 1; while (iB >= 0 && lp[iB].km > seg.b) iB--;
+    const vis = lp.slice(Math.max(0, iA - 1), Math.min(lp.length, iB + 2));
+    if (!vis.length) continue;
+    const style = LAYERS[L];
+    const stroke = heightGradient(ctx, Y, style.stops);
+
+    if (style.fillRGB && vis.length > 1) {
+      const fg = ctx.createLinearGradient(0, yTop, 0, yBot);
+      fg.addColorStop(0, 'rgba(' + style.fillRGB + ',0.38)');
+      fg.addColorStop(1, 'rgba(' + style.fillRGB + ',0)');
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.moveTo(X(vis[0].km), yBot);
+      vis.forEach(p => ctx.lineTo(X(p.km), Y(p.conn)));
+      ctx.lineTo(X(vis[vis.length - 1].km), yBot); ctx.closePath(); ctx.fill();
+    }
+
+    ctx.strokeStyle = stroke; ctx.lineWidth = style.width; ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
+    for (let i = 1; i < vis.length; i++) {
+      const p = vis[i - 1], q = vis[i];
+      ctx.setLineDash(q.km - p.km > GAP_KM ? [3, 4] : []);
+      ctx.beginPath(); ctx.moveTo(X(p.km), Y(p.conn)); ctx.lineTo(X(q.km), Y(q.conn)); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    if (vis.length === 1) { // одиночная точка: без линии её не видно
+      ctx.fillStyle = colorAt(style.stops, vis[0].conn);
+      ctx.fillRect(X(vis[0].km) - 3, Y(vis[0].conn) - style.width / 2, 6, style.width);
+    }
+    vis.forEach(p => { if (inSeg(p, seg)) hitList.push({ p, x: X(p.km), y: Y(p.conn) }); });
+  }
+  ctx.restore();
+
+  // «коврик» плотности замеров под осью: по засечке на точку, ряд на слой
+  vis3(ctx, seg, X, yBot);
+
+  // вертикальные штрихи вмешательств с подписями
+  const flagged = points.filter(p => p.intervention && inSeg(p, seg)).sort((p, q) => p.km - q.km);
+  ctx.font = '11px "IBM Plex Sans", sans-serif'; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  const rowsEnd = [];
+  flagged.forEach(p => {
+    const x = X(p.km);
+    ctx.strokeStyle = '#e0473f'; ctx.lineWidth = 1.25;
+    ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, yBot); ctx.lineTo(Math.round(x) + 0.5, yTop - 4); ctx.stroke();
+    const text = p.label || p.pointId;
+    const tw = ctx.measureText(text).width;
+    let tx = Math.min(Math.max(x - tw / 2, x0), x1 - tw);
+    let row = rowsEnd.findIndex(e => tx > e + 6);
+    if (row < 0) { row = rowsEnd.length; }
+    if (row > 1) row = 1; // не больше двух рядов подписей, дальше перекрытие (редко)
+    rowsEnd[row] = tx + tw;
+    ctx.fillStyle = '#f2f0ec';
+    ctx.fillText(text, tx, yTop - 8 - row * 13);
+  });
+
+  const segPts = points.filter(p => inSeg(p, seg)).length;
+  document.getElementById('segLabel').textContent = fmtKm(seg.a) + ' – ' + fmtKm(seg.b) + ' km · ' + segPts + ' pts';
+}
+
+function heightGradient(ctx, Y, stops) {
+  const g = ctx.createLinearGradient(0, Y(Y_MIN), 0, Y(Y_MAX));
+  stops.forEach(([v, c]) => g.addColorStop((v - Y_MIN) / (Y_MAX - Y_MIN), c));
+  return g;
+}
+
+function vis3(ctx, seg, X, yBot) {
+  for (let L = 0; L < 3; L++) {
+    ctx.fillStyle = colorAt(LAYERS[L].stops, 5);
+    ctx.globalAlpha = L === 0 ? 0.9 : 0.6;
+    points.filter(p => p.layer === L && inSeg(p, seg)).forEach(p => {
+      ctx.fillRect(Math.round(X(p.km)), yBot + 3 + L * 3, 1, 2);
+    });
+  }
+  ctx.globalAlpha = 1;
+}
+
+function niceStep(raw) {
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / pow;
+  return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * pow;
+}
+function fmtKm(k) { return (Math.round(k * 100) / 100).toString(); }
+
+// ── Подсказка ────────────────────────────────────────────────────────────
+function showTip(ev) {
+  const canvas = document.getElementById('chart');
+  const r = canvas.getBoundingClientRect();
+  const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  let best = null, bd = 24 * 24;
+  hitList.forEach(hh => { const d = (hh.x - mx) ** 2 + (hh.y - my) ** 2; if (d < bd) { bd = d; best = hh; } });
+  const tip = document.getElementById('tip');
+  if (!best) { tip.style.display = 'none'; return; }
+  const p = best.p;
+  tip.innerHTML =
+    (p.intervention ? '<div class="flag">ABRUPT INTERVENTION</div>' : '') +
+    '<div>' + esc(p.label || p.pointId) + '</div>' +
+    '<div class="k">' + fmtKm(p.km) + ' km · ' + LAYERS[p.layer].name + '</div>' +
+    '<div class="k">conn ' + p.conn + ' / 5 · hist ' + p.hist + ' / 5</div>' +
+    (p.note ? '<div style="margin-top:4px;color:#999">' + esc(p.note) + '</div>' : '');
+  tip.style.display = 'block';
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  tip.style.left = Math.min(Math.max(0, best.x + 12), r.width - tw) + 'px';
+  tip.style.top = Math.max(0, best.y - th - 10) + 'px';
+}
+
+// ── Таблица участка ──────────────────────────────────────────────────────
+function renderTable() {
+  const seg = segments[selSeg];
+  const rows = points.filter(p => inSeg(p, seg)).sort((p, q) => p.km - q.km || p.layer - q.layer);
+  document.getElementById('tableCount').textContent = rows.length + ' / ' + points.length;
+  document.getElementById('tbody').innerHTML = rows.map(p =>
+    '<tr>' +
+    '<td class="num">' + p.km.toFixed(2) + '</td>' +
+    '<td>' + LAYERS[p.layer].name + '</td>' +
+    '<td>' + esc(p.label) + '</td>' +
+    '<td class="num">' + p.hist + '</td>' +
+    '<td class="num">' + p.conn + '</td>' +
+    '<td class="flag-cell">' + (p.intervention ? '●' : '') + '</td>' +
+    '<td class="wrap">' + esc(p.note) + '</td>' +
+    '<td>' + (p.photoIds || []).map((id, i) => '<a href="https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view" target="_blank" rel="noopener">' + (i + 1) + '</a>').join(' ') + '</td>' +
+    '<td class="num" style="color:#666">' + esc(p.pointId) + '</td>' +
+    '</tr>').join('');
+}
+
+function renderLegend() {
+  const present = new Set(points.map(p => p.layer));
+  document.getElementById('legend').innerHTML = LAYERS.map((L, i) => present.has(i)
+    ? '<span><span class="sw" style="height:' + Math.max(2, L.width) + 'px;background:linear-gradient(90deg,' + L.stops[1][1] + ',' + L.stops[2][1] + ',' + L.stops[3][1] + ')"></span>' + L.name + '</span>' : ''
+  ).join('') +
+  '<span><span class="sw" style="height:0;border-top:1.5px dashed #6a6a62"></span>Threshold (provisional)</span>' +
+  '<span><span class="sw" style="width:2px;height:12px;background:#e0473f"></span>Abrupt intervention</span>' +
+  '<span><span class="sw" style="height:0;border-top:2px dotted #888"></span>Gap &gt; ' + GAP_KM + ' km (sparse data)</span>';
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+function renderAll() { document.getElementById('tip').style.display = 'none'; renderStrip(); renderChart(); renderTable(); renderLegend(); }
+
+// ── События ──────────────────────────────────────────────────────────────
+document.getElementById('strip').addEventListener('click', ev => { selSeg = segIndexAt(ev.clientX); renderAll(); });
+document.getElementById('strip').addEventListener('keydown', ev => {
+  if (ev.key === 'ArrowRight' && selSeg < segments.length - 1) { selSeg++; renderAll(); ev.preventDefault(); }
+  if (ev.key === 'ArrowLeft' && selSeg > 0) { selSeg--; renderAll(); ev.preventDefault(); }
+});
+document.getElementById('chart').addEventListener('pointermove', showTip);
+document.getElementById('chart').addEventListener('pointerdown', showTip);
+document.getElementById('chart').addEventListener('pointerleave', () => { document.getElementById('tip').style.display = 'none'; });
+document.getElementById('zoneSel').addEventListener('change', () => applyFilter(true));
+document.getElementById('segSel').addEventListener('change', () => {
+  const km = segments[selSeg] ? (segments[selSeg].a + segments[selSeg].b) / 2 : null;
+  buildSegments();
+  const keep = km === null ? -1 : segments.findIndex(s => km >= s.a && km < s.b);
+  selSeg = keep >= 0 ? keep : defaultSegment();
+  renderAll();
+});
+let resizeTimer = null;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (points.length) renderAll(); }, 120); });
+// статус держим как ключ + переменные: при смене языка перерисовываем,
+// а не оставляем data-i18n, который затёр бы ошибку/«нет точек» заглушкой
+let statusMsg = { key: 'mp.loading', vars: null };
+function setStatus(key, vars) {
+  statusMsg = { key, vars };
+  document.getElementById('status').textContent = t(key, vars);
+}
+document.addEventListener('atrc:langchange', () => setStatus(statusMsg.key, statusMsg.vars));
+
+// для локальной проверки без Web App: MP.setPoints([...]) из консоли
+window.MP = { setPoints };
+
+setStatus('mp.loading');
+loadPoints().then(setPoints).catch(err => {
+  setStatus('mp.loadError', { error: err.message || String(err) });
+});
+</script>
+</body>
+</html>

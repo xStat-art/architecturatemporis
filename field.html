@@ -100,6 +100,12 @@
   .lp-cat-desc { font-size: 11px; color: #888; min-height: 30px; margin-bottom: 12px; }
   .lp-field { width: 100%; margin-bottom: 10px; padding: 12px; background: #111; color: #ddd; border: 1px solid #2e2e2e; font-family: Arial, sans-serif; font-size: 13px; box-sizing: border-box; }
   .lp-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: #aaa; margin-bottom: 12px; }
+  .mp-label { font-size: 10px; letter-spacing: 1px; color: #777; text-transform: uppercase; margin: 4px 0 6px; }
+  .mp-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .mp-row5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
+  .mp-opt { padding: 12px 0; font-size: 13px; }
+  .mp-row5 .mp-opt { font-size: 16px; font-weight: 700; }
+  .mp-opt.active { color: #fff; border-color: #c55a11; background: #2a1a0f; }
 
   /* GPS box */
   .gps-box {
@@ -350,6 +356,46 @@
   <textarea class="lp-field" id="lightNotes" rows="2" data-i18n-placeholder="field.light.notes" placeholder="Notes (optional)"></textarea>
   <button class="btn-launch" id="btnLightSend" type="button" data-i18n="field.light.send" onclick="sendLightPoint()">→ Send light point</button>
   <div class="gps-accuracy" id="lightStatus" style="text-align:center; margin-top:8px; min-height:14px;"></div>
+</div>
+
+<button class="btn-sec" id="btnMaritimeToggle" type="button" data-i18n="field.mp.toggle" style="width:100%; margin-bottom:12px;" onclick="toggleMaritimePoint()">+ Maritime view point (from the water)</button>
+
+<div class="gps-box lp-box" id="maritimeBox" style="display:none;">
+  <div class="gps-label" data-i18n="field.mp.label">Maritime view point</div>
+  <div class="lp-note" data-i18n="field.mp.note">Built-up coast as seen from the water. One point = one stretch of the view. Separate indicator, never part of any CI, no passport.</div>
+  <div class="gps-accuracy" id="maritimeZone" style="margin-bottom:12px;"></div>
+  <div class="mp-label" data-i18n="field.mp.distance">Distance from the core, km</div>
+  <input class="lp-field" type="text" inputmode="decimal" autocomplete="off" id="mpDistance" placeholder="6.6">
+  <div class="mp-label" data-i18n="field.mp.layer">Depth layer</div>
+  <div class="mp-row3" id="mpLayer">
+    <button type="button" class="btn-sec mp-opt" data-v="0" data-i18n="field.mp.layer0" onclick="selectMp('layer', 0)">Shore</button>
+    <button type="button" class="btn-sec mp-opt" data-v="1" data-i18n="field.mp.layer1" onclick="selectMp('layer', 1)">Behind road</button>
+    <button type="button" class="btn-sec mp-opt" data-v="2" data-i18n="field.mp.layer2" onclick="selectMp('layer', 2)">Third plane</button>
+  </div>
+  <div class="mp-label" data-i18n="field.mp.hist">Historical layering, 1–5</div>
+  <div class="mp-row5" id="mpHist">
+    <button type="button" class="btn-sec mp-opt" data-v="1" onclick="selectMp('hist', 1)">1</button>
+    <button type="button" class="btn-sec mp-opt" data-v="2" onclick="selectMp('hist', 2)">2</button>
+    <button type="button" class="btn-sec mp-opt" data-v="3" onclick="selectMp('hist', 3)">3</button>
+    <button type="button" class="btn-sec mp-opt" data-v="4" onclick="selectMp('hist', 4)">4</button>
+    <button type="button" class="btn-sec mp-opt" data-v="5" onclick="selectMp('hist', 5)">5</button>
+  </div>
+  <div class="mp-label" data-i18n="field.mp.conn">Connectivity, 1–5</div>
+  <div class="mp-row5" id="mpConn">
+    <button type="button" class="btn-sec mp-opt" data-v="1" onclick="selectMp('conn', 1)">1</button>
+    <button type="button" class="btn-sec mp-opt" data-v="2" onclick="selectMp('conn', 2)">2</button>
+    <button type="button" class="btn-sec mp-opt" data-v="3" onclick="selectMp('conn', 3)">3</button>
+    <button type="button" class="btn-sec mp-opt" data-v="4" onclick="selectMp('conn', 4)">4</button>
+    <button type="button" class="btn-sec mp-opt" data-v="5" onclick="selectMp('conn', 5)">5</button>
+  </div>
+  <label class="lp-check"><input type="checkbox" id="mpIntervention"> <span data-i18n="field.mp.intervention">Abrupt intervention at this point (a real break, not sparse data)</span></label>
+  <input class="lp-field" type="text" id="mpLabel" maxlength="120" data-i18n-placeholder="field.mp.pointLabel" placeholder="Point name, e.g. Baošići · Carine">
+  <textarea class="lp-field" id="mpNote" rows="2" maxlength="1000" data-i18n-placeholder="field.mp.notePh" placeholder="Note, incl. conflicting pairs: Sv. Ivan + 2000s housing block, conflict"></textarea>
+  <input class="lp-field" type="file" id="mpPhotos" accept="image/*" multiple>
+  <input class="lp-field" type="text" id="mpResearcher" data-i18n-placeholder="field.light.researcher" placeholder="Researcher name">
+  <button class="btn-launch" id="btnMpSend" type="button" data-i18n="field.mp.send" onclick="sendMaritimePoint()">→ Send maritime point</button>
+  <div class="gps-accuracy" id="mpStatus" style="text-align:center; margin-top:8px; min-height:14px;"></div>
+  <a href="maritime.html" target="_blank" class="map-link" data-i18n="field.mp.chartLink" style="margin-top:8px; margin-bottom:0;">↗ Open the maritime view chart</a>
 </div>
 
 <button class="btn-launch disabled" id="btnLaunch" type="button" data-i18n="field.btnLaunch" onclick="openEmbeddedForm()">→ Open Field Form</button>
@@ -690,6 +736,94 @@ function sendLightPoint() {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+// v8.13: ТОЧКА ВИДА С ВОДЫ (MARITIME_POINTS, раздел 17 .gs). Данные
+// профиля побережья: дистанция от кора, слой глубины, две шкалы 1–5,
+// флаг резкого вмешательства, до 4 фото (необязательно). Отправляется
+// напрямую в Web App (action=addMaritimePoint), без Google-формы и без
+// паспорта, в CI не входит. GPS не нужен: с лодки координата наблюдателя
+// ничего не говорит о положении застройки, позицию задаёт Distance_km.
+// Зона: та же, что определена/выбрана выше (с воды GPS обычно вне зон,
+// тогда её выбирают вручную в списке), либо пусто = NOZONE.
+// ═══════════════════════════════════════════════════════════════
+const mpSel = { layer: null, hist: null, conn: null };
+const MP_MAX_PHOTOS = 4;
+const MP_BOX_ID = { layer: 'mpLayer', hist: 'mpHist', conn: 'mpConn' };
+
+function toggleMaritimePoint() {
+  const box = document.getElementById('maritimeBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  updateMaritimeZone();
+  try {
+    const saved = localStorage.getItem('atrc_researcher_name');
+    const input = document.getElementById('mpResearcher');
+    if (saved && !input.value) input.value = saved;
+  } catch (e) { /* хранилище недоступно — просто без автоподстановки */ }
+}
+
+function updateMaritimeZone() {
+  const zid = detectedZoneId || manualZoneId || '';
+  document.getElementById('maritimeZone').textContent = zid ? t('field.mp.zone', { zone: zid }) : t('field.mp.noZone');
+}
+
+function selectMp(key, v) {
+  mpSel[key] = v;
+  document.querySelectorAll('#' + MP_BOX_ID[key] + ' .mp-opt').forEach(function(b) {
+    b.classList.toggle('active', Number(b.getAttribute('data-v')) === v);
+  });
+}
+
+function sendMaritimePoint() {
+  const status = document.getElementById('mpStatus');
+  const distRaw = document.getElementById('mpDistance').value.trim().replace(',', '.');
+  const dist = Number(distRaw);
+  if (distRaw === '' || !isFinite(dist)) { status.textContent = t('field.mp.errDistance'); return; }
+  if (mpSel.layer === null) { status.textContent = t('field.mp.errLayer'); return; }
+  if (mpSel.hist === null || mpSel.conn === null) { status.textContent = t('field.mp.errScales'); return; }
+  const files = Array.prototype.slice.call(document.getElementById('mpPhotos').files || []);
+  if (files.length > MP_MAX_PHOTOS) { status.textContent = t('field.mp.errPhotos', { max: MP_MAX_PHOTOS }); return; }
+
+  const researcher = document.getElementById('mpResearcher').value.trim();
+  try { if (researcher) localStorage.setItem('atrc_researcher_name', researcher); } catch (e) {}
+  const btn = document.getElementById('btnMpSend');
+  btn.className = 'btn-launch disabled';
+  status.textContent = t('field.light.sending');
+
+  const zoneId = detectedZoneId || manualZoneId || '';
+  Promise.all(files.map(readPhotoAsJpegBase64)).then(function(b64s) {
+    return fetch(WEBAPP_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        secret: API_SECRET, action: 'addMaritimePoint',
+        zoneId: zoneId,
+        distanceKm: dist,
+        layer: mpSel.layer,
+        historicalLayering: mpSel.hist,
+        connectivity: mpSel.conn,
+        interventionFlag: document.getElementById('mpIntervention').checked,
+        label: document.getElementById('mpLabel').value.trim(),
+        note: document.getElementById('mpNote').value.trim(),
+        researcherName: researcher,
+        photos: b64s.map(function(b) { return { base64: b, mime: 'image/jpeg' }; })
+      })
+    }).then(function(r) { return r.json(); });
+  }).then(function(data) {
+    if (!data.ok) { status.textContent = t('field.status.errorPrefix', { error: data.error }); return; }
+    status.textContent = t('field.mp.sent', { pointId: data.pointId });
+    // сброс под следующую точку; дистанция и слой остаются (идём вдоль берега),
+    // шкалы сбрасываются, чтобы не отправить прошлые оценки по инерции
+    selectMp('hist', null); selectMp('conn', null);
+    document.getElementById('mpIntervention').checked = false;
+    document.getElementById('mpLabel').value = '';
+    document.getElementById('mpNote').value = '';
+    document.getElementById('mpPhotos').value = '';
+  }).catch(function() {
+    status.textContent = t('field.mp.netError');
+  }).then(function() {
+    btn.className = 'btn-launch';
+  });
+}
+
 function populateZoneFallback() {
   const sel = document.getElementById('zoneFallback');
   sel.innerHTML = '<option value="">— select zone manually —</option>';
@@ -767,6 +901,7 @@ function updateZoneDisplay() {
   const sel = document.getElementById('zoneFallback');
   const createBtn = document.getElementById('btnCreateZone');
   const activeZone = detectedZoneId || manualZoneId;
+  updateMaritimeZone(); // v8.13: панель вида с воды показывает ту же зону
 
   if (!zonesLoaded) {
     el.className = 'gps-value dim'; el.textContent = t('field.zone.loading');
