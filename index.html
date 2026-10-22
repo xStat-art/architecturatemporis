@@ -383,6 +383,8 @@
   .about-stats { display: flex; flex-direction: column; gap: 1px; background: var(--grey-2); border: 1px solid var(--grey-2); align-self: start; }
   .astat  { background: var(--dark); padding: 20px 28px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .team-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; background: var(--grey-2); border: 1px solid var(--grey-2); }
+  .team-photo { width: 100%; height: auto; aspect-ratio: 1999 / 1311; object-fit: cover; object-position: center 35%; display: block; margin-bottom: 2px; }
+  .team-photo--muted { filter: saturate(0.6); }
   .astat-lbl { font-size: 11px; letter-spacing: 1px; color: var(--grey-3); text-transform: uppercase; white-space: nowrap; }
   .astat-val { font-size: 14px; font-weight: bold; color: var(--white); text-align: right; }
 
@@ -1146,10 +1148,17 @@
     <div style="margin-top:64px;">
       <div style="font-size:11px;letter-spacing:4px;color:var(--grey-3);text-transform:uppercase;
         margin-bottom:32px;padding-bottom:16px;border-bottom:1px solid var(--grey-2);">Research Team</div>
+      <!-- Team photo, left to right: Branko, Sergei, Anna (cards follow the same order). Muted variant: add class team-photo--muted. -->
+      <img src="images/team/team-photo.jpg" class="team-photo" width="1999" height="1311" loading="lazy"
+        alt="Research team, left to right: Branko Tomanović, Sergei Tatarnikov, Anna Shaub-Tatarnikova">
       <div class="team-grid">
+        <div style="background:var(--dark);padding:36px;">
+          <div style="font-size:18px;font-weight:bold;color:var(--white);margin-bottom:4px;">Branko Tomanović</div>
+          <div style="font-size:11px;letter-spacing:2px;color:var(--grey-3);text-transform:uppercase;margin-bottom:20px;">Architect-Engineer · Montenegro Consultant</div>
+          <div style="font-size:14px;color:var(--grey-4);line-height:1.75;">Licensed architect-engineer with extensive practice in Montenegro's historic zones and regulated environments. Provides expert consultation on local architectural heritage standards, building regulations, and the application of AT methodology in the Montenegrin and Adriatic context.</div>
+        </div>
 
         <div style="background:var(--dark);padding:36px;">
-          <img src="images/team/sergei-tatarnikov.jpg" alt="Sergei Tatarnikov" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;margin-bottom:20px;">
           <div style="font-size:18px;font-weight:bold;color:var(--white);margin-bottom:4px;">Sergei Tatarnikov</div>
           <div style="font-size:11px;letter-spacing:2px;color:var(--grey-3);text-transform:uppercase;margin-bottom:20px;">Founder · Principal Researcher</div>
           <div style="font-size:14px;color:var(--grey-4);line-height:1.75;">Architect and independent researcher. Author of the AT methodology, Chronity Index, TIA protocol and ACAP platform concept. Field research in Herceg Novi, Kotor buffer zone and Casa Zamprogno (Italy). Paper accepted at EAAE Cagliari 2026, Abstract #42.</div>
@@ -1157,19 +1166,10 @@
         </div>
 
         <div style="background:var(--dark);padding:36px;">
-          <img src="images/team/branko-tomanovic.jpg" alt="Branko Tomanović" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;margin-bottom:20px;">
-          <div style="font-size:18px;font-weight:bold;color:var(--white);margin-bottom:4px;">Branko Tomanović</div>
-          <div style="font-size:11px;letter-spacing:2px;color:var(--grey-3);text-transform:uppercase;margin-bottom:20px;">Architect-Engineer · Montenegro Consultant</div>
-          <div style="font-size:14px;color:var(--grey-4);line-height:1.75;">Licensed architect-engineer with extensive practice in Montenegro's historic zones and regulated environments. Provides expert consultation on local architectural heritage standards, building regulations, and the application of AT methodology in the Montenegrin and Adriatic context.</div>
-        </div>
-
-        <div style="background:var(--dark);padding:36px;">
-          <img src="images/team/anna-shaub-tatarnikova.jpg" alt="Anna Shaub-Tatarnikova" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;margin-bottom:20px;">
           <div style="font-size:18px;font-weight:bold;color:var(--white);margin-bottom:4px;">Anna Shaub-Tatarnikova</div>
           <div style="font-size:11px;letter-spacing:2px;color:var(--grey-3);text-transform:uppercase;margin-bottom:20px;">Psychologist · Phenomenology Researcher</div>
           <div style="font-size:14px;color:var(--grey-4);line-height:1.75;">Specialist in environmental psychology and the phenomenology of inhabited space. Researches the psychological impact of historic environments on human perception, wellbeing, and ontological security. Contributes to the sensory audit protocols (Appendix H) and the neurological foundations of the Perceptual Index (PI).</div>
         </div>
-
       </div>
     </div>
 
