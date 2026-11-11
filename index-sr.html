@@ -237,7 +237,7 @@
   .ci-big {
     font-family: var(--font-display);
     font-size: clamp(80px, 18vw, 210px);
-    font-weight: 900; color: var(--white); line-height: 1; letter-spacing: -6px; margin-bottom: 6px;
+    font-weight: 900; color: #1e7cff; line-height: 1; letter-spacing: -6px; margin-bottom: 6px;
   }
   .ci-caption { font-size: 13px; color: var(--grey-3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 48px; }
   .formula-box {
@@ -1077,7 +1077,7 @@
         document.getElementById('ep-cities').textContent=cities.size||'—';
         const ciEl=document.getElementById('ep-ci');
         ciEl.textContent=avg.toFixed(3);
-        ciEl.style.color=ciToHex(avg);
+        ciEl.style.color='#1e7cff';
         document.getElementById('explore-dot').style.background='#4CAF50';
         document.getElementById('explore-status').textContent='Live';
       },
@@ -1090,7 +1090,7 @@
     document.getElementById('ep-cities').textContent='1';
     const ciEl=document.getElementById('ep-ci');
     ciEl.textContent='0.828';
-    ciEl.style.color='#FF8C00';
+    ciEl.style.color='#1e7cff';
     document.getElementById('explore-dot').style.background='#888';
     document.getElementById('explore-status').textContent='Demo';
   }
@@ -1112,7 +1112,7 @@
 
     <div class="about-grid">
       <div>
-        <div class="about-name">Architectura<br>Temporis<br>Research Centre</div>
+        <div class="about-name">Architectura<br><span style="color:#1e7cff;">Temporis</span><br>Research Centre</div>
         <div class="about-role">Nezavisna neprofitna istraživačka organizacija · Osnovana 2024.</div>
         <p class="about-text">ATRC je osnovan u Herceg Novom, Crna Gora, sa ciljem da razvije prvu reproduktivnu kvantitativnu metodologiju za merenje vremenskog kvaliteta u istorijskim sredinama — i da to merenje pretvori u primenljive alate za arhitekte, institucije nadležne za nasleđe i investitore koji rade u regulisanim istorijskim zonama.</p>
         <p class="about-text">AT metodologija proširuje klasičnu Vitruvijevu trijadu (Firmitas, Utilitas, Venustas) četvrtim stubom: Tempus. Vreme nije pretnja arhitekturi. To je građevinski materijal koji zahteva sopstveni jezik projektovanja, alate i dokumentaciju.</p>
