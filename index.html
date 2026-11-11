@@ -256,7 +256,7 @@
   .ci-big {
     font-family: var(--font-display);
     font-size: clamp(80px, 18vw, 210px);
-    font-weight: 900; color: var(--white); line-height: 1; letter-spacing: -6px; margin-bottom: 6px;
+    font-weight: 900; color: #1e7cff; line-height: 1; letter-spacing: -6px; margin-bottom: 6px;
   }
   .ci-caption { font-size: 13px; color: var(--grey-3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 48px; }
   .formula-box {
@@ -1087,7 +1087,7 @@
         document.getElementById('ep-cities').textContent=cities.size||'—';
         const ciEl=document.getElementById('ep-ci');
         ciEl.textContent=avg.toFixed(3);
-        ciEl.style.color=ciToHex(avg);
+        ciEl.style.color='#1e7cff';
         document.getElementById('explore-dot').style.background='#4CAF50';
         document.getElementById('explore-status').textContent='Live';
       },
@@ -1100,7 +1100,7 @@
     document.getElementById('ep-cities').textContent='1';
     const ciEl=document.getElementById('ep-ci');
     ciEl.textContent='0.828';
-    ciEl.style.color='#FF8C00';
+    ciEl.style.color='#1e7cff';
     document.getElementById('explore-dot').style.background='#888';
     document.getElementById('explore-status').textContent='Demo';
   }
@@ -1122,7 +1122,7 @@
 
     <div class="about-grid">
       <div>
-        <div class="about-name">Architectura<br>Temporis<br>Research Centre</div>
+        <div class="about-name">Architectura<br><span style="color:#1e7cff;">Temporis</span><br>Research Centre</div>
         <div class="about-role">Independent Non-Profit Research Organisation · Est. 2024</div>
         <p class="about-text">ATRC is founded in Herceg Novi, Montenegro to develop the first reproducible quantitative methodology for measuring temporal quality in historic environments — and translating this measurement into actionable tools for architects, heritage authorities, and investors working in regulated historic zones.</p>
         <p class="about-text">The AT methodology extends the classical Vitruvian triad (Firmitas, Utilitas, Venustas) with a fourth pillar: Tempus. Time is not a threat to architecture. It is a building material that requires its own design language, tools, and documentation.</p>
